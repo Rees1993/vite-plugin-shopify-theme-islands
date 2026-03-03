@@ -10,9 +10,9 @@ npm install -D vite-plugin-shopify-theme-islands
 
 ## Setup
 
-### 1. Add the plugin to `vite.config.mjs`
+### 1. Add the plugin to `vite.config.ts`
 
-```js
+```ts
 import { defineConfig } from 'vite';
 import shopifyThemeIslands from 'vite-plugin-shopify-theme-islands';
 
@@ -25,7 +25,7 @@ export default defineConfig({
 });
 ```
 
-### 2. Call `revive` in your JS entrypoint
+### 2. Call `revive` in your entrypoint
 
 ```js
 import { revive, getReviveOptions } from 'virtual:shopify-theme-islands/revive';
