@@ -9,7 +9,7 @@ declare module 'virtual:shopify-theme-islands/revive' {
       directiveMedia?: string;
       directiveIdle?: string;
     }
-  ): Promise<void>;
+  ): void;
   export function getReviveOptions(): {
     pathPrefix: string;
     directiveVisible: string;
