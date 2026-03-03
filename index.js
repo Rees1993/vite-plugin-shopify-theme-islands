@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
  *
  * Usage in your entrypoint:
  *   import { revive, getReviveOptions } from 'virtual:shopify-theme-islands/revive';
- *   const islands = import.meta.glob('@/js/islands/*.{ts,js}');
+ *   const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
  *   revive(islands, getReviveOptions());
  *
  * Options:
