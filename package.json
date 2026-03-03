@@ -1,0 +1,25 @@
+{
+  "name": "vite-plugin-shopify-theme-islands",
+  "version": "0.1.0",
+  "description": "Vite plugin for island architecture in Shopify themes",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./runtime": "./runtime.js"
+  },
+  "files": [
+    "index.js",
+    "runtime.js",
+    "vite-env.d.ts"
+  ],
+  "keywords": [
+    "vite",
+    "shopify",
+    "islands",
+    "vite-plugin"
+  ],
+  "peerDependencies": {
+    "vite": ">=5"
+  }
+}
