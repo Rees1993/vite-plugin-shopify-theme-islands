@@ -5,17 +5,18 @@ import type { Plugin } from 'vite';
  * Vite plugin: Shopify theme island architecture.
  * Provides the revive runtime via a virtual module.
  *
- * Usage in vite.config.mjs:
+ * Usage in vite.config.ts:
  *   import shopifyThemeIslands from 'vite-plugin-shopify-theme-islands';
  *   plugins: [shopifyThemeIslands({ pathPrefix: '/frontend/js/islands/' })]
  *
  * Usage in your entrypoint:
- *   import { revive, getReviveOptions } from 'virtual:shopify-theme-islands/revive';
+ *   import { revive } from 'virtual:shopify-theme-islands/revive';
  *   const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
- *   revive(islands, getReviveOptions());
+ *   revive(islands);
  */
 
 const VIRTUAL_REVIVE = 'virtual:shopify-theme-islands/revive';
+const VIRTUAL_RUNTIME = '\0virtual:shopify-theme-islands/runtime';
 const runtimePath = new URL('./runtime.js', import.meta.url).pathname;
 
 export interface ShopifyThemeIslandsOptions {
@@ -41,22 +42,24 @@ export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOp
     enforce: 'pre',
     resolveId(id: string) {
       if (id === VIRTUAL_REVIVE) return '\0' + id;
+      if (id === VIRTUAL_RUNTIME) return id;
       return null;
     },
     load(id: string) {
+      if (id === VIRTUAL_RUNTIME) return runtime;
       if (id !== '\0' + VIRTUAL_REVIVE) return null;
-      return (
-        runtime +
-        `\nexport function getReviveOptions() {
-  return {
+      return `
+import { revive as _revive } from '${VIRTUAL_RUNTIME}';
+
+export function revive(islands) {
+  _revive(islands, {
     pathPrefix: ${JSON.stringify(pathPrefix)},
     directiveVisible: ${JSON.stringify(directiveVisible)},
     directiveMedia: ${JSON.stringify(directiveMedia)},
     directiveIdle: ${JSON.stringify(directiveIdle)},
-  };
+  });
 }
-`
-      );
+`;
     },
   };
 }

@@ -27,11 +27,11 @@ export default defineConfig({
 
 ### 2. Call `revive` in your entrypoint
 
-```js
-import { revive, getReviveOptions } from 'virtual:shopify-theme-islands/revive';
+```ts
+import { revive } from 'virtual:shopify-theme-islands/revive';
 
 const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
-revive(islands, getReviveOptions());
+revive(islands);
 ```
 
 The glob pattern must match the `pathPrefix` option. Each file in that directory corresponds to a custom element — the filename (without extension) is the tag name.
