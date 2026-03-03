@@ -28,6 +28,7 @@ export default function shopifyThemeIslands(pluginOptions = {}) {
   const directiveVisible = pluginOptions.directiveVisible ?? 'client:visible';
   const directiveMedia = pluginOptions.directiveMedia ?? 'client:media';
   const directiveIdle = pluginOptions.directiveIdle ?? 'client:idle';
+  const runtime = readFileSync(runtimePath, 'utf-8');
 
   return {
     name: 'vite-plugin-shopify-theme-islands',
@@ -38,7 +39,6 @@ export default function shopifyThemeIslands(pluginOptions = {}) {
     },
     load(id) {
       if (id !== '\0' + VIRTUAL_REVIVE) return null;
-      const runtime = readFileSync(runtimePath, 'utf-8');
       return (
         runtime +
         `\nexport function getReviveOptions() {

@@ -4,21 +4,45 @@
   "description": "Vite plugin for island architecture in Shopify themes",
   "type": "module",
   "main": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./index.js",
-    "./runtime": "./runtime.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./runtime": "./runtime.js",
+    "./client": "./client.d.ts"
   },
   "files": [
     "index.js",
+    "index.d.ts",
     "runtime.js",
-    "vite-env.d.ts"
+    "client.d.ts"
   ],
+  "sideEffects": false,
   "keywords": [
     "vite",
     "shopify",
     "islands",
     "vite-plugin"
   ],
+  "license": "MIT",
+  "author": {
+    "name": "Alex Rees",
+    "email": "alex@thirteenstudios.agency",
+    "url": "https://thirteenstudios.agency"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rees1993/vite-plugin-shopify-theme-islands"
+  },
+  "homepage": "https://github.com/Rees1993/vite-plugin-shopify-theme-islands#readme",
+  "bugs": {
+    "url": "https://github.com/Rees1993/vite-plugin-shopify-theme-islands/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "peerDependencies": {
     "vite": ">=5"
   }

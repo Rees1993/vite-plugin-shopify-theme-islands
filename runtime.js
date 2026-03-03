@@ -55,11 +55,12 @@ export function revive(islands, options) {
       const q = node.getAttribute(attrMedia);
       if (q) await media(q);
       if (node.hasAttribute(attrIdle)) await idle();
-      loader();
+      // kick off the load; side effects (e.g. customElements.define) run on resolution
+      loader().catch(console.error);
     }
     let child = node.firstElementChild;
     while (child) {
-      dfs(child);
+      dfs(child); // intentionally not awaited — process siblings in parallel
       child = child.nextElementSibling;
     }
   }

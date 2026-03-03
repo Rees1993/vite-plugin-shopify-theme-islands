@@ -1,19 +1,3 @@
-/// <reference types="vite/client" />
-
-declare module 'virtual:shopify-theme-islands/revive' {
-  export function revive(
-    islands: Record<string, () => void>,
-    options?: {
-      pathPrefix?: string;
-      directiveVisible?: string;
-      directiveMedia?: string;
-      directiveIdle?: string;
-    }
-  ): void;
-  export function getReviveOptions(): {
-    pathPrefix: string;
-    directiveVisible: string;
-    directiveMedia: string;
-    directiveIdle: string;
-  };
-}
+// Virtual module types have moved to client.d.ts.
+// In your tsconfig.json, use: { "types": ["vite-plugin-shopify-theme-islands/client"] }
+export * from './client.d.ts';
