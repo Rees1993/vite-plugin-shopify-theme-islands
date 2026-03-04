@@ -10,13 +10,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./revive": {
+      "types": "./revive.d.ts"
+    },
     "./client": {
       "types": "./client.d.ts"
     }
   },
   "files": [
     "dist",
-    "client.d.ts"
+    "client.d.ts",
+    "revive.d.ts"
   ],
   "sideEffects": false,
   "keywords": [

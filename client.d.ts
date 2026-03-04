@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 
+// virtual: alias for Vite convention compatibility
 declare module 'virtual:shopify-theme-islands/revive' {
-  export function revive(islands: Record<string, () => Promise<unknown>>): void;
+  export { default } from 'vite-plugin-shopify-theme-islands/revive';
 }

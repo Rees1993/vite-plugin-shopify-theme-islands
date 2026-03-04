@@ -13,13 +13,13 @@ npm install -D vite-plugin-shopify-theme-islands
 ### 1. Add the plugin to `vite.config.ts`
 
 ```ts
-import { defineConfig } from 'vite';
-import shopifyThemeIslands from 'vite-plugin-shopify-theme-islands';
+import { defineConfig } from "vite";
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
   plugins: [
     shopifyThemeIslands({
-      pathPrefix: '/frontend/js/islands/',
+      pathPrefix: "/frontend/js/islands/",
     }),
   ],
 });
@@ -28,31 +28,13 @@ export default defineConfig({
 ### 2. Call `revive` in your entrypoint
 
 ```ts
-import { revive } from 'virtual:shopify-theme-islands/revive';
+import revive from "vite-plugin-shopify-theme-islands/revive";
 
-const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
+const islands = import.meta.glob("/frontend/js/islands/*.{ts,js}");
 revive(islands);
 ```
 
 The glob pattern must match the `pathPrefix` option. Each file in that directory corresponds to a custom element — the filename (without extension) is the tag name.
-
-### 3. TypeScript: reference the virtual module types
-
-Add the following to your `tsconfig.json` so TypeScript knows about the `virtual:shopify-theme-islands/revive` module:
-
-```json
-{
-  "compilerOptions": {
-    "types": ["vite-plugin-shopify-theme-islands/client"]
-  }
-}
-```
-
-Or add a triple-slash reference in your entrypoint file:
-
-```ts
-/// <reference types="vite-plugin-shopify-theme-islands/client" />
-```
 
 ## Writing islands
 
@@ -70,9 +52,15 @@ class ProductForm extends HTMLElement {
   connectedCallback() {
     // ...
   }
+
+  disconnectedCallback() {
+    // ...
+  }
 }
 
-customElements.define('product-form', ProductForm);
+if (!customElements.get("product-form")) {
+  customElements.define("product-form", ProductForm);
+}
 ```
 
 ## Loading directives
@@ -119,12 +107,12 @@ Directives can be combined — the element will wait for all conditions to be me
 
 ## Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `pathPrefix` | `string` | `'/frontend/js/islands/'` | Path prefix used to match `import.meta.glob` keys to tag names |
-| `directiveVisible` | `string` | `'client:visible'` | Attribute name for the visible directive |
-| `directiveMedia` | `string` | `'client:media'` | Attribute name for the media directive |
-| `directiveIdle` | `string` | `'client:idle'` | Attribute name for the idle directive |
+| Option             | Type     | Default                   | Description                                                    |
+| ------------------ | -------- | ------------------------- | -------------------------------------------------------------- |
+| `pathPrefix`       | `string` | `'/frontend/js/islands/'` | Path prefix used to match `import.meta.glob` keys to tag names |
+| `directiveVisible` | `string` | `'client:visible'`        | Attribute name for the visible directive                       |
+| `directiveMedia`   | `string` | `'client:media'`          | Attribute name for the media directive                         |
+| `directiveIdle`    | `string` | `'client:idle'`           | Attribute name for the idle directive                          |
 
 ## License
 

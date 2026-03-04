@@ -17,6 +17,16 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify package version matches release tag
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${{ github.ref_name }}" ]; then
+            echo "package.json version ($PKG_VERSION) does not match release tag (${{ github.ref_name }})"
+            exit 1
+          fi
+
+      - run: npm run check
+
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

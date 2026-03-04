@@ -41,7 +41,7 @@ export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOp
     name: 'vite-plugin-shopify-theme-islands',
     enforce: 'pre',
     resolveId(id: string) {
-      if (id === VIRTUAL_REVIVE) return '\0' + VIRTUAL_REVIVE;
+      if (id === VIRTUAL_REVIVE || id === 'vite-plugin-shopify-theme-islands/revive') return '\0' + VIRTUAL_REVIVE;
       if (id === VIRTUAL_RUNTIME) return id;
       return null;
     },
@@ -51,7 +51,7 @@ export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOp
       return `
 import { revive as _revive } from '${VIRTUAL_RUNTIME}';
 
-export function revive(islands) {
+export default function revive(islands) {
   _revive(islands, {
     pathPrefix: ${JSON.stringify(pathPrefix)},
     directiveVisible: ${JSON.stringify(directiveVisible)},
