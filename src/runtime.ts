@@ -1,5 +1,16 @@
-// Browser ESM runtime for island architecture.
-// Loaded via `virtual:shopify-theme-islands/revive` — do not import directly.
+/**
+ * Island architecture runtime for Shopify themes.
+ *
+ * Walks the DOM for custom elements that match island files, then loads them
+ * lazily based on client directives:
+ *
+ *   client:visible  — load when the element scrolls into view
+ *   client:media    — load when a CSS media query matches
+ *   client:idle     — load when the browser has idle time
+ *
+ * Directives can be combined; all conditions must be met before loading.
+ * A MutationObserver re-runs the same logic for elements added dynamically.
+ */
 
 interface ReviveOptions {
   pathPrefix?: string;
@@ -8,6 +19,7 @@ interface ReviveOptions {
   directiveIdle?: string;
 }
 
+// Resolves when the given media query matches
 function media(query: string): Promise<void> {
   const m = window.matchMedia(query);
   return new Promise((resolve) => {
@@ -16,6 +28,7 @@ function media(query: string): Promise<void> {
   });
 }
 
+// Resolves when the element enters the viewport
 function visible(element: Element): Promise<void> {
   return new Promise((resolve) => {
     const obs = new IntersectionObserver((entries) => {
@@ -31,6 +44,7 @@ function visible(element: Element): Promise<void> {
   });
 }
 
+// Resolves when the browser is idle (falls back to setTimeout for Safari)
 function idle(): Promise<void> {
   return new Promise((resolve) => {
     if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve());
@@ -55,17 +69,20 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   async function dfs(node: Element): Promise<void> {
     const tagName = node.tagName.toLowerCase();
     const loader = islands[pathPrefix + tagName + '.ts'] ?? islands[pathPrefix + tagName + '.js'];
+
+    // Custom elements always contain a hyphen
     if (/-/.test(tagName) && loader) {
       if (node.hasAttribute(attrVisible)) await visible(node);
       const q = node.getAttribute(attrMedia);
       if (q) await media(q);
       if (node.hasAttribute(attrIdle)) await idle();
-      // kick off the load; side effects (e.g. customElements.define) run on resolution
+      // Side effects (e.g. customElements.define) run when the import resolves
       loader().catch(console.error);
     }
+
     let child = node.firstElementChild;
     while (child) {
-      dfs(child); // intentionally not awaited — process siblings in parallel
+      dfs(child); // intentionally not awaited — siblings load in parallel
       child = child.nextElementSibling;
     }
   }
