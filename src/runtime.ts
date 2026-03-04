@@ -52,6 +52,15 @@ function idle(): Promise<void> {
   });
 }
 
+// NodeFilter that accepts custom elements (tag names containing a hyphen) and
+// skips (but still descends into) everything else
+const customElementFilter: NodeFilter = {
+  acceptNode: (node) =>
+    (node as Element).tagName.includes('-')
+      ? NodeFilter.FILTER_ACCEPT
+      : NodeFilter.FILTER_SKIP,
+};
+
 export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): () => void {
   const attrVisible = options?.directiveVisible ?? 'client:visible';
   const attrMedia = options?.directiveMedia ?? 'client:media';
@@ -75,32 +84,35 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
   }
 
-  function visit(node: Element): void {
-    const tagName = node.tagName.toLowerCase();
-    if (!queued.has(tagName)) {
-      const loader = islandMap.get(tagName);
-      if (loader) {
-        queued.add(tagName);
-        loadIsland(tagName, node, loader);
-      }
+  function process(el: Element): void {
+    const tagName = el.tagName.toLowerCase();
+    if (queued.has(tagName)) return;
+    const loader = islandMap.get(tagName);
+    if (loader) {
+      queued.add(tagName);
+      loadIsland(tagName, el, loader);
     }
-    let child = node.firstElementChild;
-    while (child) {
-      visit(child);
-      child = child.nextElementSibling;
-    }
+  }
+
+  // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
+  // and avoids stack overflow on deeply nested pages
+  function walk(root: Element): void {
+    process(root);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, customElementFilter);
+    let node: Node | null;
+    while ((node = walker.nextNode())) process(node as Element);
   }
 
   const observer = new MutationObserver((mutations) => {
     for (const { addedNodes } of mutations) {
       for (const node of addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) visit(node as Element);
+        if (node.nodeType === Node.ELEMENT_NODE) walk(node as Element);
       }
     }
   });
 
   function init(): void {
-    visit(document.body);
+    walk(document.body);
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
