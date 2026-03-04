@@ -10,7 +10,7 @@ import type { Plugin } from 'vite';
  *   plugins: [shopifyThemeIslands({ pathPrefix: '/frontend/js/islands/' })]
  *
  * Usage in your entrypoint:
- *   import { revive } from 'virtual:shopify-theme-islands/revive';
+ *   import revive from 'vite-plugin-shopify-theme-islands/revive';
  *   const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
  *   revive(islands);
  */
