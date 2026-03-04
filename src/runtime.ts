@@ -10,10 +10,10 @@
  *
  * Directives can be combined; all conditions must be met before loading.
  * A MutationObserver re-runs the same logic for elements added dynamically.
+ * Returns a cleanup function that disconnects the observer.
  */
 
 interface ReviveOptions {
-  pathPrefix?: string;
   directiveVisible?: string;
   directiveMedia?: string;
   directiveIdle?: string;
@@ -52,41 +52,63 @@ function idle(): Promise<void> {
   });
 }
 
-export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
-  const pathPrefix = options?.pathPrefix ?? '/frontend/js/islands/';
+export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): () => void {
   const attrVisible = options?.directiveVisible ?? 'client:visible';
   const attrMedia = options?.directiveMedia ?? 'client:media';
   const attrIdle = options?.directiveIdle ?? 'client:idle';
 
-  const observer = new MutationObserver((mutations) => {
-    for (const { addedNodes } of mutations) {
-      for (const node of addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) dfs(node as Element);
+  // Precompute tag name → loader map from glob keys (filename without extension = tag name)
+  const islandMap = new Map<string, () => Promise<unknown>>();
+  for (const [key, loader] of Object.entries(islands)) {
+    const tagName = key.split('/').pop()!.replace(/\.(ts|js)$/, '');
+    if (tagName.includes('-') && !islandMap.has(tagName)) islandMap.set(tagName, loader);
+  }
+
+  // Track queued tag names to avoid duplicate customElements.define calls
+  const queued = new Set<string>();
+
+  async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
+    if (el.hasAttribute(attrVisible)) await visible(el);
+    const q = el.getAttribute(attrMedia);
+    if (q) await media(q);
+    if (el.hasAttribute(attrIdle)) await idle();
+    loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+  }
+
+  function visit(node: Element): void {
+    const tagName = node.tagName.toLowerCase();
+    if (!queued.has(tagName)) {
+      const loader = islandMap.get(tagName);
+      if (loader) {
+        queued.add(tagName);
+        loadIsland(tagName, node, loader);
       }
     }
-  });
-
-  async function dfs(node: Element): Promise<void> {
-    const tagName = node.tagName.toLowerCase();
-    const loader = islands[pathPrefix + tagName + '.ts'] ?? islands[pathPrefix + tagName + '.js'];
-
-    // Custom elements always contain a hyphen
-    if (/-/.test(tagName) && loader) {
-      if (node.hasAttribute(attrVisible)) await visible(node);
-      const q = node.getAttribute(attrMedia);
-      if (q) await media(q);
-      if (node.hasAttribute(attrIdle)) await idle();
-      // Side effects (e.g. customElements.define) run when the import resolves
-      loader().catch(console.error);
-    }
-
     let child = node.firstElementChild;
     while (child) {
-      dfs(child); // intentionally not awaited — siblings load in parallel
+      visit(child);
       child = child.nextElementSibling;
     }
   }
 
-  dfs(document.body);
-  observer.observe(document.body, { childList: true, subtree: true });
+  const observer = new MutationObserver((mutations) => {
+    for (const { addedNodes } of mutations) {
+      for (const node of addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) visit(node as Element);
+      }
+    }
+  });
+
+  function init(): void {
+    visit(document.body);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+
+  return () => observer.disconnect();
 }
