@@ -24,6 +24,6 @@ jobs:
 
       - run: bun run check
 
-      - run: bun publish
+      - run: npm publish
         env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
