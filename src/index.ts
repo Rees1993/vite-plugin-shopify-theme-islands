@@ -1,13 +1,15 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
-const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/islands";
+const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
-const MIXIN_ID = "vite-plugin-shopify-theme-islands/mixin";
+const MIXIN_ID = "vite-plugin-shopify-theme-islands/island";
 const runtimePath = new URL("./runtime.js", import.meta.url).pathname;
-const mixinPath = new URL("./mixin.js", import.meta.url).pathname;
+const mixinPath = new URL("./island.js", import.meta.url).pathname;
 
-// Matches any import from the island mixin module
-const MIXIN_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/mixin['"]/;
+const MIXIN_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
+const TS_JS_RE = /\.(ts|js)$/;
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -44,6 +46,30 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
+// Recursively scan a directory for files containing the Island mixin import
+function scanForMixinFiles(dir: string, found: Set<string>): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      scanForMixinFiles(full, found);
+    } else if (TS_JS_RE.test(entry.name)) {
+      try {
+        const content = readFileSync(full, 'utf-8');
+        if (MIXIN_IMPORT_RE.test(content)) found.add(full);
+      } catch {
+        // skip unreadable files
+      }
+    }
+  }
+}
+
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
   const rawDirs = (Array.isArray(options.directories)
     ? options.directories
@@ -55,27 +81,43 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const directiveIdle = options.directiveIdle ?? defaults.directiveIdle;
 
   let resolvedDirs = rawDirs;
-
-  // Files detected via Island mixin import
+  let root = process.cwd();
   const mixinFiles = new Set<string>();
+  let scanned = false;
 
   return {
     name: "vite-plugin-shopify-theme-islands",
     enforce: "pre",
 
     configResolved(config) {
+      root = config.root;
       resolvedDirs = resolveAliases(rawDirs, config);
     },
 
-    // Resolve the mixin module to its built path
-    resolveId(id) {
-      if (id === VIRTUAL_ID || id === `virtual:${VIRTUAL_ID}`) return RESOLVED_ID;
-      if (id === MIXIN_ID) return mixinPath;
+    buildStart() {
+      if (scanned) return;
+      scanned = true;
+      scanForMixinFiles(root, mixinFiles);
     },
 
-    // Detect files that import the Island mixin and register them
+    // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
-      if (MIXIN_IMPORT_RE.test(code)) mixinFiles.add(id);
+      if (!id.endsWith('.ts') && !id.endsWith('.js')) return;
+      if (code.includes('shopify-theme-islands/island') && MIXIN_IMPORT_RE.test(code)) {
+        mixinFiles.add(id);
+      } else {
+        mixinFiles.delete(id);
+      }
+    },
+
+    // Remove deleted files from the mixin set
+    watchChange(id, { event }) {
+      if (event === 'delete') mixinFiles.delete(id);
+    },
+
+    resolveId(id) {
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
+      if (id === MIXIN_ID) return mixinPath;
     },
 
     load(id) {
@@ -85,7 +127,6 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`
       );
 
-      // Explicit lazy imports for mixin-detected files
       const mixinImports = [...mixinFiles].map(
         (file) => `  [${JSON.stringify(file)}]: () => import(${JSON.stringify(file)})`
       );

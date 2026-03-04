@@ -31,13 +31,10 @@ function media(query: string): Promise<void> {
 // Resolves when the element enters the viewport
 function visible(element: Element): Promise<void> {
   return new Promise((resolve) => {
-    const obs = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          obs.disconnect();
-          resolve();
-          break;
-        }
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        obs.disconnect();
+        resolve();
       }
     });
     obs.observe(element);
@@ -84,7 +81,7 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
   }
 
-  function process(el: Element): void {
+  function activate(el: Element): void {
     const tagName = el.tagName.toLowerCase();
     if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
@@ -96,11 +93,11 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
 
   // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
   // and avoids stack overflow on deeply nested pages
-  function walk(root: Element): void {
-    process(root);
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, customElementFilter);
+  function walk(el: Element): void {
+    activate(el);
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT, customElementFilter);
     let node: Node | null;
-    while ((node = walker.nextNode())) process(node as Element);
+    while ((node = walker.nextNode())) activate(node as Element);
   }
 
   const observer = new MutationObserver((mutations) => {

@@ -11,21 +11,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./islands": {
-      "types": "./islands.d.ts"
+    "./revive": {
+      "types": "./revive.d.ts"
     },
-    "./mixin": {
-      "types": "./dist/mixin.d.ts",
-      "default": "./dist/mixin.js"
-    },
-    "./client": {
-      "types": "./client.d.ts"
+    "./island": {
+      "types": "./dist/island.d.ts",
+      "import": "./dist/island.js"
     }
   },
   "files": [
     "dist",
-    "client.d.ts",
-    "islands.d.ts"
+    "revive.d.ts"
   ],
   "sideEffects": false,
   "keywords": [
@@ -52,9 +48,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:js": "bun build src/index.ts src/runtime.ts src/mixin.ts --outdir dist --format esm",
+    "build:js": "bun build src/index.ts src/runtime.ts src/island.ts --outdir dist --format esm --target node",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
-    "build": "bun run build:js && bun run build:types",
+    "build": "rm -rf dist && bun run build:js && bun run build:types",
     "check": "tsc --noEmit",
     "prepublishOnly": "bun run build"
   },

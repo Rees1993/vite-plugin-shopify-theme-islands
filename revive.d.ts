@@ -1,2 +1,2 @@
-// Renamed to islands.d.ts — import from 'vite-plugin-shopify-theme-islands/islands'
-export { default } from './islands';
+declare function revive(): () => void;
+export default revive;
