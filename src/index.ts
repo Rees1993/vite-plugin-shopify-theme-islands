@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 
 /**
@@ -16,7 +15,7 @@ import type { Plugin } from 'vite';
  */
 
 const VIRTUAL_REVIVE = 'virtual:shopify-theme-islands/revive';
-const VIRTUAL_RUNTIME = '\0virtual:shopify-theme-islands/runtime';
+const RESOLVED_REVIVE = '\0virtual:shopify-theme-islands/revive';
 const runtimePath = new URL('./runtime.js', import.meta.url).pathname;
 
 export interface ShopifyThemeIslandsOptions {
@@ -35,21 +34,18 @@ export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOp
   const directiveVisible = pluginOptions.directiveVisible ?? 'client:visible';
   const directiveMedia = pluginOptions.directiveMedia ?? 'client:media';
   const directiveIdle = pluginOptions.directiveIdle ?? 'client:idle';
-  const runtime = readFileSync(runtimePath, 'utf-8');
 
   return {
     name: 'vite-plugin-shopify-theme-islands',
     enforce: 'pre',
     resolveId(id: string) {
-      if (id === VIRTUAL_REVIVE || id === 'vite-plugin-shopify-theme-islands/revive') return '\0' + VIRTUAL_REVIVE;
-      if (id === VIRTUAL_RUNTIME) return id;
+      if (id === VIRTUAL_REVIVE || id === 'vite-plugin-shopify-theme-islands/revive') return RESOLVED_REVIVE;
       return null;
     },
     load(id: string) {
-      if (id === VIRTUAL_RUNTIME) return runtime;
-      if (id !== '\0' + VIRTUAL_REVIVE) return null;
+      if (id !== RESOLVED_REVIVE) return null;
       return `
-import { revive as _revive } from '${VIRTUAL_RUNTIME}';
+import { revive as _revive } from ${JSON.stringify(runtimePath)};
 
 export default function revive(islands) {
   _revive(islands, {
