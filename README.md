@@ -5,7 +5,10 @@ Island architecture for Shopify themes. Lazily hydrate custom elements using loa
 ## Installation
 
 ```bash
+bun add -d vite-plugin-shopify-theme-islands
 npm install -D vite-plugin-shopify-theme-islands
+pnpm add -D vite-plugin-shopify-theme-islands
+yarn add -D vite-plugin-shopify-theme-islands
 ```
 
 ## Setup

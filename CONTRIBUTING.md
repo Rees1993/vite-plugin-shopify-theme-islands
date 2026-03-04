@@ -11,9 +11,9 @@ Be respectful and constructive. This project follows the [Contributor Covenant](
 ```bash
 git clone https://github.com/Rees1993/vite-plugin-shopify-theme-islands.git
 cd vite-plugin-shopify-theme-islands
-npm install
-npm run build
-npm run check
+bun install
+bun run build
+bun run check
 ```
 
 ## Workflow
@@ -38,8 +38,8 @@ Fork the repository, then create a branch from `main` using the following naming
 
 ### 3. Make your changes
 
-- Run `npm run build` to compile
-- Run `npm run check` to type check
+- Run `bun run build` to compile
+- Run `bun run check` to type check
 - Keep changes focused — one concern per PR
 
 ### 4. Commit messages
