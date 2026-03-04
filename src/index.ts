@@ -1,26 +1,12 @@
-import type { Plugin } from 'vite';
+import type { Plugin, ResolvedConfig } from "vite";
 
-/**
- * Vite plugin: Shopify theme island architecture.
- * Provides the revive runtime via a virtual module.
- *
- * Usage in vite.config.ts:
- *   import shopifyThemeIslands from 'vite-plugin-shopify-theme-islands';
- *   plugins: [shopifyThemeIslands({ pathPrefix: '/frontend/js/islands/' })]
- *
- * Usage in your entrypoint:
- *   import revive from 'vite-plugin-shopify-theme-islands/revive';
- *   const islands = import.meta.glob('/frontend/js/islands/*.{ts,js}');
- *   revive(islands);
- */
-
-const VIRTUAL_REVIVE = 'virtual:shopify-theme-islands/revive';
-const RESOLVED_REVIVE = '\0virtual:shopify-theme-islands/revive';
-const runtimePath = new URL('./runtime.js', import.meta.url).pathname;
+const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/islands";
+const RESOLVED_ID = "\0" + VIRTUAL_ID;
+const runtimePath = new URL("./runtime.js", import.meta.url).pathname;
 
 export interface ShopifyThemeIslandsOptions {
-  /** Path prefix used to match island glob keys. Default: `'/frontend/js/islands/'` */
-  pathPrefix?: string;
+  /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
+  directories?: string | string[];
   /** Attribute for "load when visible". Default: `'client:visible'` */
   directiveVisible?: string;
   /** Attribute for "load when media matches". Default: `'client:media'` */
@@ -29,33 +15,62 @@ export interface ShopifyThemeIslandsOptions {
   directiveIdle?: string;
 }
 
-export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOptions = {}): Plugin {
-  const pathPrefix = pluginOptions.pathPrefix ?? '/frontend/js/islands/';
-  const directiveVisible = pluginOptions.directiveVisible ?? 'client:visible';
-  const directiveMedia = pluginOptions.directiveMedia ?? 'client:media';
-  const directiveIdle = pluginOptions.directiveIdle ?? 'client:idle';
+const defaults = {
+  directories: ["/frontend/js/islands/"],
+  directiveVisible: "client:visible",
+  directiveMedia: "client:media",
+  directiveIdle: "client:idle",
+};
 
-  return {
-    name: 'vite-plugin-shopify-theme-islands',
-    enforce: 'pre',
-    resolveId(id: string) {
-      if (id === VIRTUAL_REVIVE || id === 'vite-plugin-shopify-theme-islands/revive') return RESOLVED_REVIVE;
-      return null;
-    },
-    load(id: string) {
-      if (id !== RESOLVED_REVIVE) return null;
-      return `
-import { revive as _revive } from ${JSON.stringify(runtimePath)};
+function normalizeDir(dir: string): string {
+  return dir.endsWith('/') ? dir : dir + '/';
+}
 
-export default function revive(islands) {
-  _revive(islands, {
-    pathPrefix: ${JSON.stringify(pathPrefix)},
-    directiveVisible: ${JSON.stringify(directiveVisible)},
-    directiveMedia: ${JSON.stringify(directiveMedia)},
-    directiveIdle: ${JSON.stringify(directiveIdle)},
+function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
+  const aliases = config.resolve.alias;
+  return dirs.map((dir) => {
+    for (const { find, replacement } of aliases) {
+      if (typeof find === "string" && dir.startsWith(find))
+        return dir.replace(find, replacement);
+      if (find instanceof RegExp && find.test(dir))
+        return dir.replace(find, replacement);
+    }
+    return dir;
   });
 }
-`;
+
+export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
+  const rawDirs = (Array.isArray(options.directories)
+    ? options.directories
+    : [options.directories ?? defaults.directories[0]]
+  ).map(normalizeDir);
+
+  const directiveVisible = options.directiveVisible ?? defaults.directiveVisible;
+  const directiveMedia = options.directiveMedia ?? defaults.directiveMedia;
+  const directiveIdle = options.directiveIdle ?? defaults.directiveIdle;
+
+  let resolvedDirs = rawDirs;
+
+  return {
+    name: "vite-plugin-shopify-theme-islands",
+    enforce: "pre",
+    configResolved(config) {
+      resolvedDirs = resolveAliases(rawDirs, config);
+    },
+    resolveId(id) {
+      if (id === VIRTUAL_ID || id === `virtual:${VIRTUAL_ID}`) return RESOLVED_ID;
+    },
+    load(id) {
+      if (id !== RESOLVED_ID) return;
+      const globs = resolvedDirs.map(
+        (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`
+      );
+      return [
+        `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
+        `const islands = { ${globs.join(", ")} };`,
+        `const options = ${JSON.stringify({ directiveVisible, directiveMedia, directiveIdle })};`,
+        `export default () => _islands(islands, options);`,
+      ].join("\n");
     },
   };
 }

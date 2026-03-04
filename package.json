@@ -11,8 +11,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./revive": {
-      "types": "./revive.d.ts"
+    "./islands": {
+      "types": "./islands.d.ts"
     },
     "./client": {
       "types": "./client.d.ts"
@@ -21,7 +21,7 @@
   "files": [
     "dist",
     "client.d.ts",
-    "revive.d.ts"
+    "islands.d.ts"
   ],
   "sideEffects": false,
   "keywords": [

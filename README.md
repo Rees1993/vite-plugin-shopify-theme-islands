@@ -21,33 +21,35 @@ import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
   plugins: [
-    shopifyThemeIslands({
-      pathPrefix: "/frontend/js/islands/",
-    }),
+    shopifyThemeIslands(),
   ],
 });
 ```
 
-### 2. Call `revive` in your entrypoint
+### 2. Call `islands` in your entrypoint
 
 ```ts
-import revive from "vite-plugin-shopify-theme-islands/revive";
+import islands from "vite-plugin-shopify-theme-islands/islands";
 
-const islands = import.meta.glob("/frontend/js/islands/*.{ts,js}");
-revive(islands);
+islands();
 ```
 
-The glob pattern must match the `pathPrefix` option. Each file in that directory corresponds to a custom element — the filename (without extension) is the tag name.
+That's it. The plugin automatically scans your islands directory and wires everything up.
 
 ## Writing islands
 
-Each island is a file in your islands directory that defines and registers a custom element. The filename must match the custom element tag name used in your Liquid templates.
+Each island is a file in your islands directory that defines and registers a custom element. The filename (without extension) must match the custom element tag name used in your Liquid templates.
 
 ```
 frontend/js/islands/
-  product-form.ts   →  <product-form>
-  cart-drawer.ts    →  <cart-drawer>
+  product-form.ts        →  <product-form>
+  cart-drawer.ts         →  <cart-drawer>
+  forms/checkout-form.ts →  <checkout-form>
 ```
+
+> Filenames must contain a hyphen (`product-form.ts` not `productform.ts`) — this is a Web Components requirement. Filenames must also be lowercase to match the tag name.
+
+Islands are scanned recursively, so subdirectories are supported.
 
 ```ts
 // frontend/js/islands/product-form.ts
@@ -61,14 +63,14 @@ class ProductForm extends HTMLElement {
   }
 }
 
-if (!customElements.get("product-form")) {
-  customElements.define("product-form", ProductForm);
-}
+customElements.define("product-form", ProductForm);
 ```
+
+> No need to guard against duplicate registration — the runtime ensures each island is only loaded once.
 
 ## Loading directives
 
-Add these attributes to your custom elements in Liquid to control when the JavaScript loads.
+Add these attributes to your custom elements in Liquid to control when the JavaScript loads. Without a directive, the island loads immediately.
 
 ### `client:visible`
 
@@ -110,12 +112,35 @@ Directives can be combined — the element will wait for all conditions to be me
 
 ## Options
 
-| Option             | Type     | Default                   | Description                                                    |
-| ------------------ | -------- | ------------------------- | -------------------------------------------------------------- |
-| `pathPrefix`       | `string` | `'/frontend/js/islands/'` | Path prefix used to match `import.meta.glob` keys to tag names |
-| `directiveVisible` | `string` | `'client:visible'`        | Attribute name for the visible directive                       |
-| `directiveMedia`   | `string` | `'client:media'`          | Attribute name for the media directive                         |
-| `directiveIdle`    | `string` | `'client:idle'`           | Attribute name for the idle directive                          |
+| Option             | Type                   | Default                       | Description                                                     |
+| ------------------ | ---------------------- | ----------------------------- | --------------------------------------------------------------- |
+| `directories`      | `string \| string[]`   | `['/frontend/js/islands/']`   | Directories to scan for island files. Accepts Vite aliases.     |
+| `directiveVisible` | `string`               | `'client:visible'`            | Attribute name for the visible directive                        |
+| `directiveMedia`   | `string`               | `'client:media'`              | Attribute name for the media directive                          |
+| `directiveIdle`    | `string`               | `'client:idle'`               | Attribute name for the idle directive                           |
+
+### Multiple island directories
+
+```ts
+shopifyThemeIslands({
+  directories: ["/frontend/js/islands/", "/frontend/js/components/"],
+});
+```
+
+### Using Vite aliases
+
+```ts
+export default defineConfig({
+  resolve: {
+    alias: { "@islands": "/frontend/js/islands" },
+  },
+  plugins: [
+    shopifyThemeIslands({
+      directories: ["@islands/"],
+    }),
+  ],
+});
+```
 
 ## License
 
