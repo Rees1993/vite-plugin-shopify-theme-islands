@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Vite plugin for island architecture in Shopify themes",
   "type": "module",
+  "packageManager": "bun@1.3.10",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -49,15 +50,15 @@
   "scripts": {
     "build": "tsup",
     "check": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "vite": ">=5"
+    "vite": ">=6"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^6.0.0"
   }
 }
