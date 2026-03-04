@@ -41,7 +41,7 @@ export default function shopifyThemeIslands(pluginOptions: ShopifyThemeIslandsOp
     name: 'vite-plugin-shopify-theme-islands',
     enforce: 'pre',
     resolveId(id: string) {
-      if (id === VIRTUAL_REVIVE) return '\0' + id;
+      if (id === VIRTUAL_REVIVE) return '\0' + VIRTUAL_REVIVE;
       if (id === VIRTUAL_RUNTIME) return id;
       return null;
     },
