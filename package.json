@@ -14,6 +14,10 @@
     "./islands": {
       "types": "./islands.d.ts"
     },
+    "./mixin": {
+      "types": "./dist/mixin.d.ts",
+      "default": "./dist/mixin.js"
+    },
     "./client": {
       "types": "./client.d.ts"
     }
@@ -48,7 +52,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build:js": "bun build src/index.ts src/runtime.ts --outdir dist --format esm",
+    "build:js": "bun build src/index.ts src/runtime.ts src/mixin.ts --outdir dist --format esm",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "build": "bun run build:js && bun run build:types",
     "check": "tsc --noEmit",
