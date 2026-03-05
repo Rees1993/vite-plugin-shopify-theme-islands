@@ -66,7 +66,11 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   const islandMap = new Map<string, () => Promise<unknown>>();
   for (const [key, loader] of Object.entries(islands)) {
     const tagName = key.split('/').pop()!.replace(/\.(ts|js)$/, '');
-    if (tagName.includes('-') && !islandMap.has(tagName)) islandMap.set(tagName, loader);
+    if (!tagName.includes('-')) {
+      console.warn(`[islands] Skipping "${key.split('/').pop()}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`);
+      continue;
+    }
+    if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
   // Track queued tag names to avoid duplicate customElements.define calls
