@@ -20,6 +20,8 @@ export interface ShopifyThemeIslandsOptions {
   directiveMedia?: string;
   /** Attribute for "load when idle". Default: `'client:idle'` */
   directiveIdle?: string;
+  /** Log discovered islands and generated virtual module. Default: `false` */
+  debug?: boolean;
 }
 
 const defaults = {
@@ -79,11 +81,22 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const directiveVisible = options.directiveVisible ?? defaults.directiveVisible;
   const directiveMedia = options.directiveMedia ?? defaults.directiveMedia;
   const directiveIdle = options.directiveIdle ?? defaults.directiveIdle;
+  const debug = options.debug ?? false;
+
+  const log = (...args: unknown[]) => { if (debug) console.log('[islands]', ...args); };
 
   let resolvedDirs = rawDirs;
   let root = process.cwd();
   const islandFiles = new Set<string>();
   let scanned = false;
+
+  // Returns true if the file is already covered by a scanned directory glob.
+  // resolvedDirs may be root-relative (/frontend/js/islands/) or absolute (alias-resolved),
+  // so normalise to absolute before comparing against islandFiles (which are always absolute).
+  const inDirectory = (file: string) => resolvedDirs.some((dir) => {
+    const absDir = dir.startsWith(root) ? dir : join(root, dir.replace(/^\//, ''));
+    return file.startsWith(absDir);
+  });
 
   return {
     name: "vite-plugin-shopify-theme-islands",
@@ -98,29 +111,40 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (scanned) return;
       scanned = true;
       scanForIslandFiles(root, islandFiles);
+      for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
+      if (debug) {
+        log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
+        log('Directives:', { visible: directiveVisible, media: directiveMedia, idle: directiveIdle });
+        if (islandFiles.size) {
+          log(`Found ${islandFiles.size} island file(s) via mixin import:`);
+          for (const f of islandFiles) log(' ', relative(root, f));
+        }
+      }
     },
 
     // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
       if (!id.endsWith('.ts') && !id.endsWith('.js')) return;
-      if (code.includes('shopify-theme-islands/island') && ISLAND_IMPORT_RE.test(code)) {
+      if (code.includes('shopify-theme-islands/island') && ISLAND_IMPORT_RE.test(code) && !inDirectory(id)) {
         islandFiles.add(id);
+        log('Detected island:', relative(root, id));
       } else {
-        islandFiles.delete(id);
+        if (islandFiles.delete(id)) log('Removed island:', relative(root, id));
       }
     },
 
     watchChange(id, { event }) {
       if (!TS_JS_RE.test(id)) return;
       if (event === 'delete') {
-        islandFiles.delete(id);
+        if (islandFiles.delete(id)) log('Removed island (deleted):', relative(root, id));
       } else {
         try {
           const content = readFileSync(id, 'utf-8');
-          if (ISLAND_IMPORT_RE.test(content)) {
+          if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id)) {
             islandFiles.add(id);
+            log('Detected island (watchChange):', relative(root, id));
           } else {
-            islandFiles.delete(id);
+            if (islandFiles.delete(id)) log('Removed island (watchChange):', relative(root, id));
           }
         } catch {
           // ignore unreadable files
