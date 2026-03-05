@@ -10,7 +10,6 @@
  *
  * Directives can be combined; all conditions must be met before loading.
  * A MutationObserver re-runs the same logic for elements added dynamically.
- * Returns a cleanup function that disconnects the observer.
  */
 
 interface ReviveOptions {
@@ -31,13 +30,10 @@ function media(query: string): Promise<void> {
 // Resolves when the element enters the viewport
 function visible(element: Element): Promise<void> {
   return new Promise((resolve) => {
-    const obs = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          obs.disconnect();
-          resolve();
-          break;
-        }
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        obs.disconnect();
+        resolve();
       }
     });
     obs.observe(element);
@@ -61,7 +57,7 @@ const customElementFilter: NodeFilter = {
       : NodeFilter.FILTER_SKIP,
 };
 
-export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): () => void {
+export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
   const attrVisible = options?.directiveVisible ?? 'client:visible';
   const attrMedia = options?.directiveMedia ?? 'client:media';
   const attrIdle = options?.directiveIdle ?? 'client:idle';
@@ -84,7 +80,7 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
   }
 
-  function process(el: Element): void {
+  function activate(el: Element): void {
     const tagName = el.tagName.toLowerCase();
     if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
@@ -96,11 +92,11 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
 
   // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
   // and avoids stack overflow on deeply nested pages
-  function walk(root: Element): void {
-    process(root);
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, customElementFilter);
+  function walk(el: Element): void {
+    activate(el);
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT, customElementFilter);
     let node: Node | null;
-    while ((node = walker.nextNode())) process(node as Element);
+    while ((node = walker.nextNode())) activate(node as Element);
   }
 
   const observer = new MutationObserver((mutations) => {
@@ -121,6 +117,4 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   } else {
     init();
   }
-
-  return () => observer.disconnect();
 }

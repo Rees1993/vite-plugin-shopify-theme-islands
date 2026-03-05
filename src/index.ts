@@ -1,8 +1,15 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
-const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/islands";
+const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
+const ISLAND_ID = "vite-plugin-shopify-theme-islands/island";
 const runtimePath = new URL("./runtime.js", import.meta.url).pathname;
+const islandPath = new URL("./island.js", import.meta.url).pathname;
+
+const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
+const TS_JS_RE = /\.(ts|js)$/;
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -39,6 +46,30 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
+// Recursively scan a directory for files containing the Island import
+function scanForIslandFiles(dir: string, found: Set<string>): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      scanForIslandFiles(full, found);
+    } else if (TS_JS_RE.test(entry.name)) {
+      try {
+        const content = readFileSync(full, 'utf-8');
+        if (ISLAND_IMPORT_RE.test(content)) found.add(full);
+      } catch {
+        // skip unreadable files
+      }
+    }
+  }
+}
+
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
   const rawDirs = (Array.isArray(options.directories)
     ? options.directories
@@ -50,26 +81,81 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const directiveIdle = options.directiveIdle ?? defaults.directiveIdle;
 
   let resolvedDirs = rawDirs;
+  let root = process.cwd();
+  const islandFiles = new Set<string>();
+  let scanned = false;
 
   return {
     name: "vite-plugin-shopify-theme-islands",
     enforce: "pre",
+
     configResolved(config) {
+      root = config.root;
       resolvedDirs = resolveAliases(rawDirs, config);
     },
-    resolveId(id) {
-      if (id === VIRTUAL_ID || id === `virtual:${VIRTUAL_ID}`) return RESOLVED_ID;
+
+    buildStart() {
+      if (scanned) return;
+      scanned = true;
+      scanForIslandFiles(root, islandFiles);
     },
+
+    // Pick up files added/changed during dev (HMR); remove stale entries
+    transform(code, id) {
+      if (!id.endsWith('.ts') && !id.endsWith('.js')) return;
+      if (code.includes('shopify-theme-islands/island') && ISLAND_IMPORT_RE.test(code)) {
+        islandFiles.add(id);
+      } else {
+        islandFiles.delete(id);
+      }
+    },
+
+    watchChange(id, { event }) {
+      if (!TS_JS_RE.test(id)) return;
+      if (event === 'delete') {
+        islandFiles.delete(id);
+      } else {
+        try {
+          const content = readFileSync(id, 'utf-8');
+          if (ISLAND_IMPORT_RE.test(content)) {
+            islandFiles.add(id);
+          } else {
+            islandFiles.delete(id);
+          }
+        } catch {
+          // ignore unreadable files
+        }
+      }
+    },
+
+    resolveId(id) {
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
+      if (id === ISLAND_ID) return islandPath;
+    },
+
     load(id) {
       if (id !== RESOLVED_ID) return;
+
       const globs = resolvedDirs.map(
         (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`
       );
+
+      // Use import.meta.glob for island files so Vite handles base URL rewriting
+      // (hand-crafted import() calls resolve against the page origin, not the dev server)
+      const islandPaths = [...islandFiles].map(
+        (file) => '/' + relative(root, file).replace(/\\/g, '/')
+      );
+
+      const islandsEntries = [
+        globs.length ? `{ ${globs.join(", ")} }` : null,
+        islandFiles.size ? `import.meta.glob(${JSON.stringify(islandPaths)})` : null,
+      ].filter(Boolean);
+
       return [
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
-        `const islands = { ${globs.join(", ")} };`,
+        `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
         `const options = ${JSON.stringify({ directiveVisible, directiveMedia, directiveIdle })};`,
-        `export default () => _islands(islands, options);`,
+        `_islands(islands, options);`,
       ].join("\n");
     },
   };

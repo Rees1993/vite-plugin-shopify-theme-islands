@@ -20,25 +20,25 @@ import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
-  plugins: [
-    shopifyThemeIslands(),
-  ],
+  plugins: [shopifyThemeIslands()],
 });
 ```
 
-### 2. Call `islands` in your entrypoint
+### 2. Import the runtime in your entrypoint
 
 ```ts
-import islands from "vite-plugin-shopify-theme-islands/islands";
-
-islands();
+import "vite-plugin-shopify-theme-islands/revive";
 ```
 
 That's it. The plugin automatically scans your islands directory and wires everything up.
 
 ## Writing islands
 
-Each island is a file in your islands directory that defines and registers a custom element. The filename (without extension) must match the custom element tag name used in your Liquid templates.
+Two approaches — use either or both.
+
+### Directory scanning
+
+Drop files into your islands directory and they're automatically picked up. The filename (without extension) must match the custom element tag name used in your Liquid templates.
 
 ```
 frontend/js/islands/
@@ -49,7 +49,7 @@ frontend/js/islands/
 
 > Filenames must contain a hyphen (`product-form.ts` not `productform.ts`) — this is a Web Components requirement. Filenames must also be lowercase to match the tag name.
 
-Islands are scanned recursively, so subdirectories are supported.
+Subdirectories are supported. Any file in the directory becomes an island automatically.
 
 ```ts
 // frontend/js/islands/product-form.ts
@@ -57,16 +57,44 @@ class ProductForm extends HTMLElement {
   connectedCallback() {
     // ...
   }
+}
 
-  disconnectedCallback() {
+if (!customElements.get("product-form")) {
+  customElements.define("product-form", ProductForm);
+}
+```
+
+### Island mixin
+
+Mark any file as an island with the `Island` mixin, regardless of where it lives. Import it and extend from `Island(HTMLElement)` instead of `HTMLElement` — everything else stays identical.
+
+```ts
+// frontend/js/components/site-footer.ts
+import Island from "vite-plugin-shopify-theme-islands/island";
+
+class SiteFooter extends Island(HTMLElement) {
+  connectedCallback() {
     // ...
   }
 }
 
-customElements.define("product-form", ProductForm);
+if (!customElements.get("site-footer")) {
+  customElements.define("site-footer", SiteFooter);
+}
 ```
 
-> No need to guard against duplicate registration — the runtime ensures each island is only loaded once.
+The plugin detects the mixin import at build time and includes the file as a lazy island chunk — no directory config needed.
+
+### Which to use
+
+|                   | Directory scanning                 | Island mixin                   |
+| ----------------- | ---------------------------------- | ------------------------------ |
+| File organisation | Dedicated islands directory        | Co-located anywhere            |
+| Opt-in style      | Convention (everything in the dir) | Explicit (per file)            |
+| Auditability      | One directory to check             | Search for `/island` import    |
+| Build overhead    | None                               | Filesystem scan at build start |
+
+Both can be used together — directory scanning for new islands, the mixin for existing components you want to adopt without moving.
 
 ## Loading directives
 
@@ -112,12 +140,12 @@ Directives can be combined — the element will wait for all conditions to be me
 
 ## Options
 
-| Option             | Type                   | Default                       | Description                                                     |
-| ------------------ | ---------------------- | ----------------------------- | --------------------------------------------------------------- |
-| `directories`      | `string \| string[]`   | `['/frontend/js/islands/']`   | Directories to scan for island files. Accepts Vite aliases.     |
-| `directiveVisible` | `string`               | `'client:visible'`            | Attribute name for the visible directive                        |
-| `directiveMedia`   | `string`               | `'client:media'`              | Attribute name for the media directive                          |
-| `directiveIdle`    | `string`               | `'client:idle'`               | Attribute name for the idle directive                           |
+| Option             | Type                 | Default                     | Description                                                 |
+| ------------------ | -------------------- | --------------------------- | ----------------------------------------------------------- |
+| `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases. |
+| `directiveVisible` | `string`             | `'client:visible'`          | Attribute name for the visible directive                    |
+| `directiveMedia`   | `string`             | `'client:media'`            | Attribute name for the media directive                      |
+| `directiveIdle`    | `string`             | `'client:idle'`             | Attribute name for the idle directive                       |
 
 ### Multiple island directories
 
