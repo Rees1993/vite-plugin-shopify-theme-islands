@@ -140,7 +140,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
         `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
         `const options = ${JSON.stringify({ directiveVisible, directiveMedia, directiveIdle })};`,
-        `export default () => _islands(islands, options);`,
+        `_islands(islands, options);`,
       ].join("\n");
     },
   };

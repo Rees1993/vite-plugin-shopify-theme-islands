@@ -24,12 +24,10 @@ export default defineConfig({
 });
 ```
 
-### 2. Call `revive` in your entrypoint
+### 2. Import the runtime in your entrypoint
 
 ```ts
-import revive from "vite-plugin-shopify-theme-islands/revive";
-
-revive();
+import "vite-plugin-shopify-theme-islands/revive";
 ```
 
 That's it. The plugin automatically scans your islands directory and wires everything up.

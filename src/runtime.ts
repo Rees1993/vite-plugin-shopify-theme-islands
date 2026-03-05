@@ -10,7 +10,6 @@
  *
  * Directives can be combined; all conditions must be met before loading.
  * A MutationObserver re-runs the same logic for elements added dynamically.
- * Returns a cleanup function that disconnects the observer.
  */
 
 interface ReviveOptions {
@@ -58,7 +57,7 @@ const customElementFilter: NodeFilter = {
       : NodeFilter.FILTER_SKIP,
 };
 
-export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): () => void {
+export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
   const attrVisible = options?.directiveVisible ?? 'client:visible';
   const attrMedia = options?.directiveMedia ?? 'client:media';
   const attrIdle = options?.directiveIdle ?? 'client:idle';
@@ -118,6 +117,4 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   } else {
     init();
   }
-
-  return () => observer.disconnect();
 }
