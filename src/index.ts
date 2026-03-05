@@ -1,14 +1,14 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
 const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
-const MIXIN_ID = "vite-plugin-shopify-theme-islands/island";
+const ISLAND_ID = "vite-plugin-shopify-theme-islands/island";
 const runtimePath = new URL("./runtime.js", import.meta.url).pathname;
-const mixinPath = new URL("./island.js", import.meta.url).pathname;
+const islandPath = new URL("./island.js", import.meta.url).pathname;
 
-const MIXIN_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
+const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;
 
 export interface ShopifyThemeIslandsOptions {
@@ -46,8 +46,8 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
-// Recursively scan a directory for files containing the Island mixin import
-function scanForMixinFiles(dir: string, found: Set<string>): void {
+// Recursively scan a directory for files containing the Island import
+function scanForIslandFiles(dir: string, found: Set<string>): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -58,11 +58,11 @@ function scanForMixinFiles(dir: string, found: Set<string>): void {
     if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      scanForMixinFiles(full, found);
+      scanForIslandFiles(full, found);
     } else if (TS_JS_RE.test(entry.name)) {
       try {
         const content = readFileSync(full, 'utf-8');
-        if (MIXIN_IMPORT_RE.test(content)) found.add(full);
+        if (ISLAND_IMPORT_RE.test(content)) found.add(full);
       } catch {
         // skip unreadable files
       }
@@ -82,7 +82,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
   let resolvedDirs = rawDirs;
   let root = process.cwd();
-  const mixinFiles = new Set<string>();
+  const islandFiles = new Set<string>();
   let scanned = false;
 
   return {
@@ -97,27 +97,40 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     buildStart() {
       if (scanned) return;
       scanned = true;
-      scanForMixinFiles(root, mixinFiles);
+      scanForIslandFiles(root, islandFiles);
     },
 
     // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
       if (!id.endsWith('.ts') && !id.endsWith('.js')) return;
-      if (code.includes('shopify-theme-islands/island') && MIXIN_IMPORT_RE.test(code)) {
-        mixinFiles.add(id);
+      if (code.includes('shopify-theme-islands/island') && ISLAND_IMPORT_RE.test(code)) {
+        islandFiles.add(id);
       } else {
-        mixinFiles.delete(id);
+        islandFiles.delete(id);
       }
     },
 
-    // Remove deleted files from the mixin set
     watchChange(id, { event }) {
-      if (event === 'delete') mixinFiles.delete(id);
+      if (!TS_JS_RE.test(id)) return;
+      if (event === 'delete') {
+        islandFiles.delete(id);
+      } else {
+        try {
+          const content = readFileSync(id, 'utf-8');
+          if (ISLAND_IMPORT_RE.test(content)) {
+            islandFiles.add(id);
+          } else {
+            islandFiles.delete(id);
+          }
+        } catch {
+          // ignore unreadable files
+        }
+      }
     },
 
     resolveId(id) {
       if (id === VIRTUAL_ID) return RESOLVED_ID;
-      if (id === MIXIN_ID) return mixinPath;
+      if (id === ISLAND_ID) return islandPath;
     },
 
     load(id) {
@@ -127,13 +140,15 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`
       );
 
-      const mixinImports = [...mixinFiles].map(
-        (file) => `  [${JSON.stringify(file)}]: () => import(${JSON.stringify(file)})`
+      // Use import.meta.glob for island files so Vite handles base URL rewriting
+      // (hand-crafted import() calls resolve against the page origin, not the dev server)
+      const islandPaths = [...islandFiles].map(
+        (file) => '/' + relative(root, file).replace(/\\/g, '/')
       );
 
       const islandsEntries = [
         globs.length ? `{ ${globs.join(", ")} }` : null,
-        mixinFiles.size ? `{\n${mixinImports.join(",\n")}\n}` : null,
+        islandFiles.size ? `import.meta.glob(${JSON.stringify(islandPaths)})` : null,
       ].filter(Boolean);
 
       return [

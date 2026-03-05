@@ -69,17 +69,17 @@ if (!customElements.get("product-form")) {
 Mark any file as an island with the `Island` mixin, regardless of where it lives. Import it and extend from `Island(HTMLElement)` instead of `HTMLElement` — everything else stays identical.
 
 ```ts
-// frontend/js/components/pre-footer.ts
+// frontend/js/components/site-footer.ts
 import Island from "vite-plugin-shopify-theme-islands/island";
 
-class PreFooter extends Island(HTMLElement) {
+class SiteFooter extends Island(HTMLElement) {
   connectedCallback() {
     // ...
   }
 }
 
-if (!customElements.get("pre-footer")) {
-  customElements.define("pre-footer", PreFooter);
+if (!customElements.get("site-footer")) {
+  customElements.define("site-footer", SiteFooter);
 }
 ```
 
