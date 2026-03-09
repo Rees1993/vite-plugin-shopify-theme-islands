@@ -23,7 +23,9 @@
     "dist",
     "revive.d.ts"
   ],
-  "sideEffects": ["./dist/runtime.js"],
+  "sideEffects": [
+    "./dist/runtime.js"
+  ],
   "keywords": [
     "vite",
     "shopify",
@@ -52,12 +54,17 @@
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "build": "rm -rf dist && bun run build:js && bun run build:types",
     "check": "tsc --noEmit",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "test:plugin": "bun test src/__tests__/plugin.test.ts",
+    "test:runtime": "bun test ./src/__tests__/runtime.test.ts",
+    "test": "bun run test:plugin && bun run test:runtime"
   },
   "peerDependencies": {
     "vite": ">=6"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.8.3",
+    "@types/bun": "latest",
     "@types/node": "^25.3.3",
     "typescript": "^5.0.0",
     "vite": "^6.0.0"
