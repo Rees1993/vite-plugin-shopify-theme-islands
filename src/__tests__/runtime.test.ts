@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
 import { revive } from "../runtime";
 
 // Flush microtasks + a short timer tick so async directive chains resolve
@@ -12,14 +12,10 @@ describe("revive", () => {
 
   describe("islandMap", () => {
     it("warns and skips non-hyphenated filenames", () => {
-      const warnings: string[] = [];
-      const original = console.warn;
-      console.warn = (...args: unknown[]) => warnings.push(args.join(" "));
-
+      const spy = spyOn(console, "warn");
       revive({ "/islands/myisland.ts": async () => {} });
-
-      expect(warnings.some((w) => w.includes("must contain a hyphen"))).toBe(true);
-      console.warn = original;
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("must contain a hyphen"));
+      spy.mockRestore();
     });
 
     it("loads an island that matches the tag name", async () => {
