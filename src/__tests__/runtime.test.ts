@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { revive } from "../runtime";
 
 // Flush microtasks + a short timer tick so async directive chains resolve
@@ -79,16 +79,23 @@ describe("revive", () => {
   });
 
   describe("client:visible", () => {
-    it("does not load until the IntersectionObserver callback fires", async () => {
-      let trigger!: (entries: Partial<IntersectionObserverEntry>[]) => void;
-      const MockIO = function (this: any, cb: any) {
+    let trigger!: (entries: Partial<IntersectionObserverEntry>[]) => void;
+    let originalIO: unknown;
+
+    beforeEach(() => {
+      originalIO = (globalThis as any).IntersectionObserver;
+      (globalThis as any).IntersectionObserver = function (this: any, cb: any) {
         trigger = cb;
         this.observe = () => {};
         this.disconnect = () => {};
       };
-      const original = (globalThis as any).IntersectionObserver;
-      (globalThis as any).IntersectionObserver = MockIO;
+    });
 
+    afterEach(() => {
+      (globalThis as any).IntersectionObserver = originalIO;
+    });
+
+    it("does not load until the IntersectionObserver callback fires", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<lazy-section client:visible></lazy-section>";
       revive({ "/islands/lazy-section.ts": loader });
@@ -97,20 +104,9 @@ describe("revive", () => {
       trigger([{ isIntersecting: true }]);
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
-
-      (globalThis as any).IntersectionObserver = original;
     });
 
     it("does not load when IntersectionObserver fires with isIntersecting false", async () => {
-      let trigger!: (entries: Partial<IntersectionObserverEntry>[]) => void;
-      const MockIO = function (this: any, cb: any) {
-        trigger = cb;
-        this.observe = () => {};
-        this.disconnect = () => {};
-      };
-      const original = (globalThis as any).IntersectionObserver;
-      (globalThis as any).IntersectionObserver = MockIO;
-
       const loader = mock(async () => {});
       document.body.innerHTML = "<off-screen client:visible></off-screen>";
       revive({ "/islands/off-screen.ts": loader });
@@ -118,14 +114,21 @@ describe("revive", () => {
       trigger([{ isIntersecting: false }]);
       await flush();
       expect(loader).not.toHaveBeenCalled();
-
-      (globalThis as any).IntersectionObserver = original;
     });
   });
 
   describe("client:media", () => {
+    let originalMatchMedia: typeof window.matchMedia;
+
+    beforeEach(() => {
+      originalMatchMedia = window.matchMedia;
+    });
+
+    afterEach(() => {
+      (window as any).matchMedia = originalMatchMedia;
+    });
+
     it("loads immediately when the media query already matches", async () => {
-      const original = window.matchMedia;
       (window as any).matchMedia = () => ({ matches: true, addEventListener: () => {} });
 
       const loader = mock(async () => {});
@@ -133,13 +136,10 @@ describe("revive", () => {
       revive({ "/islands/media-panel.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
-
-      (window as any).matchMedia = original;
     });
 
     it("waits for a change event when the query does not initially match", async () => {
       let changeHandler!: () => void;
-      const original = window.matchMedia;
       (window as any).matchMedia = () => ({
         matches: false,
         addEventListener: (_: string, h: () => void) => { changeHandler = h; },
@@ -154,8 +154,6 @@ describe("revive", () => {
       changeHandler();
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
-
-      (window as any).matchMedia = original;
     });
   });
 
