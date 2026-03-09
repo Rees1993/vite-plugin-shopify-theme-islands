@@ -23,7 +23,7 @@
     "dist",
     "revive.d.ts"
   ],
-  "sideEffects": false,
+  "sideEffects": ["./dist/runtime.js"],
   "keywords": [
     "vite",
     "shopify",
