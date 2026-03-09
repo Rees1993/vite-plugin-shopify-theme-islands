@@ -1,12 +1,13 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
 const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
 const ISLAND_ID = "vite-plugin-shopify-theme-islands/island";
-const runtimePath = new URL("./runtime.js", import.meta.url).pathname;
-const islandPath = new URL("./island.js", import.meta.url).pathname;
+const runtimePath = fileURLToPath(new URL("./runtime.js", import.meta.url));
+const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 
 const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;

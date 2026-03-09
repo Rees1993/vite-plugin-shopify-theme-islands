@@ -1,5 +1,9 @@
 # vite-plugin-shopify-theme-islands
 
+[![npm version](https://img.shields.io/npm/v/vite-plugin-shopify-theme-islands)](https://www.npmjs.com/package/vite-plugin-shopify-theme-islands)
+[![npm downloads](https://img.shields.io/npm/dm/vite-plugin-shopify-theme-islands)](https://www.npmjs.com/package/vite-plugin-shopify-theme-islands)
+[![license](https://img.shields.io/npm/l/vite-plugin-shopify-theme-islands)](./LICENSE)
+
 Island architecture for Shopify themes. Lazily hydrate custom elements using loading directives — only load the JavaScript when it's actually needed.
 
 ## Installation
@@ -146,6 +150,7 @@ Directives can be combined — the element will wait for all conditions to be me
 | `directiveVisible` | `string`             | `'client:visible'`          | Attribute name for the visible directive                    |
 | `directiveMedia`   | `string`             | `'client:media'`            | Attribute name for the media directive                      |
 | `directiveIdle`    | `string`             | `'client:idle'`             | Attribute name for the idle directive                       |
+| `debug`            | `boolean`            | `false`                     | Log discovered islands and active directives at startup     |
 
 ### Multiple island directories
 
