@@ -60,6 +60,14 @@ describe("revive", () => {
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
+    it("respects custom idle timeout", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<idle-fast client:idle></idle-fast>";
+      revive({ "/islands/idle-fast.ts": loader }, { directives: { idle: { timeout: 50 } } });
+      await new Promise<void>((r) => setTimeout(r, 100)); // wait past the 50ms custom timeout
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
     it("calls loader via requestIdleCallback when available", async () => {
       let cb!: () => void;
       // With GlobalRegistrator, window === globalThis
@@ -80,12 +88,14 @@ describe("revive", () => {
 
   describe("client:visible", () => {
     let trigger!: (entries: Partial<IntersectionObserverEntry>[]) => void;
+    let ioOptions: IntersectionObserverInit | undefined;
     let originalIO: unknown;
 
     beforeEach(() => {
       originalIO = (globalThis as any).IntersectionObserver;
-      (globalThis as any).IntersectionObserver = function (this: any, cb: any) {
+      (globalThis as any).IntersectionObserver = function (this: any, cb: any, opts?: IntersectionObserverInit) {
         trigger = cb;
+        ioOptions = opts;
         this.observe = () => {};
         this.disconnect = () => {};
       };
@@ -112,6 +122,36 @@ describe("revive", () => {
       revive({ "/islands/off-screen.ts": loader });
 
       trigger([{ isIntersecting: false }]);
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+    });
+
+    it("passes 200px rootMargin to IntersectionObserver by default", () => {
+      document.body.innerHTML = "<margin-default client:visible></margin-default>";
+      revive({ "/islands/margin-default.ts": mock(async () => {}) });
+      expect(ioOptions?.rootMargin).toBe("200px");
+    });
+
+    it("passes custom rootMargin to IntersectionObserver", () => {
+      document.body.innerHTML = "<margin-custom client:visible></margin-custom>";
+      revive({ "/islands/margin-custom.ts": mock(async () => {}) }, { directives: { visible: { rootMargin: "0px" } } });
+      expect(ioOptions?.rootMargin).toBe("0px");
+    });
+
+    it("passes custom threshold to IntersectionObserver", () => {
+      document.body.innerHTML = "<threshold-test client:visible></threshold-test>";
+      revive({ "/islands/threshold-test.ts": mock(async () => {}) }, { directives: { visible: { threshold: 0.5 } } });
+      expect(ioOptions?.threshold).toBe(0.5);
+    });
+
+    it("does not load when element is removed before becoming visible", async () => {
+      const loader = mock(async () => {});
+      const el = document.createElement("ghost-island");
+      el.setAttribute("client:visible", "");
+      document.body.appendChild(el);
+      revive({ "/islands/ghost-island.ts": loader });
+
+      document.body.removeChild(el);
       await flush();
       expect(loader).not.toHaveBeenCalled();
     });

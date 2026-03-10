@@ -12,24 +12,51 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;
 
+/** Shared directive configuration shape used by both the plugin and the runtime. */
+export interface DirectivesConfig {
+  /** Configuration for the `client:visible` directive (IntersectionObserver). */
+  visible?: {
+    /** HTML attribute name. Default: `'client:visible'` */
+    attribute?: string;
+    /** Passed to IntersectionObserver — loads islands before they scroll into view. Default: `'200px'` */
+    rootMargin?: string;
+    /** Passed to IntersectionObserver — ratio of element that must be visible. Default: `0` */
+    threshold?: number;
+  };
+  /** Configuration for the `client:idle` directive (requestIdleCallback). */
+  idle?: {
+    /** HTML attribute name. Default: `'client:idle'` */
+    attribute?: string;
+    /** Fallback timeout (ms) when requestIdleCallback is unavailable. Default: `200` */
+    timeout?: number;
+  };
+  /** Configuration for the `client:media` directive (matchMedia). */
+  media?: {
+    /** HTML attribute name. Default: `'client:media'` */
+    attribute?: string;
+  };
+}
+
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
   directories?: string | string[];
-  /** Attribute for "load when visible". Default: `'client:visible'` */
-  directiveVisible?: string;
-  /** Attribute for "load when media matches". Default: `'client:media'` */
-  directiveMedia?: string;
-  /** Attribute for "load when idle". Default: `'client:idle'` */
-  directiveIdle?: string;
   /** Log discovered islands and generated virtual module. Default: `false` */
   debug?: boolean;
+  /** Per-directive configuration. */
+  directives?: DirectivesConfig;
+}
+
+export interface ReviveOptions {
+  directives?: DirectivesConfig;
 }
 
 const defaults = {
   directories: ["/frontend/js/islands/"],
-  directiveVisible: "client:visible",
-  directiveMedia: "client:media",
-  directiveIdle: "client:idle",
+  directives: {
+    visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
+    idle:    { attribute: "client:idle",    timeout: 200 },
+    media:   { attribute: "client:media" },
+  },
 };
 
 function normalizeDir(dir: string): string {
@@ -79,11 +106,14 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     : [options.directories ?? defaults.directories[0]]
   ).map(normalizeDir);
 
-  const directiveVisible = options.directiveVisible ?? defaults.directiveVisible;
-  const directiveMedia = options.directiveMedia ?? defaults.directiveMedia;
-  const directiveIdle = options.directiveIdle ?? defaults.directiveIdle;
-  const debug = options.debug ?? false;
+  // Deep merge directives — per-directive defaults are preserved when only some keys are overridden
+  const directives: DirectivesConfig = {
+    visible: { ...defaults.directives.visible, ...options.directives?.visible },
+    idle:    { ...defaults.directives.idle,    ...options.directives?.idle },
+    media:   { ...defaults.directives.media,   ...options.directives?.media },
+  };
 
+  const debug = options.debug ?? false;
   const log = (...args: unknown[]) => { if (debug) console.log('[islands]', ...args); };
 
   let resolvedDirs = rawDirs;
@@ -115,7 +145,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
       if (debug) {
         log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
-        log('Directives:', { visible: directiveVisible, media: directiveMedia, idle: directiveIdle });
+        log('Directives:', directives);
         if (islandFiles.size) {
           log(`Found ${islandFiles.size} island file(s) via mixin import:`);
           for (const f of islandFiles) log(' ', relative(root, f));
@@ -179,7 +209,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       return [
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
         `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify({ directiveVisible, directiveMedia, directiveIdle })};`,
+        `const options = ${JSON.stringify({ directives })};`,
         `_islands(islands, options);`,
       ].join("\n");
     },
