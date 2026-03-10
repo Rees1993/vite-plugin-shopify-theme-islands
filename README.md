@@ -184,22 +184,24 @@ Register your own loading conditions with the `clientDirectives` plugin option. 
 ### 1. Write the directive
 
 ```ts
-// src/directives/on-click.ts
+// src/directives/hover.ts
 import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
 
-const onClickDirective: ClientDirective = (load, { value }, el) => {
-  el.addEventListener("click", load, { once: true });
+const hoverDirective: ClientDirective = (load, _opts, el) => {
+  el.addEventListener("mouseenter", load, { once: true });
 };
 
-export default onClickDirective;
+export default hoverDirective;
 ```
+
+`mouseenter` fires before `click`, so the module starts downloading the moment the user moves their cursor toward the element — by the time they click it's already loaded.
 
 The function signature is `(load, options, el) => void | Promise<void>`:
 
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
 | `load` | `() => Promise<unknown>` | Call this to trigger the island module load |
-| `options.name` | `string` | The matched attribute name, e.g. `'client:on-click'` |
+| `options.name` | `string` | The matched attribute name, e.g. `'client:hover'` |
 | `options.value` | `string` | The attribute value; empty string if no value was set |
 | `el` | `Element` | The island element |
 
@@ -213,7 +215,7 @@ export default defineConfig({
   plugins: [
     shopifyThemeIslands({
       clientDirectives: [
-        { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
+        { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
       ],
     }),
   ],
@@ -223,7 +225,7 @@ export default defineConfig({
 ### 3. Use it in Liquid
 
 ```html
-<quick-add client:on-click>
+<quick-add client:hover>
   <!-- ... -->
 </quick-add>
 ```
@@ -233,8 +235,8 @@ export default defineConfig({
 Built-in directives always run first. A custom directive is only invoked after all built-in conditions on the element have been met. This means you can gate a custom directive behind `client:visible` to avoid wiring event listeners for off-screen elements:
 
 ```html
-<!-- element must enter the viewport before the click handler is registered -->
-<quick-add client:visible client:on-click>
+<!-- element must enter the viewport before the hover handler is registered -->
+<quick-add client:visible client:hover>
   <!-- ... -->
 </quick-add>
 ```
