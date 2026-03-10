@@ -126,13 +126,30 @@ Loads the island when a CSS media query matches.
 
 ### `client:idle`
 
-Loads the island once the browser is idle (uses `requestIdleCallback`, falls back to `setTimeout`).
+Loads the island once the browser is idle (uses `requestIdleCallback` with a 500ms deadline, falls back to `setTimeout`).
 
 ```html
 <recently-viewed client:idle>
   <!-- ... -->
 </recently-viewed>
 ```
+
+### `client:defer`
+
+Loads the island after a fixed delay. The delay in milliseconds is read from the attribute value. If no value is given, the configured default (3000ms) is used.
+
+```html
+<chat-widget client:defer="3000">
+  <!-- ... -->
+</chat-widget>
+
+<!-- uses the default 3000ms delay -->
+<analytics-widget client:defer>
+  <!-- ... -->
+</analytics-widget>
+```
+
+Unlike `client:idle`, which waits for genuine browser idle time, `client:defer` always waits exactly the specified number of milliseconds.
 
 Directives can be combined — the element will wait for all conditions to be met before loading:
 
@@ -144,13 +161,47 @@ Directives can be combined — the element will wait for all conditions to be me
 
 ## Options
 
-| Option             | Type                 | Default                     | Description                                                 |
-| ------------------ | -------------------- | --------------------------- | ----------------------------------------------------------- |
-| `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases. |
-| `directiveVisible` | `string`             | `'client:visible'`          | Attribute name for the visible directive                    |
-| `directiveMedia`   | `string`             | `'client:media'`            | Attribute name for the media directive                      |
-| `directiveIdle`    | `string`             | `'client:idle'`             | Attribute name for the idle directive                       |
-| `debug`            | `boolean`            | `false`                     | Log discovered islands and active directives at startup     |
+| Option        | Type                 | Default                     | Description                                                                         |
+| ------------- | -------------------- | --------------------------- | ----------------------------------------------------------------------------------- |
+| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                         |
+| `directives`  | `object`             | see below                   | Per-directive configuration. Each directive has an `attribute` name and extra options. |
+| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.   |
+
+### Directive defaults
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: {
+      attribute: "client:visible", // HTML attribute name
+      rootMargin: "200px",         // passed to IntersectionObserver — pre-loads before scrolling into view
+      threshold: 0,                // passed to IntersectionObserver — ratio of element that must be visible
+    },
+    idle: {
+      attribute: "client:idle",    // HTML attribute name
+      timeout: 500,                // deadline (ms) for requestIdleCallback; also the setTimeout fallback delay
+    },
+    media: {
+      attribute: "client:media",   // HTML attribute name
+    },
+    defer: {
+      attribute: "client:defer",   // HTML attribute name
+      delay: 3000,                 // fallback delay (ms) when the attribute has no value
+    },
+  },
+});
+```
+
+All options are optional — only override what you need. Partial overrides preserve the other defaults:
+
+```ts
+// Only change rootMargin — attribute and threshold keep their defaults
+shopifyThemeIslands({
+  directives: {
+    visible: { rootMargin: "400px" },
+  },
+});
+```
 
 ### Multiple island directories
 

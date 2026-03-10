@@ -27,13 +27,20 @@ export interface DirectivesConfig {
   idle?: {
     /** HTML attribute name. Default: `'client:idle'` */
     attribute?: string;
-    /** Fallback timeout (ms) when requestIdleCallback is unavailable. Default: `200` */
+    /** Deadline (ms) passed to requestIdleCallback; also used as the setTimeout fallback delay. Default: `500` */
     timeout?: number;
   };
   /** Configuration for the `client:media` directive (matchMedia). */
   media?: {
     /** HTML attribute name. Default: `'client:media'` */
     attribute?: string;
+  };
+  /** Configuration for the `client:defer` directive (fixed setTimeout delay). */
+  defer?: {
+    /** HTML attribute name. Default: `'client:defer'` */
+    attribute?: string;
+    /** Fallback delay (ms) when the attribute has no value. Default: `3000` */
+    delay?: number;
   };
 }
 
@@ -48,6 +55,8 @@ export interface ShopifyThemeIslandsOptions {
 
 export interface ReviveOptions {
   directives?: DirectivesConfig;
+  /** Log island activation and directive events to the console. Default: `false` */
+  debug?: boolean;
 }
 
 const defaults = {
@@ -56,6 +65,7 @@ const defaults = {
     visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
     idle:    { attribute: "client:idle",    timeout: 500 },
     media:   { attribute: "client:media" },
+    defer:   { attribute: "client:defer",   delay: 3000 },
   },
 };
 
@@ -111,6 +121,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     visible: { ...defaults.directives.visible, ...options.directives?.visible },
     idle:    { ...defaults.directives.idle,    ...options.directives?.idle },
     media:   { ...defaults.directives.media,   ...options.directives?.media },
+    defer:   { ...defaults.directives.defer,   ...options.directives?.defer },
   };
 
   const debug = options.debug ?? false;
@@ -209,7 +220,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       return [
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
         `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify({ directives })};`,
+        `const options = ${JSON.stringify({ directives, debug })};`,
         `_islands(islands, options);`,
       ].join("\n");
     },

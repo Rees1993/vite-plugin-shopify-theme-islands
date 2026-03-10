@@ -7,6 +7,7 @@
  *   client:visible  — load when the element scrolls into view
  *   client:media    — load when a CSS media query matches
  *   client:idle     — load when the browser has idle time
+ *   client:defer    — load after a fixed delay (ms value on the attribute)
  *
  * Directives can be combined; all conditions must be met before loading.
  * A MutationObserver re-runs the same logic for elements added dynamically.
@@ -49,6 +50,11 @@ function visible(
   });
 }
 
+// Resolves after a fixed delay.
+function defer(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Resolves when the browser is idle.
 // Falls back to setTimeout with a configurable timeout for browsers without requestIdleCallback.
 function idle(timeout: number): Promise<void> {
@@ -71,9 +77,12 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   const attrVisible = options?.directives?.visible?.attribute ?? 'client:visible';
   const attrMedia   = options?.directives?.media?.attribute   ?? 'client:media';
   const attrIdle    = options?.directives?.idle?.attribute    ?? 'client:idle';
+  const attrDefer   = options?.directives?.defer?.attribute   ?? 'client:defer';
   const rootMargin  = options?.directives?.visible?.rootMargin ?? '200px';
   const threshold   = options?.directives?.visible?.threshold  ?? 0;
-  const idleTimeout = options?.directives?.idle?.timeout       ?? 200;
+  const idleTimeout = options?.directives?.idle?.timeout       ?? 500;
+  const deferDelay  = options?.directives?.defer?.delay        ?? 3000;
+  const log = options?.debug ? (...args: unknown[]) => console.debug('[islands]', ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -94,15 +103,41 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   const pendingVisible = new Map<Element, () => void>();
 
   async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
+    log(`<${tagName}> activating`);
     try {
-      if (el.hasAttribute(attrVisible)) await visible(el, rootMargin, threshold, pendingVisible);
+      if (el.hasAttribute(attrVisible)) {
+        log(`<${tagName}> waiting for ${attrVisible}`);
+        await visible(el, rootMargin, threshold, pendingVisible);
+        log(`<${tagName}> ${attrVisible} resolved`);
+      }
       const q = el.getAttribute(attrMedia);
-      if (q) await media(q);
-      if (el.hasAttribute(attrIdle)) await idle(idleTimeout);
+      if (q) {
+        log(`<${tagName}> waiting for ${attrMedia}="${q}"`);
+        await media(q);
+        log(`<${tagName}> ${attrMedia} resolved`);
+      }
+      if (el.hasAttribute(attrIdle)) {
+        log(`<${tagName}> waiting for ${attrIdle} (timeout: ${idleTimeout}ms)`);
+        await idle(idleTimeout);
+        log(`<${tagName}> ${attrIdle} resolved`);
+      }
+      const d = el.getAttribute(attrDefer);
+      if (d !== null) {
+        const raw = parseInt(d, 10);
+        const ms = (d === '' || Number.isNaN(raw)) ? deferDelay : raw;
+        if (d !== '' && Number.isNaN(raw)) {
+          console.warn(`[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`);
+        }
+        log(`<${tagName}> waiting for ${attrDefer} (${ms}ms)`);
+        await defer(ms);
+        log(`<${tagName}> ${attrDefer} resolved`);
+      }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
+      log(`<${tagName}> aborted (element removed)`);
       return;
     }
+    log(`<${tagName}> loading`);
     loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
   }
 
