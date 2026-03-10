@@ -51,26 +51,36 @@ describe("revive", () => {
   });
 
   describe("client:idle", () => {
+    let originalRIC: unknown;
+
+    beforeEach(() => {
+      originalRIC = (window as any).requestIdleCallback;
+    });
+
+    afterEach(() => {
+      if (originalRIC === undefined) delete (window as any).requestIdleCallback;
+      else (window as any).requestIdleCallback = originalRIC;
+    });
+
     it("calls loader after idle via setTimeout fallback when requestIdleCallback is absent", async () => {
-      // happy-dom does not implement requestIdleCallback, so the fallback (setTimeout 200ms) is used
+      // happy-dom does not implement requestIdleCallback, so the fallback (setTimeout) is used
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-widget client:idle></idle-widget>";
-      revive({ "/islands/idle-widget.ts": loader });
-      await new Promise<void>((r) => setTimeout(r, 250)); // wait past the 200ms fallback
+      revive({ "/islands/idle-widget.ts": loader }, { directives: { idle: { timeout: 20 } } });
+      await new Promise<void>((r) => setTimeout(r, 50));
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
     it("respects custom idle timeout", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-fast client:idle></idle-fast>";
-      revive({ "/islands/idle-fast.ts": loader }, { directives: { idle: { timeout: 50 } } });
-      await new Promise<void>((r) => setTimeout(r, 100)); // wait past the 50ms custom timeout
+      revive({ "/islands/idle-fast.ts": loader }, { directives: { idle: { timeout: 20 } } });
+      await new Promise<void>((r) => setTimeout(r, 50));
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
     it("calls loader via requestIdleCallback when available", async () => {
-      let cb!: () => void;
-      // With GlobalRegistrator, window === globalThis
+      let cb!: (opts?: { timeout: number }) => void;
       (window as any).requestIdleCallback = (fn: () => void) => { cb = fn; };
 
       const loader = mock(async () => {});
@@ -81,8 +91,16 @@ describe("revive", () => {
       cb();
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
+    });
 
-      delete (window as any).requestIdleCallback;
+    it("passes timeout option to requestIdleCallback", () => {
+      let capturedOpts: unknown;
+      (window as any).requestIdleCallback = (_fn: () => void, opts: unknown) => { capturedOpts = opts; };
+
+      document.body.innerHTML = "<idle-opts client:idle></idle-opts>";
+      revive({ "/islands/idle-opts.ts": mock(async () => {}) }, { directives: { idle: { timeout: 300 } } });
+
+      expect(capturedOpts).toEqual({ timeout: 300 });
     });
   });
 

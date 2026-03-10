@@ -33,11 +33,14 @@ function visible(
   pending: Map<Element, () => void>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        io.disconnect();
-        pending.delete(element);
-        resolve();
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          io.disconnect();
+          pending.delete(element);
+          resolve();
+          return;
+        }
       }
     }, { rootMargin, threshold });
 
@@ -50,7 +53,7 @@ function visible(
 // Falls back to setTimeout with a configurable timeout for browsers without requestIdleCallback.
 function idle(timeout: number): Promise<void> {
   return new Promise((resolve) => {
-    if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve());
+    if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout });
     else setTimeout(resolve, timeout);
   });
 }
