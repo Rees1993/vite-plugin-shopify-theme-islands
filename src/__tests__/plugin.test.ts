@@ -49,18 +49,43 @@ describe("plugin", () => {
       expect(output).toContain('import.meta.glob("/components/**/*.{ts,js}")');
     });
 
-    it("includes custom directive names in options", () => {
+    it("includes default directive config in options", () => {
+      const plugin = shopifyThemeIslands({ directories: ["/islands/"] }) as any;
+      plugin.configResolved(makeConfig());
+      const output: string = plugin.load(RESOLVED_ID);
+      expect(output).toContain('"attribute":"client:visible"');
+      expect(output).toContain('"rootMargin":"200px"');
+      expect(output).toContain('"threshold":0');
+      expect(output).toContain('"attribute":"client:idle"');
+      expect(output).toContain('"timeout":500');
+      expect(output).toContain('"attribute":"client:media"');
+    });
+
+    it("merges custom visible config with defaults", () => {
       const plugin = shopifyThemeIslands({
         directories: ["/islands/"],
-        directiveVisible: "data:visible",
-        directiveMedia: "data:media",
-        directiveIdle: "data:idle",
+        directives: { visible: { rootMargin: "0px" } },
       }) as any;
       plugin.configResolved(makeConfig());
       const output: string = plugin.load(RESOLVED_ID);
-      expect(output).toContain('"directiveVisible":"data:visible"');
-      expect(output).toContain('"directiveMedia":"data:media"');
-      expect(output).toContain('"directiveIdle":"data:idle"');
+      expect(output).toContain('"rootMargin":"0px"');
+      expect(output).toContain('"attribute":"client:visible"'); // default preserved
+    });
+
+    it("includes custom directive attribute names in options", () => {
+      const plugin = shopifyThemeIslands({
+        directories: ["/islands/"],
+        directives: {
+          visible: { attribute: "data:visible" },
+          media:   { attribute: "data:media" },
+          idle:    { attribute: "data:idle" },
+        },
+      }) as any;
+      plugin.configResolved(makeConfig());
+      const output: string = plugin.load(RESOLVED_ID);
+      expect(output).toContain('"attribute":"data:visible"');
+      expect(output).toContain('"attribute":"data:media"');
+      expect(output).toContain('"attribute":"data:idle"');
     });
 
     it("resolves Vite string aliases in directory paths", () => {

@@ -12,11 +12,7 @@
  * A MutationObserver re-runs the same logic for elements added dynamically.
  */
 
-interface ReviveOptions {
-  directiveVisible?: string;
-  directiveMedia?: string;
-  directiveIdle?: string;
-}
+import type { ReviveOptions } from "./index.js";
 
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
@@ -27,24 +23,38 @@ function media(query: string): Promise<void> {
   });
 }
 
-// Resolves when the element enters the viewport
-function visible(element: Element): Promise<void> {
-  return new Promise((resolve) => {
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        obs.disconnect();
-        resolve();
+// Resolves when the element enters the viewport.
+// Registers a cancel function in `pending` so the outer MutationObserver can
+// abort this if the element is removed from the DOM before becoming visible.
+function visible(
+  element: Element,
+  rootMargin: string,
+  threshold: number,
+  pending: Map<Element, () => void>,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          io.disconnect();
+          pending.delete(element);
+          resolve();
+          return;
+        }
       }
-    });
-    obs.observe(element);
+    }, { rootMargin, threshold });
+
+    io.observe(element);
+    pending.set(element, () => { io.disconnect(); reject(); });
   });
 }
 
-// Resolves when the browser is idle (falls back to setTimeout for Safari)
-function idle(): Promise<void> {
+// Resolves when the browser is idle.
+// Falls back to setTimeout with a configurable timeout for browsers without requestIdleCallback.
+function idle(timeout: number): Promise<void> {
   return new Promise((resolve) => {
-    if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve());
-    else setTimeout(resolve, 200);
+    if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout });
+    else setTimeout(resolve, timeout);
   });
 }
 
@@ -58,9 +68,12 @@ const customElementFilter: NodeFilter = {
 };
 
 export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
-  const attrVisible = options?.directiveVisible ?? 'client:visible';
-  const attrMedia = options?.directiveMedia ?? 'client:media';
-  const attrIdle = options?.directiveIdle ?? 'client:idle';
+  const attrVisible = options?.directives?.visible?.attribute ?? 'client:visible';
+  const attrMedia   = options?.directives?.media?.attribute   ?? 'client:media';
+  const attrIdle    = options?.directives?.idle?.attribute    ?? 'client:idle';
+  const rootMargin  = options?.directives?.visible?.rootMargin ?? '200px';
+  const threshold   = options?.directives?.visible?.threshold  ?? 0;
+  const idleTimeout = options?.directives?.idle?.timeout       ?? 200;
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -76,11 +89,20 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
 
+  // Elements awaiting client:visible — maps element to its IO cancel function.
+  // Checked by the outer MutationObserver to abort loading if the element is removed.
+  const pendingVisible = new Map<Element, () => void>();
+
   async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
-    if (el.hasAttribute(attrVisible)) await visible(el);
-    const q = el.getAttribute(attrMedia);
-    if (q) await media(q);
-    if (el.hasAttribute(attrIdle)) await idle();
+    try {
+      if (el.hasAttribute(attrVisible)) await visible(el, rootMargin, threshold, pendingVisible);
+      const q = el.getAttribute(attrMedia);
+      if (q) await media(q);
+      if (el.hasAttribute(attrIdle)) await idle(idleTimeout);
+    } catch {
+      // element was removed from the DOM before all conditions were met — skip loading
+      return;
+    }
     loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
   }
 
@@ -104,6 +126,14 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   }
 
   const observer = new MutationObserver((mutations) => {
+    // Cancel loading for any pending-visible elements that were removed from the DOM
+    for (const [el, cancel] of pendingVisible) {
+      if (!el.isConnected) {
+        pendingVisible.delete(el);
+        cancel();
+      }
+    }
+    // Activate islands added dynamically
     for (const { addedNodes } of mutations) {
       for (const node of addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) walk(node as Element);
