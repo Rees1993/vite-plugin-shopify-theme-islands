@@ -13,7 +13,7 @@
  * A MutationObserver re-runs the same logic for elements added dynamically.
  */
 
-import type { ReviveOptions } from "./index.js";
+import type { ClientDirective, ReviveOptions } from "./index.js";
 
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
@@ -73,7 +73,11 @@ const customElementFilter: NodeFilter = {
       : NodeFilter.FILTER_SKIP,
 };
 
-export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
+export function revive(
+  islands: Record<string, () => Promise<unknown>>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+): void {
   const attrVisible = options?.directives?.visible?.attribute ?? 'client:visible';
   const attrMedia   = options?.directives?.media?.attribute   ?? 'client:media';
   const attrIdle    = options?.directives?.idle?.attribute    ?? 'client:idle';
@@ -106,8 +110,10 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     log(`<${tagName}> activating`);
     try {
       if (el.hasAttribute(attrVisible)) {
+        // Per-element value overrides global rootMargin (e.g. client:visible="0px")
+        const elRootMargin = el.getAttribute(attrVisible) || rootMargin;
         log(`<${tagName}> waiting for ${attrVisible}`);
-        await visible(el, rootMargin, threshold, pendingVisible);
+        await visible(el, elRootMargin, threshold, pendingVisible);
         log(`<${tagName}> ${attrVisible} resolved`);
       }
       const q = el.getAttribute(attrMedia);
@@ -117,8 +123,12 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
         log(`<${tagName}> ${attrMedia} resolved`);
       }
       if (el.hasAttribute(attrIdle)) {
-        log(`<${tagName}> waiting for ${attrIdle} (timeout: ${idleTimeout}ms)`);
-        await idle(idleTimeout);
+        // Per-element value overrides global timeout (e.g. client:idle="1000")
+        // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
+        const rawIdle = parseInt(el.getAttribute(attrIdle)!, 10);
+        const elTimeout = Number.isNaN(rawIdle) ? idleTimeout : rawIdle;
+        log(`<${tagName}> waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
+        await idle(elTimeout);
         log(`<${tagName}> ${attrIdle} resolved`);
       }
       const d = el.getAttribute(attrDefer);
@@ -137,8 +147,22 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
       log(`<${tagName}> aborted (element removed)`);
       return;
     }
+
+    const run = () => loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+
+    // Custom directives run after built-ins — the directive owns the load() call
+    if (customDirectives?.size) {
+      for (const [attrName, directiveFn] of customDirectives) {
+        if (el.hasAttribute(attrName)) {
+          log(`<${tagName}> dispatching to custom directive ${attrName}`);
+          directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
+          return; // directive owns the load call
+        }
+      }
+    }
+
     log(`<${tagName}> loading`);
-    loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+    run();
   }
 
   function activate(el: Element): void {
