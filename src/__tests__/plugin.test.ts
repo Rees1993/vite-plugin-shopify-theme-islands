@@ -59,6 +59,8 @@ describe("plugin", () => {
       expect(output).toContain('"attribute":"client:idle"');
       expect(output).toContain('"timeout":500');
       expect(output).toContain('"attribute":"client:media"');
+      expect(output).toContain('"attribute":"client:defer"');
+      expect(output).toContain('"delay":3000');
     });
 
     it("merges custom visible config with defaults", () => {

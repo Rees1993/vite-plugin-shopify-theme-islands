@@ -215,6 +215,67 @@ describe("revive", () => {
     });
   });
 
+  describe("client:defer", () => {
+    it("loads after the specified delay", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-widget client:defer="20"></defer-widget>';
+      revive({ "/islands/defer-widget.ts": loader });
+      await flush(); // 50ms — past the 20ms delay
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not load before the delay has elapsed", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-slow client:defer="500"></defer-slow>';
+      revive({ "/islands/defer-slow.ts": loader });
+      await flush(); // 50ms — well before 500ms
+      expect(loader).not.toHaveBeenCalled();
+    });
+
+    it("uses configured fallback delay when attribute has no value", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-novalue client:defer></defer-novalue>';
+      revive({ "/islands/defer-novalue.ts": loader }, { directives: { defer: { delay: 20 } } });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("respects custom attribute name", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-custom data:defer="20"></defer-custom>';
+      revive({ "/islands/defer-custom.ts": loader }, { directives: { defer: { attribute: "data:defer" } } });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to configured delay and warns when attribute value is not a valid number", async () => {
+      const spy = spyOn(console, "warn");
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-nan client:defer="abc"></defer-nan>';
+      revive({ "/islands/defer-nan.ts": loader }, { directives: { defer: { delay: 20 } } });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("invalid"));
+      spy.mockRestore();
+    });
+
+    it("treats client:defer=\"0\" as a zero ms delay, not the default", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-zero client:defer="0"></defer-zero>';
+      revive({ "/islands/defer-zero.ts": loader });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for both defer and idle when combined", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-combo client:defer="20" client:idle></defer-combo>';
+      revive({ "/islands/defer-combo.ts": loader }, { directives: { idle: { timeout: 20 } } });
+      await new Promise<void>((r) => setTimeout(r, 80));
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("MutationObserver", () => {
     it("activates islands added to the DOM after init", async () => {
       const loader = mock(async () => {});
