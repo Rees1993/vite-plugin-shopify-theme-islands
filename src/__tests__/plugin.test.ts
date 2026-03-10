@@ -57,7 +57,7 @@ describe("plugin", () => {
       expect(output).toContain('"rootMargin":"200px"');
       expect(output).toContain('"threshold":0');
       expect(output).toContain('"attribute":"client:idle"');
-      expect(output).toContain('"timeout":200');
+      expect(output).toContain('"timeout":500');
       expect(output).toContain('"attribute":"client:media"');
     });
 

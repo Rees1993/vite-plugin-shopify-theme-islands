@@ -54,7 +54,7 @@ const defaults = {
   directories: ["/frontend/js/islands/"],
   directives: {
     visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
-    idle:    { attribute: "client:idle",    timeout: 200 },
+    idle:    { attribute: "client:idle",    timeout: 500 },
     media:   { attribute: "client:media" },
   },
 };
