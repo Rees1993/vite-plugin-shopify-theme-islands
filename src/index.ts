@@ -30,11 +30,11 @@ export interface ClientDirectiveOptions {
  * ```ts
  * import type { ClientDirective } from 'vite-plugin-shopify-theme-islands';
  *
- * const onClickDirective: ClientDirective = (load, { value }, el) => {
- *   el.addEventListener('click', load, { once: true });
+ * const hoverDirective: ClientDirective = (load, _opts, el) => {
+ *   el.addEventListener('mouseenter', load, { once: true });
  * };
  *
- * export default onClickDirective;
+ * export default hoverDirective;
  * ```
  */
 export type ClientDirective = (

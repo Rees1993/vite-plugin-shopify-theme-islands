@@ -134,7 +134,7 @@ export function revive(
       const d = el.getAttribute(attrDefer);
       if (d !== null) {
         const raw = parseInt(d, 10);
-        const ms = (d === '' || Number.isNaN(raw)) ? deferDelay : raw;
+        const ms = Number.isNaN(raw) ? deferDelay : raw;
         if (d !== '' && Number.isNaN(raw)) {
           console.warn(`[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`);
         }
