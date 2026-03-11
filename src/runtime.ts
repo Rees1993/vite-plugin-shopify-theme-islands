@@ -86,7 +86,7 @@ export function revive(
   const threshold   = options?.directives?.visible?.threshold  ?? 0;
   const idleTimeout = options?.directives?.idle?.timeout       ?? 500;
   const deferDelay  = options?.directives?.defer?.delay        ?? 3000;
-  const log = options?.debug ? (...args: unknown[]) => console.debug('[islands]', ...args) : () => {};
+  const log = options?.debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
