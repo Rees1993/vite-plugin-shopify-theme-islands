@@ -70,18 +70,11 @@ function idle(timeout: number): Promise<void> {
   });
 }
 
-// NodeFilter that accepts custom elements (tag names containing a hyphen) and
-// skips (but still descends into) everything else
-const customElementFilter: NodeFilter = {
-  acceptNode: (node) =>
-    (node as Element).tagName.includes("-") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
-};
-
 export function revive(
   islands: Record<string, () => Promise<unknown>>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
-): void {
+): () => void {
   const attrVisible = options?.directives?.visible?.attribute ?? "client:visible";
   const attrMedia = options?.directives?.media?.attribute ?? "client:media";
   const attrIdle = options?.directives?.idle?.attribute ?? "client:idle";
@@ -114,9 +107,29 @@ export function revive(
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
 
+  // Track successfully loaded tag names so child islands can activate after their parent loads
+  const loaded = new Set<string>();
+
   // Elements awaiting client:visible — maps element to its IO cancel function.
   // Checked by the outer MutationObserver to abort loading if the element is removed.
   const pendingVisible = new Map<Element, () => void>();
+
+  // Returns true if the tag is queued but not yet loaded.
+  // Only islands can enter `queued`, so the islandMap check is redundant here.
+  const isUnloadedIsland = (tag: string) => queued.has(tag) && !loaded.has(tag);
+
+  // NodeFilter that accepts custom elements (tag names containing a hyphen),
+  // skips (but still descends into) non-custom elements, and rejects the subtree
+  // of any queued-but-not-yet-loaded island (children are walked after the parent loads).
+  const customElementFilter: NodeFilter = {
+    acceptNode: (node) => {
+      const tag = (node as Element).tagName;
+      if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
+      const lowerTag = tag.toLowerCase();
+      if (isUnloadedIsland(lowerTag)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  };
 
   async function loadIsland(
     tagName: string,
@@ -154,7 +167,9 @@ export function revive(
         await visible(el, elRootMargin, threshold, pendingVisible);
       }
       const query = el.getAttribute(attrMedia);
-      if (query) {
+      if (query === "") {
+        console.warn(`[islands] <${tagName}> ${attrMedia} has no value — skipping media check`);
+      } else if (query) {
         note(`waiting for ${attrMedia}="${query}"`);
         await media(query);
       }
@@ -185,10 +200,15 @@ export function revive(
     }
 
     const run = () =>
-      loader().catch((err) => {
-        console.error(`[islands] Failed to load <${tagName}>:`, err);
-        queued.delete(tagName);
-      });
+      loader()
+        .then(() => {
+          loaded.add(tagName);
+          if (el.children.length) walk(el); // pick up child islands now that parent has loaded
+        })
+        .catch((err) => {
+          console.error(`[islands] Failed to load <${tagName}>:`, err);
+          queued.delete(tagName);
+        });
 
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {
@@ -217,10 +237,17 @@ export function revive(
     const tagName = el.tagName.toLowerCase();
     if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
-    if (loader) {
-      queued.add(tagName);
-      loadIsland(tagName, el, loader);
+    if (!loader) return;
+
+    // Don't activate if this element is inside a queued-but-not-yet-loaded parent island
+    let ancestor = el.parentElement;
+    while (ancestor) {
+      if (isUnloadedIsland(ancestor.tagName.toLowerCase())) return;
+      ancestor = ancestor.parentElement;
     }
+
+    queued.add(tagName);
+    loadIsland(tagName, el, loader);
   }
 
   // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
@@ -258,4 +285,6 @@ export function revive(
   } else {
     init();
   }
+
+  return () => observer.disconnect();
 }
