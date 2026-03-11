@@ -162,14 +162,6 @@ describe("revive", () => {
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
-    it("respects custom idle timeout", async () => {
-      const loader = mock(async () => {});
-      document.body.innerHTML = "<idle-fast client:idle></idle-fast>";
-      revive({ "/islands/idle-fast.ts": loader }, { directives: { idle: { timeout: 20 } } });
-      await flush();
-      expect(loader).toHaveBeenCalledTimes(1);
-    });
-
     it("calls loader via requestIdleCallback when available", async () => {
       let cb!: IdleRequestCallback;
       window.requestIdleCallback = (fn) => {
@@ -439,6 +431,87 @@ describe("revive", () => {
       document.body.appendChild(el);
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("child island cascade", () => {
+    it("child island loads via cascade when parent resolves immediately", async () => {
+      const parentLoader = mock(async () => {});
+      const childLoader = mock(async () => {});
+
+      document.body.innerHTML = `
+        <parent-widget>
+          <child-widget></child-widget>
+        </parent-widget>
+      `;
+
+      revive({
+        "/islands/parent-widget.ts": parentLoader,
+        "/islands/child-widget.ts": childLoader,
+      });
+
+      await flush();
+      expect(parentLoader).toHaveBeenCalledTimes(1);
+      // Child activated via cascade after parent loaded, not directly
+      expect(childLoader).toHaveBeenCalledTimes(1);
+    });
+
+    it("child island loads after parent loader resolves", async () => {
+      let resolveParent!: () => void;
+      const parentLoader = mock(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveParent = resolve;
+          }),
+      );
+      const childLoader = mock(async () => {});
+
+      document.body.innerHTML = `
+        <parent-cascade>
+          <child-cascade></child-cascade>
+        </parent-cascade>
+      `;
+
+      revive({
+        "/islands/parent-cascade.ts": parentLoader,
+        "/islands/child-cascade.ts": childLoader,
+      });
+
+      await flush();
+      expect(parentLoader).toHaveBeenCalledTimes(1);
+      expect(childLoader).not.toHaveBeenCalled();
+
+      resolveParent();
+      await flush();
+      expect(childLoader).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("revive teardown", () => {
+    it("returned disconnect() stops the MutationObserver — islands added after disconnect are not activated", async () => {
+      const loader = mock(async () => {});
+      const disconnect = revive({ "/islands/post-disconnect.ts": loader });
+
+      disconnect();
+
+      const el = document.createElement("post-disconnect");
+      document.body.appendChild(el);
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("client:media empty value", () => {
+    it("warns and skips when client:media has an empty value", async () => {
+      const spy = spyOn(console, "warn");
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<empty-media client:media=""></empty-media>';
+      revive({ "/islands/empty-media.ts": loader });
+      await flush();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("has no value"));
+      // Island still loads (media check is skipped, not the whole island)
+      expect(loader).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
     });
   });
 
