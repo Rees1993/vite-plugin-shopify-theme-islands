@@ -47,11 +47,7 @@ export interface ClientDirectiveOptions {
  * })
  * ```
  */
-export type ClientDirective = (
-  load: ClientDirectiveLoader,
-  options: ClientDirectiveOptions,
-  el: HTMLElement,
-) => void | Promise<void>;
+export type ClientDirective = (load: ClientDirectiveLoader, options: ClientDirectiveOptions, el: HTMLElement) => void | Promise<void>;
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -63,7 +59,7 @@ export interface ClientDirectiveDefinition {
 
 const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'public', 'assets', '.cache']);
+const SKIP_DIRS = new Set(["node_modules", "dist", "build", "public", "assets", ".cache"]);
 
 /** Shared directive configuration shape used by both the plugin and the runtime. */
 export interface DirectivesConfig {
@@ -118,24 +114,22 @@ const defaults = {
   directories: ["/frontend/js/islands/"],
   directives: {
     visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
-    idle:    { attribute: "client:idle",    timeout: 500 },
-    media:   { attribute: "client:media" },
-    defer:   { attribute: "client:defer",   delay: 3000 },
+    idle: { attribute: "client:idle", timeout: 500 },
+    media: { attribute: "client:media" },
+    defer: { attribute: "client:defer", delay: 3000 },
   },
 };
 
 function normalizeDir(dir: string): string {
-  return dir.endsWith('/') ? dir : dir + '/';
+  return dir.endsWith("/") ? dir : dir + "/";
 }
 
 function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   const aliases = config.resolve.alias;
   return dirs.map((dir) => {
     for (const { find, replacement } of aliases) {
-      if (typeof find === "string" && dir.startsWith(find))
-        return dir.replace(find, replacement);
-      if (find instanceof RegExp && find.test(dir))
-        return dir.replace(find, replacement);
+      if (typeof find === "string" && dir.startsWith(find)) return dir.replace(find, replacement);
+      if (find instanceof RegExp && find.test(dir)) return dir.replace(find, replacement);
     }
     return dir;
   });
@@ -150,11 +144,11 @@ function collectTagNames(dir: string, names: string[]): void {
     return;
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
+    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
     if (entry.isDirectory()) {
       collectTagNames(join(dir, entry.name), names);
     } else if (TS_JS_RE.test(entry.name)) {
-      names.push(entry.name.replace(/\.(ts|js)$/, ''));
+      names.push(entry.name.replace(/\.(ts|js)$/, ""));
     }
   }
 }
@@ -168,13 +162,13 @@ function scanForIslandFiles(dir: string, found: Set<string>): void {
     return;
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
+    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       scanForIslandFiles(full, found);
     } else if (TS_JS_RE.test(entry.name)) {
       try {
-        const content = readFileSync(full, 'utf-8');
+        const content = readFileSync(full, "utf-8");
         if (ISLAND_IMPORT_RE.test(content)) found.add(full);
       } catch {
         // skip unreadable files
@@ -184,23 +178,22 @@ function scanForIslandFiles(dir: string, found: Set<string>): void {
 }
 
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
-  const rawDirs = (Array.isArray(options.directories)
-    ? options.directories
-    : [options.directories ?? defaults.directories[0]]
-  ).map(normalizeDir);
+  const rawDirs = (Array.isArray(options.directories) ? options.directories : [options.directories ?? defaults.directories[0]]).map(
+    normalizeDir,
+  );
 
   // Deep merge directives — per-directive defaults are preserved when only some keys are overridden
   const directives: DirectivesConfig = {
     visible: { ...defaults.directives.visible, ...options.directives?.visible },
-    idle:    { ...defaults.directives.idle,    ...options.directives?.idle },
-    media:   { ...defaults.directives.media,   ...options.directives?.media },
-    defer:   { ...defaults.directives.defer,   ...options.directives?.defer },
+    idle: { ...defaults.directives.idle, ...options.directives?.idle },
+    media: { ...defaults.directives.media, ...options.directives?.media },
+    defer: { ...defaults.directives.defer, ...options.directives?.defer },
   };
 
   const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
 
   const debug = options.debug ?? false;
-  const log = debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
+  const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
 
   let resolvedDirs = rawDirs;
   let root = process.cwd();
@@ -220,7 +213,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     configResolved(config) {
       root = config.root;
       resolvedDirs = resolveAliases(rawDirs, config);
-      absDirs = resolvedDirs.map((d) => d.startsWith(root) ? d : join(root, d.replace(/^\//, '')));
+      absDirs = resolvedDirs.map((d) => (d.startsWith(root) ? d : join(root, d.replace(/^\//, ""))));
     },
 
     buildStart() {
@@ -232,41 +225,41 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
       if (debug) {
         log(`Scanned in ${scanMs}ms`);
-        log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
+        log("Scanning directories:", resolvedDirs.map((d) => d + "**/*.{ts,js}").join(", "));
         const dirNames: string[] = [];
         for (const dir of absDirs) collectTagNames(dir, dirNames);
-        if (dirNames.length) log(`Found ${dirNames.length} directory island(s): [${dirNames.join(', ')}]`);
+        if (dirNames.length) log(`Found ${dirNames.length} directory island(s): [${dirNames.join(", ")}]`);
         if (islandFiles.size) {
           log(`Found ${islandFiles.size} island file(s) via mixin import:`);
-          for (const f of islandFiles) log(' ', relative(root, f));
+          for (const f of islandFiles) log(" ", relative(root, f));
         }
-        log('Directives:', directives);
+        log("Directives:", directives);
       }
     },
 
     // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
       if (!TS_JS_RE.test(id)) return;
-      if (code.includes('shopify-theme-islands/island') && ISLAND_IMPORT_RE.test(code) && !inDirectory(id)) {
+      if (code.includes("shopify-theme-islands/island") && ISLAND_IMPORT_RE.test(code) && !inDirectory(id)) {
         islandFiles.add(id);
-        log('Detected island:', relative(root, id));
+        log("Detected island:", relative(root, id));
       } else {
-        if (islandFiles.delete(id)) log('Removed island:', relative(root, id));
+        if (islandFiles.delete(id)) log("Removed island:", relative(root, id));
       }
     },
 
     watchChange(id, { event }) {
       if (!TS_JS_RE.test(id)) return;
-      if (event === 'delete') {
-        if (islandFiles.delete(id)) log('Removed island (deleted):', relative(root, id));
+      if (event === "delete") {
+        if (islandFiles.delete(id)) log("Removed island (deleted):", relative(root, id));
       } else {
         try {
-          const content = readFileSync(id, 'utf-8');
+          const content = readFileSync(id, "utf-8");
           if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id)) {
             islandFiles.add(id);
-            log('Detected island (watchChange):', relative(root, id));
+            log("Detected island (watchChange):", relative(root, id));
           } else {
-            if (islandFiles.delete(id)) log('Removed island (watchChange):', relative(root, id));
+            if (islandFiles.delete(id)) log("Removed island (watchChange):", relative(root, id));
           }
         } catch {
           // ignore unreadable files
@@ -282,15 +275,11 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const globs = resolvedDirs.map(
-        (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`
-      );
+      const globs = resolvedDirs.map((dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`);
 
       // Use import.meta.glob for island files so Vite handles base URL rewriting
       // (hand-crafted import() calls resolve against the page origin, not the dev server)
-      const islandPaths = islandFiles.size
-        ? [...islandFiles].map((file) => '/' + relative(root, file).replace(/\\/g, '/'))
-        : null;
+      const islandPaths = islandFiles.size ? [...islandFiles].map((file) => "/" + relative(root, file).replace(/\\/g, "/")) : null;
 
       // globs always has at least one entry (rawDirs is never empty)
       const islandsEntries = [`{ ${globs.join(", ")} }`];
@@ -302,9 +291,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       for (const [i, def] of clientDirectiveDefinitions.entries()) {
         const resolved = await this.resolve(def.entrypoint);
         if (!resolved) {
-          throw new Error(
-            `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`
-          );
+          throw new Error(`[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`);
         }
         directiveImports.push(`import _directive${i} from ${JSON.stringify(resolved.id)};`);
         mapEntries.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
