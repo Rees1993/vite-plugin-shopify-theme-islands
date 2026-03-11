@@ -58,7 +58,9 @@
     "test:plugin": "bun test src/__tests__/plugin.test.ts",
     "test:runtime": "bun test ./src/__tests__/runtime.test.ts",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "lint": "oxlint src/",
+    "format": "oxfmt src/"
   },
   "peerDependencies": {
     "vite": ">=6"
@@ -67,6 +69,8 @@
     "@happy-dom/global-registrator": "^20.8.3",
     "@types/bun": "latest",
     "@types/node": "^25.3.3",
+    "oxfmt": "^0.38.0",
+    "oxlint": "^1.53.0",
     "typescript": "^5.0.0",
     "vite": "^6.0.0"
   }
