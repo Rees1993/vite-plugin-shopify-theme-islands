@@ -64,10 +64,10 @@ describe("revive", () => {
 
     it("removes tag from queued on load failure, allowing retry on re-insertion", async () => {
       const spy = spyOn(console, "error");
-      let moCallback: MutationObserverCallback | undefined;
+      let moCallback: MutationCallback | undefined;
       const OriginalMO = globalThis.MutationObserver;
       globalThis.MutationObserver = class {
-        constructor(cb: MutationObserverCallback) { moCallback = cb; }
+        constructor(cb: MutationCallback) { moCallback = cb; }
         observe() {}
         disconnect() {}
       } as unknown as typeof MutationObserver;
@@ -95,10 +95,10 @@ describe("revive", () => {
     });
 
     it("does not retry on re-insertion when load succeeds", async () => {
-      let moCallback: MutationObserverCallback | undefined;
+      let moCallback: MutationCallback | undefined;
       const OriginalMO = globalThis.MutationObserver;
       globalThis.MutationObserver = class {
-        constructor(cb: MutationObserverCallback) { moCallback = cb; }
+        constructor(cb: MutationCallback) { moCallback = cb; }
         observe() {}
         disconnect() {}
       } as unknown as typeof MutationObserver;
