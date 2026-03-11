@@ -114,6 +114,15 @@ Loads the island when the element scrolls into view.
 </product-recommendations>
 ```
 
+The attribute value overrides the global `rootMargin` for that element only:
+
+```html
+<!-- load only once fully visible (no pre-load margin) -->
+<product-recommendations client:visible="0px">
+  <!-- ... -->
+</product-recommendations>
+```
+
 ### `client:media`
 
 Loads the island when a CSS media query matches.
@@ -130,6 +139,15 @@ Loads the island once the browser is idle (uses `requestIdleCallback` with a 500
 
 ```html
 <recently-viewed client:idle>
+  <!-- ... -->
+</recently-viewed>
+```
+
+The attribute value overrides the global `timeout` for that element only:
+
+```html
+<!-- wait up to 2 seconds for idle time before loading -->
+<recently-viewed client:idle="2000">
   <!-- ... -->
 </recently-viewed>
 ```
@@ -159,13 +177,81 @@ Directives can be combined — the element will wait for all conditions to be me
 </heavy-widget>
 ```
 
+## Custom directives
+
+Register your own loading conditions via `directives.custom`. A custom directive is a function that receives a `load` callback and decides when to call it.
+
+### 1. Write the directive
+
+```ts
+// src/directives/hover.ts
+import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
+
+const hoverDirective: ClientDirective = (load, _opts, el) => {
+  el.addEventListener("mouseenter", load, { once: true });
+};
+
+export default hoverDirective;
+```
+
+`mouseenter` fires before `click`, so the module starts downloading the moment the user moves their cursor toward the element — by the time they click it's already loaded.
+
+The function signature is `(load, options, el) => void | Promise<void>`:
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `load` | `() => Promise<unknown>` | Call this to trigger the island module load |
+| `options.name` | `string` | The matched attribute name, e.g. `'client:hover'` |
+| `options.value` | `string` | The attribute value; empty string if no value was set |
+| `el` | `Element` | The island element |
+
+### 2. Register it in the plugin config
+
+```ts
+// vite.config.ts
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
+
+export default defineConfig({
+  plugins: [
+    shopifyThemeIslands({
+      directives: {
+        custom: [
+          { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
+        ],
+      },
+    }),
+  ],
+});
+```
+
+### 3. Use it in Liquid
+
+```html
+<quick-add client:hover>
+  <!-- ... -->
+</quick-add>
+```
+
+### Ordering
+
+Built-in directives always run first. A custom directive is only invoked after all built-in conditions on the element have been met. This means you can gate a custom directive behind `client:visible` to avoid wiring event listeners for off-screen elements:
+
+```html
+<!-- element must enter the viewport before the hover handler is registered -->
+<quick-add client:visible client:hover>
+  <!-- ... -->
+</quick-add>
+```
+
+The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
+
 ## Options
 
-| Option        | Type                 | Default                     | Description                                                                         |
-| ------------- | -------------------- | --------------------------- | ----------------------------------------------------------------------------------- |
-| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                         |
+| Option        | Type                 | Default                     | Description                                                                            |
+| ------------- | -------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
+| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                            |
 | `directives`  | `object`             | see below                   | Per-directive configuration. Each directive has an `attribute` name and extra options. |
-| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.   |
+| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.      |
 
 ### Directive defaults
 

@@ -13,7 +13,7 @@
  * A MutationObserver re-runs the same logic for elements added dynamically.
  */
 
-import type { ReviveOptions } from "./index.js";
+import type { ClientDirective, ReviveOptions } from "./index.js";
 
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
@@ -73,7 +73,11 @@ const customElementFilter: NodeFilter = {
       : NodeFilter.FILTER_SKIP,
 };
 
-export function revive(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions): void {
+export function revive(
+  islands: Record<string, () => Promise<unknown>>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+): void {
   const attrVisible = options?.directives?.visible?.attribute ?? 'client:visible';
   const attrMedia   = options?.directives?.media?.attribute   ?? 'client:media';
   const attrIdle    = options?.directives?.idle?.attribute    ?? 'client:idle';
@@ -82,7 +86,8 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   const threshold   = options?.directives?.visible?.threshold  ?? 0;
   const idleTimeout = options?.directives?.idle?.timeout       ?? 500;
   const deferDelay  = options?.directives?.defer?.delay        ?? 3000;
-  const log = options?.debug ? (...args: unknown[]) => console.debug('[islands]', ...args) : () => {};
+  const debug = options?.debug ?? false;
+  const log = debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -95,6 +100,8 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
+  log(`revive() ready — ${islandMap.size} island(s)`);
+
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
 
@@ -102,46 +109,78 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
   // Checked by the outer MutationObserver to abort loading if the element is removed.
   const pendingVisible = new Map<Element, () => void>();
 
-  async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
+  async function loadIsland(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): Promise<void> {
+    // Log activating immediately so islands stuck waiting still appear in the console
     log(`<${tagName}> activating`);
+
+    // Buffer subsequent stages; flush as a collapsed group if there were any,
+    // or as a flat log if the island triggered with no intermediate steps
+    const msgs: string[] = [];
+    const note = debug ? (msg: string) => { msgs.push(msg); } : () => {};
+    const flush = debug ? (final: string) => {
+      if (msgs.length === 0) {
+        console.log('[islands]', `<${tagName}> ${final}`);
+      } else {
+        console.groupCollapsed(`[islands] <${tagName}>`);
+        for (const m of msgs) console.log(m);
+        console.log(final);
+        console.groupEnd();
+      }
+    } : () => {};
     try {
       if (el.hasAttribute(attrVisible)) {
-        log(`<${tagName}> waiting for ${attrVisible}`);
-        await visible(el, rootMargin, threshold, pendingVisible);
-        log(`<${tagName}> ${attrVisible} resolved`);
+        // Per-element value overrides global rootMargin (e.g. client:visible="0px")
+        const elRootMargin = el.getAttribute(attrVisible) || rootMargin;
+        note(`waiting for ${attrVisible}`);
+        await visible(el, elRootMargin, threshold, pendingVisible);
       }
-      const q = el.getAttribute(attrMedia);
-      if (q) {
-        log(`<${tagName}> waiting for ${attrMedia}="${q}"`);
-        await media(q);
-        log(`<${tagName}> ${attrMedia} resolved`);
+      const query = el.getAttribute(attrMedia);
+      if (query) {
+        note(`waiting for ${attrMedia}="${query}"`);
+        await media(query);
       }
       if (el.hasAttribute(attrIdle)) {
-        log(`<${tagName}> waiting for ${attrIdle} (timeout: ${idleTimeout}ms)`);
-        await idle(idleTimeout);
-        log(`<${tagName}> ${attrIdle} resolved`);
+        // Per-element value overrides global timeout (e.g. client:idle="1000")
+        // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
+        const rawIdle = parseInt(el.getAttribute(attrIdle)!, 10);
+        const elTimeout = Number.isNaN(rawIdle) ? idleTimeout : rawIdle;
+        note(`waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
+        await idle(elTimeout);
       }
       const d = el.getAttribute(attrDefer);
       if (d !== null) {
         const raw = parseInt(d, 10);
-        const ms = (d === '' || Number.isNaN(raw)) ? deferDelay : raw;
+        const ms = Number.isNaN(raw) ? deferDelay : raw;
         if (d !== '' && Number.isNaN(raw)) {
           console.warn(`[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`);
         }
-        log(`<${tagName}> waiting for ${attrDefer} (${ms}ms)`);
+        note(`waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
-        log(`<${tagName}> ${attrDefer} resolved`);
       }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
-      log(`<${tagName}> aborted (element removed)`);
+      flush('aborted (element removed)');
       return;
     }
-    log(`<${tagName}> loading`);
-    loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+
+    const run = () => loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+
+    // Custom directives run after built-ins — the directive owns the load() call
+    if (customDirectives?.size) {
+      for (const [attrName, directiveFn] of customDirectives) {
+        if (el.hasAttribute(attrName)) {
+          flush(`dispatching to custom directive ${attrName}`);
+          directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
+          return; // directive owns the load call
+        }
+      }
+    }
+
+    flush('triggered');
+    run();
   }
 
-  function activate(el: Element): void {
+  function activate(el: HTMLElement): void {
     const tagName = el.tagName.toLowerCase();
     if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
@@ -153,11 +192,11 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
 
   // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
   // and avoids stack overflow on deeply nested pages
-  function walk(el: Element): void {
+  function walk(el: HTMLElement): void {
     activate(el);
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT, customElementFilter);
     let node: Node | null;
-    while ((node = walker.nextNode())) activate(node as Element);
+    while ((node = walker.nextNode())) activate(node as HTMLElement);
   }
 
   const observer = new MutationObserver((mutations) => {
@@ -171,7 +210,7 @@ export function revive(islands: Record<string, () => Promise<unknown>>, options?
     // Activate islands added dynamically
     for (const { addedNodes } of mutations) {
       for (const node of addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) walk(node as Element);
+        if (node.nodeType === Node.ELEMENT_NODE) walk(node as HTMLElement);
       }
     }
   });
