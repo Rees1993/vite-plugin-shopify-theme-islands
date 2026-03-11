@@ -84,7 +84,6 @@ export function revive(
   const idleTimeout = options?.directives?.idle?.timeout ?? 500;
   const deferDelay = options?.directives?.defer?.delay ?? 3000;
   const debug = options?.debug ?? false;
-  const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -102,10 +101,13 @@ export function revive(
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
-  log(`revive() ready — ${islandMap.size} island(s)`);
 
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
+
+  // Set to true after the initial DOM walk — suppresses the upfront "waiting · ..." log for
+  // dynamically added islands, where the completion group alone is sufficient.
+  let initDone = false;
 
   // Track successfully loaded tag names so child islands can activate after their parent loads
   const loaded = new Set<string>();
@@ -136,8 +138,30 @@ export function revive(
     el: HTMLElement,
     loader: () => Promise<unknown>,
   ): Promise<void> {
-    // Log activating immediately so islands stuck waiting still appear in the console
-    log(`<${tagName}> activating`);
+    // Show which directives the island is waiting on inside the init group. Skipped for
+    // dynamic (post-init) activations — the completion group is sufficient there.
+    // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
+    if (debug && !initDone) {
+      const parts: string[] = [];
+      if (el.hasAttribute(attrVisible)) {
+        const v = el.getAttribute(attrVisible);
+        parts.push(v ? `${attrVisible}="${v}"` : attrVisible);
+      }
+      const mediaVal = el.getAttribute(attrMedia);
+      if (mediaVal) parts.push(`${attrMedia}="${mediaVal}"`);
+      if (el.hasAttribute(attrIdle)) {
+        const v = el.getAttribute(attrIdle);
+        parts.push(v ? `${attrIdle}="${v}"` : attrIdle);
+      }
+      const deferVal = el.getAttribute(attrDefer);
+      if (deferVal !== null) parts.push(deferVal ? `${attrDefer}="${deferVal}"` : attrDefer);
+      if (customDirectives?.size) {
+        for (const a of customDirectives.keys()) {
+          if (el.hasAttribute(a)) parts.push(a);
+        }
+      }
+      if (parts.length > 0) console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
+    }
 
     // Buffer subsequent stages; flush as a collapsed group if there were any,
     // or as a flat log if the island triggered with no intermediate steps
@@ -152,9 +176,8 @@ export function revive(
           if (msgs.length === 0) {
             console.log("[islands]", `<${tagName}> ${final}`);
           } else {
-            console.groupCollapsed(`[islands] <${tagName}>`);
+            console.groupCollapsed(`[islands] <${tagName}> ${final}`);
             for (const m of msgs) console.log(m);
-            console.log(final);
             console.groupEnd();
           }
         }
@@ -276,7 +299,10 @@ export function revive(
   });
 
   function init(): void {
+    if (debug) console.groupCollapsed(`[islands] ready — ${islandMap.size} island(s)`);
     walk(document.body);
+    initDone = true;
+    if (debug) console.groupEnd();
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
