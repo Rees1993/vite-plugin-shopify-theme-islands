@@ -515,6 +515,109 @@ describe("revive", () => {
     });
   });
 
+  describe("debug logging", () => {
+    it("does not call console.groupCollapsed when debug is false (default)", () => {
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      document.body.innerHTML = "<no-debug-island></no-debug-island>";
+      revive({ "/islands/no-debug-island.ts": mock(async () => {}) });
+      expect(groupCollapsed).not.toHaveBeenCalled();
+      groupCollapsed.mockRestore();
+    });
+
+    it("wraps the init walk in a collapsed group with island count when debug: true", () => {
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = "<dbg-init></dbg-init>";
+      revive({ "/islands/dbg-init.ts": mock(async () => {}) }, { debug: true });
+      expect(groupCollapsed).toHaveBeenCalledWith("[islands] ready — 1 island(s)");
+      expect(groupEnd).toHaveBeenCalled();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+
+    it("logs waiting with directive names for islands that have directives during init", async () => {
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = '<dbg-waiting client:defer="500"></dbg-waiting>';
+      revive({ "/islands/dbg-waiting.ts": mock(async () => {}) }, { debug: true });
+      const waitingCalls = logSpy.mock.calls.filter((args) =>
+        String(args[1]).includes("waiting ·"),
+      );
+      expect(waitingCalls).toHaveLength(1);
+      expect(waitingCalls[0]).toEqual(["[islands]", '<dbg-waiting> waiting · client:defer="500"']);
+      logSpy.mockRestore();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+
+    it("does not log waiting for islands with no directives", () => {
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = "<dbg-instant></dbg-instant>";
+      revive({ "/islands/dbg-instant.ts": mock(async () => {}) }, { debug: true });
+      const waitingCalls = logSpy.mock.calls.filter((args) =>
+        String(args[1]).includes("waiting ·"),
+      );
+      expect(waitingCalls).toHaveLength(0);
+      logSpy.mockRestore();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+
+    it("does not log waiting for islands added dynamically after init", async () => {
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      revive({ "/islands/dbg-dynamic.ts": mock(async () => {}) }, { debug: true });
+      logSpy.mockClear();
+      const el = document.createElement("dbg-dynamic");
+      el.setAttribute("client:defer", "500");
+      document.body.appendChild(el);
+      await flush();
+      const waitingCalls = logSpy.mock.calls.filter((args) =>
+        String(args[1]).includes("waiting ·"),
+      );
+      expect(waitingCalls).toHaveLength(0);
+      logSpy.mockRestore();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+
+    it("includes the outcome in the collapsed group label when intermediate notes were buffered", async () => {
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = '<dbg-outcome client:defer="20"></dbg-outcome>';
+      revive({ "/islands/dbg-outcome.ts": mock(async () => {}) }, { debug: true });
+      await flush();
+      const triggered = groupCollapsed.mock.calls.find((args) =>
+        String(args[0]).includes("<dbg-outcome> triggered"),
+      );
+      expect(triggered).toBeDefined();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+
+    it("logs a flat line (no group) when an island fires with no intermediate waits", async () => {
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = "<dbg-flat></dbg-flat>";
+      revive({ "/islands/dbg-flat.ts": mock(async () => {}) }, { debug: true });
+      await flush();
+      expect(logSpy).toHaveBeenCalledWith("[islands]", "<dbg-flat> triggered");
+      // outcome is a flat log, not a group
+      const triggeredGroup = groupCollapsed.mock.calls.find((args) =>
+        String(args[0]).includes("<dbg-flat> triggered"),
+      );
+      expect(triggeredGroup).toBeUndefined();
+      logSpy.mockRestore();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
+    });
+  });
+
   describe("custom directives", () => {
     it("calls the directive function with loader, options, and element", async () => {
       const directiveFn = mock<ClientDirective>((_load, _opts, _el) => {});
