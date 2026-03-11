@@ -20,7 +20,7 @@ function media(query: string): Promise<void> {
   const m = window.matchMedia(query);
   return new Promise((resolve) => {
     if (m.matches) resolve();
-    else m.addEventListener('change', () => resolve(), { once: true });
+    else m.addEventListener("change", () => resolve(), { once: true });
   });
 }
 
@@ -34,19 +34,25 @@ function visible(
   pending: Map<Element, () => void>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const io = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          io.disconnect();
-          pending.delete(element);
-          resolve();
-          return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            io.disconnect();
+            pending.delete(element);
+            resolve();
+            return;
+          }
         }
-      }
-    }, { rootMargin, threshold });
+      },
+      { rootMargin, threshold },
+    );
 
     io.observe(element);
-    pending.set(element, () => { io.disconnect(); reject(); });
+    pending.set(element, () => {
+      io.disconnect();
+      reject();
+    });
   });
 }
 
@@ -59,7 +65,7 @@ function defer(ms: number): Promise<void> {
 // Falls back to setTimeout with a configurable timeout for browsers without requestIdleCallback.
 function idle(timeout: number): Promise<void> {
   return new Promise((resolve) => {
-    if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout });
+    if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout });
     else setTimeout(resolve, timeout);
   });
 }
@@ -68,9 +74,7 @@ function idle(timeout: number): Promise<void> {
 // skips (but still descends into) everything else
 const customElementFilter: NodeFilter = {
   acceptNode: (node) =>
-    (node as Element).tagName.includes('-')
-      ? NodeFilter.FILTER_ACCEPT
-      : NodeFilter.FILTER_SKIP,
+    (node as Element).tagName.includes("-") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
 };
 
 export function revive(
@@ -78,23 +82,28 @@ export function revive(
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ): void {
-  const attrVisible = options?.directives?.visible?.attribute ?? 'client:visible';
-  const attrMedia   = options?.directives?.media?.attribute   ?? 'client:media';
-  const attrIdle    = options?.directives?.idle?.attribute    ?? 'client:idle';
-  const attrDefer   = options?.directives?.defer?.attribute   ?? 'client:defer';
-  const rootMargin  = options?.directives?.visible?.rootMargin ?? '200px';
-  const threshold   = options?.directives?.visible?.threshold  ?? 0;
-  const idleTimeout = options?.directives?.idle?.timeout       ?? 500;
-  const deferDelay  = options?.directives?.defer?.delay        ?? 3000;
+  const attrVisible = options?.directives?.visible?.attribute ?? "client:visible";
+  const attrMedia = options?.directives?.media?.attribute ?? "client:media";
+  const attrIdle = options?.directives?.idle?.attribute ?? "client:idle";
+  const attrDefer = options?.directives?.defer?.attribute ?? "client:defer";
+  const rootMargin = options?.directives?.visible?.rootMargin ?? "200px";
+  const threshold = options?.directives?.visible?.threshold ?? 0;
+  const idleTimeout = options?.directives?.idle?.timeout ?? 500;
+  const deferDelay = options?.directives?.defer?.delay ?? 3000;
   const debug = options?.debug ?? false;
-  const log = debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
+  const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
   for (const [key, loader] of Object.entries(islands)) {
-    const tagName = key.split('/').pop()!.replace(/\.(ts|js)$/, '');
-    if (!tagName.includes('-')) {
-      console.warn(`[islands] Skipping "${key.split('/').pop()}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`);
+    const tagName = key
+      .split("/")
+      .pop()!
+      .replace(/\.(ts|js)$/, "");
+    if (!tagName.includes("-")) {
+      console.warn(
+        `[islands] Skipping "${key.split("/").pop()}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`,
+      );
       continue;
     }
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
@@ -109,24 +118,34 @@ export function revive(
   // Checked by the outer MutationObserver to abort loading if the element is removed.
   const pendingVisible = new Map<Element, () => void>();
 
-  async function loadIsland(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): Promise<void> {
+  async function loadIsland(
+    tagName: string,
+    el: HTMLElement,
+    loader: () => Promise<unknown>,
+  ): Promise<void> {
     // Log activating immediately so islands stuck waiting still appear in the console
     log(`<${tagName}> activating`);
 
     // Buffer subsequent stages; flush as a collapsed group if there were any,
     // or as a flat log if the island triggered with no intermediate steps
     const msgs: string[] = [];
-    const note = debug ? (msg: string) => { msgs.push(msg); } : () => {};
-    const flush = debug ? (final: string) => {
-      if (msgs.length === 0) {
-        console.log('[islands]', `<${tagName}> ${final}`);
-      } else {
-        console.groupCollapsed(`[islands] <${tagName}>`);
-        for (const m of msgs) console.log(m);
-        console.log(final);
-        console.groupEnd();
-      }
-    } : () => {};
+    const note = debug
+      ? (msg: string) => {
+          msgs.push(msg);
+        }
+      : () => {};
+    const flush = debug
+      ? (final: string) => {
+          if (msgs.length === 0) {
+            console.log("[islands]", `<${tagName}> ${final}`);
+          } else {
+            console.groupCollapsed(`[islands] <${tagName}>`);
+            for (const m of msgs) console.log(m);
+            console.log(final);
+            console.groupEnd();
+          }
+        }
+      : () => {};
     try {
       if (el.hasAttribute(attrVisible)) {
         // Per-element value overrides global rootMargin (e.g. client:visible="0px")
@@ -151,22 +170,25 @@ export function revive(
       if (d !== null) {
         const raw = parseInt(d, 10);
         const ms = Number.isNaN(raw) ? deferDelay : raw;
-        if (d !== '' && Number.isNaN(raw)) {
-          console.warn(`[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`);
+        if (d !== "" && Number.isNaN(raw)) {
+          console.warn(
+            `[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`,
+          );
         }
         note(`waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
       }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
-      flush('aborted (element removed)');
+      flush("aborted (element removed)");
       return;
     }
 
-    const run = () => loader().catch((err) => {
-      console.error(`[islands] Failed to load <${tagName}>:`, err);
-      queued.delete(tagName);
-    });
+    const run = () =>
+      loader().catch((err) => {
+        console.error(`[islands] Failed to load <${tagName}>:`, err);
+        queued.delete(tagName);
+      });
 
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {
@@ -176,7 +198,7 @@ export function revive(
       }
       if (matched.length > 1) {
         console.warn(
-          `[islands] <${tagName}> has multiple custom directives (${matched.map(([a]) => a).join(', ')}) — only "${matched[0][0]}" will be used. Combining custom directives is not yet supported.`,
+          `[islands] <${tagName}> has multiple custom directives (${matched.map(([a]) => a).join(", ")}) — only "${matched[0][0]}" will be used. Combining custom directives is not yet supported.`,
         );
       }
       if (matched.length > 0) {
@@ -187,7 +209,7 @@ export function revive(
       }
     }
 
-    flush('triggered');
+    flush("triggered");
     run();
   }
 
@@ -231,8 +253,8 @@ export function revive(
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
   } else {
     init();
   }

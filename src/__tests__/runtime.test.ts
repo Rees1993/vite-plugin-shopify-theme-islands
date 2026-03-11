@@ -11,7 +11,10 @@ const IDLE_DEADLINE: IdleDeadline = { timeRemaining: () => 0, didTimeout: false 
 
 // Helper to install a mock IntersectionObserver and return the real one for restoration
 function mockIntersectionObserver(
-  impl: new (cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) => Pick<IntersectionObserver, "observe" | "disconnect">
+  impl: new (
+    cb: IntersectionObserverCallback,
+    opts?: IntersectionObserverInit,
+  ) => Pick<IntersectionObserver, "observe" | "disconnect">,
 ): typeof IntersectionObserver {
   const original = globalThis.IntersectionObserver;
   globalThis.IntersectionObserver = impl as unknown as typeof IntersectionObserver;
@@ -67,7 +70,9 @@ describe("revive", () => {
       let moCallback: MutationCallback | undefined;
       const OriginalMO = globalThis.MutationObserver;
       globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) { moCallback = cb; }
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
         observe() {}
         disconnect() {}
       } as unknown as typeof MutationObserver;
@@ -82,11 +87,17 @@ describe("revive", () => {
       revive({ "/islands/retry-island.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("Failed to load"), expect.any(Error));
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load"),
+        expect.any(Error),
+      );
 
       // Simulate re-insertion via MutationObserver — queued was cleared on failure
       const el2 = document.createElement("retry-island");
-      moCallback!([{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+      moCallback!(
+        [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
       await flush();
       expect(loader).toHaveBeenCalledTimes(2);
 
@@ -98,7 +109,9 @@ describe("revive", () => {
       let moCallback: MutationCallback | undefined;
       const OriginalMO = globalThis.MutationObserver;
       globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) { moCallback = cb; }
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
         observe() {}
         disconnect() {}
       } as unknown as typeof MutationObserver;
@@ -112,7 +125,10 @@ describe("revive", () => {
 
       // Simulate re-insertion — queued still has tagName, so load is blocked
       const el2 = document.createElement("no-retry-island");
-      moCallback!([{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+      moCallback!(
+        [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
 
@@ -126,14 +142,14 @@ describe("revive", () => {
 
     beforeEach(() => {
       // happy-dom doesn't implement requestIdleCallback, so it's undefined at runtime
-      originalRIC = 'requestIdleCallback' in window ? window.requestIdleCallback : undefined;
+      originalRIC = "requestIdleCallback" in window ? window.requestIdleCallback : undefined;
     });
 
     afterEach(() => {
       if (originalRIC !== undefined) {
         window.requestIdleCallback = originalRIC;
       } else {
-        Reflect.deleteProperty(window, 'requestIdleCallback');
+        Reflect.deleteProperty(window, "requestIdleCallback");
       }
     });
 
@@ -156,7 +172,10 @@ describe("revive", () => {
 
     it("calls loader via requestIdleCallback when available", async () => {
       let cb!: IdleRequestCallback;
-      window.requestIdleCallback = (fn) => { cb = fn; return 0; };
+      window.requestIdleCallback = (fn) => {
+        cb = fn;
+        return 0;
+      };
 
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-box client:idle></idle-box>";
@@ -170,10 +189,16 @@ describe("revive", () => {
 
     it("passes timeout option to requestIdleCallback", () => {
       let capturedOpts: IdleRequestOptions | undefined;
-      window.requestIdleCallback = (_fn, opts) => { capturedOpts = opts; return 0; };
+      window.requestIdleCallback = (_fn, opts) => {
+        capturedOpts = opts;
+        return 0;
+      };
 
       document.body.innerHTML = "<idle-opts client:idle></idle-opts>";
-      revive({ "/islands/idle-opts.ts": mock(async () => {}) }, { directives: { idle: { timeout: 300 } } });
+      revive(
+        { "/islands/idle-opts.ts": mock(async () => {}) },
+        { directives: { idle: { timeout: 300 } } },
+      );
 
       expect(capturedOpts).toEqual({ timeout: 300 });
     });
@@ -182,10 +207,7 @@ describe("revive", () => {
       // global=5000ms but per-element="20" → should load within 80ms
       const loader = mock(async () => {});
       document.body.innerHTML = '<idle-per-el client:idle="20"></idle-per-el>';
-      revive(
-        { "/islands/idle-per-el.ts": loader },
-        { directives: { idle: { timeout: 5000 } } },
-      );
+      revive({ "/islands/idle-per-el.ts": loader }, { directives: { idle: { timeout: 5000 } } });
       await flush(80);
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -208,14 +230,16 @@ describe("revive", () => {
     let originalIO: typeof IntersectionObserver;
 
     beforeEach(() => {
-      originalIO = mockIntersectionObserver(class {
-        observe = (): void => {};
-        disconnect = (): void => {};
-        constructor(cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) {
-          trigger = cb;
-          ioOptions = opts;
-        }
-      });
+      originalIO = mockIntersectionObserver(
+        class {
+          observe = (): void => {};
+          disconnect = (): void => {};
+          constructor(cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) {
+            trigger = cb;
+            ioOptions = opts;
+          }
+        },
+      );
     });
 
     afterEach(() => {
@@ -251,13 +275,19 @@ describe("revive", () => {
 
     it("passes custom rootMargin to IntersectionObserver", () => {
       document.body.innerHTML = "<margin-custom client:visible></margin-custom>";
-      revive({ "/islands/margin-custom.ts": mock(async () => {}) }, { directives: { visible: { rootMargin: "0px" } } });
+      revive(
+        { "/islands/margin-custom.ts": mock(async () => {}) },
+        { directives: { visible: { rootMargin: "0px" } } },
+      );
       expect(ioOptions?.rootMargin).toBe("0px");
     });
 
     it("passes custom threshold to IntersectionObserver", () => {
       document.body.innerHTML = "<threshold-test client:visible></threshold-test>";
-      revive({ "/islands/threshold-test.ts": mock(async () => {}) }, { directives: { visible: { threshold: 0.5 } } });
+      revive(
+        { "/islands/threshold-test.ts": mock(async () => {}) },
+        { directives: { visible: { threshold: 0.5 } } },
+      );
       expect(ioOptions?.threshold).toBe(0.5);
     });
 
@@ -304,7 +334,8 @@ describe("revive", () => {
     });
 
     it("loads immediately when the media query already matches", async () => {
-      window.matchMedia = (_q) => ({ matches: true, addEventListener: () => {} } as unknown as MediaQueryList);
+      window.matchMedia = (_q) =>
+        ({ matches: true, addEventListener: () => {} }) as unknown as MediaQueryList;
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
@@ -315,10 +346,13 @@ describe("revive", () => {
 
     it("waits for a change event when the query does not initially match", async () => {
       let changeHandler!: () => void;
-      window.matchMedia = (_q) => ({
-        matches: false,
-        addEventListener: (_: string, h: () => void) => { changeHandler = h; },
-      } as unknown as MediaQueryList);
+      window.matchMedia = (_q) =>
+        ({
+          matches: false,
+          addEventListener: (_: string, h: () => void) => {
+            changeHandler = h;
+          },
+        }) as unknown as MediaQueryList;
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
@@ -351,7 +385,7 @@ describe("revive", () => {
 
     it("uses configured fallback delay when attribute has no value", async () => {
       const loader = mock(async () => {});
-      document.body.innerHTML = '<defer-novalue client:defer></defer-novalue>';
+      document.body.innerHTML = "<defer-novalue client:defer></defer-novalue>";
       revive({ "/islands/defer-novalue.ts": loader }, { directives: { defer: { delay: 20 } } });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
@@ -360,7 +394,10 @@ describe("revive", () => {
     it("respects custom attribute name", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-custom data:defer="20"></defer-custom>';
-      revive({ "/islands/defer-custom.ts": loader }, { directives: { defer: { attribute: "data:defer" } } });
+      revive(
+        { "/islands/defer-custom.ts": loader },
+        { directives: { defer: { attribute: "data:defer" } } },
+      );
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -376,7 +413,7 @@ describe("revive", () => {
       spy.mockRestore();
     });
 
-    it("treats client:defer=\"0\" as a zero ms delay, not the default", async () => {
+    it('treats client:defer="0" as a zero ms delay, not the default', async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-zero client:defer="0"></defer-zero>';
       revive({ "/islands/defer-zero.ts": loader });
@@ -429,7 +466,9 @@ describe("revive", () => {
     });
 
     it("does not auto-load when a custom directive matches — directive owns the load call", async () => {
-      const directiveFn = mock<ClientDirective>(() => { /* intentionally don't call load */ });
+      const directiveFn = mock<ClientDirective>(() => {
+        /* intentionally don't call load */
+      });
       const loader = mock(async () => {});
       document.body.innerHTML = "<no-auto-load client:on-click></no-auto-load>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
@@ -442,7 +481,9 @@ describe("revive", () => {
     it("calls load immediately when no custom directive attribute matches", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<no-attr-island></no-attr-island>";
-      const customDirectives = new Map<string, ClientDirective>([["client:on-click", mock<ClientDirective>(() => {})]]);
+      const customDirectives = new Map<string, ClientDirective>([
+        ["client:on-click", mock<ClientDirective>(() => {})],
+      ]);
       revive({ "/islands/no-attr-island.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
@@ -450,11 +491,15 @@ describe("revive", () => {
 
     it("built-ins gate before custom directive — client:visible must resolve first", async () => {
       let trigger!: IntersectionObserverCallback;
-      const originalIO = mockIntersectionObserver(class {
-        observe = (): void => {};
-        disconnect = (): void => {};
-        constructor(cb: IntersectionObserverCallback) { trigger = cb; }
-      });
+      const originalIO = mockIntersectionObserver(
+        class {
+          observe = (): void => {};
+          disconnect = (): void => {};
+          constructor(cb: IntersectionObserverCallback) {
+            trigger = cb;
+          }
+        },
+      );
 
       const directiveFn = mock<ClientDirective>(() => {});
       document.body.innerHTML = "<gated-island client:visible client:on-click></gated-island>";
@@ -470,5 +515,4 @@ describe("revive", () => {
       globalThis.IntersectionObserver = originalIO;
     });
   });
-
 });

@@ -93,8 +93,8 @@ describe("plugin", () => {
         directories: ["/islands/"],
         directives: {
           visible: { attribute: "data:visible" },
-          media:   { attribute: "data:media" },
-          idle:    { attribute: "data:idle" },
+          media: { attribute: "data:media" },
+          idle: { attribute: "data:idle" },
         },
       });
       plugin.configResolved(makeConfig());
@@ -107,7 +107,7 @@ describe("plugin", () => {
     it("resolves Vite string aliases in directory paths", async () => {
       const plugin = makePlugin({ directories: ["@islands/"] });
       plugin.configResolved(
-        makeConfig([{ find: "@islands", replacement: "/project/frontend/js/islands" }])
+        makeConfig([{ find: "@islands", replacement: "/project/frontend/js/islands" }]),
       );
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("/project/frontend/js/islands/");
@@ -117,7 +117,7 @@ describe("plugin", () => {
     it("resolves Vite regex aliases in directory paths", async () => {
       const plugin = makePlugin({ directories: ["@islands/"] });
       plugin.configResolved(
-        makeConfig([{ find: /^@islands/, replacement: "/project/frontend/js/islands" }])
+        makeConfig([{ find: /^@islands/, replacement: "/project/frontend/js/islands" }]),
       );
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("/project/frontend/js/islands/");
@@ -129,7 +129,7 @@ describe("plugin", () => {
         directives: {
           custom: [
             { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
-            { name: "client:hover",    entrypoint: "./src/directives/hover.ts" },
+            { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
           ],
         },
       });
@@ -137,13 +137,15 @@ describe("plugin", () => {
       const ctx = {
         resolve: async (id: string) => ({ id: `/resolved/${id}` }),
       };
-      const output = await (plugin.load as (this: typeof ctx, id: string) => Promise<string | undefined>).call(ctx, RESOLVED_ID);
+      const output = await (
+        plugin.load as (this: typeof ctx, id: string) => Promise<string | undefined>
+      ).call(ctx, RESOLVED_ID);
       expect(output).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts"');
       expect(output).toContain('import _directive1 from "/resolved/./src/directives/hover.ts"');
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
-      expect(output).toContain('new Map([');
-      expect(output).toContain('_islands(islands, options, customDirectives)');
+      expect(output).toContain("new Map([");
+      expect(output).toContain("_islands(islands, options, customDirectives)");
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {
@@ -162,7 +164,10 @@ describe("plugin", () => {
       plugin.configResolved(makeConfig());
       const ctx = { resolve: async () => null };
       await expect(
-        (plugin.load as (this: typeof ctx, id: string) => Promise<string | undefined>).call(ctx, RESOLVED_ID)
+        (plugin.load as (this: typeof ctx, id: string) => Promise<string | undefined>).call(
+          ctx,
+          RESOLVED_ID,
+        ),
       ).rejects.toThrow("Cannot resolve");
     });
   });
@@ -198,7 +203,7 @@ describe("plugin", () => {
     it("includes mixin files discovered outside the islands directory", async () => {
       writeFileSync(
         join(tmp, "my-widget.ts"),
-        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class MyWidget extends Island(HTMLElement) {}'
+        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class MyWidget extends Island(HTMLElement) {}',
       );
 
       const plugin = makePlugin({ directories: ["/nonexistent/"] });
@@ -213,7 +218,7 @@ describe("plugin", () => {
       mkdirSync(islandsDir);
       writeFileSync(
         join(islandsDir, "my-widget.ts"),
-        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class MyWidget extends Island(HTMLElement) {}'
+        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class MyWidget extends Island(HTMLElement) {}',
       );
 
       const plugin = makePlugin({ directories: ["/islands/"] });
