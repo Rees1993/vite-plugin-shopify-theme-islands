@@ -163,7 +163,10 @@ export function revive(
       return;
     }
 
-    const run = () => loader().catch((err) => console.error(`[islands] Failed to load <${tagName}>:`, err));
+    const run = () => loader().catch((err) => {
+      console.error(`[islands] Failed to load <${tagName}>:`, err);
+      queued.delete(tagName);
+    });
 
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {

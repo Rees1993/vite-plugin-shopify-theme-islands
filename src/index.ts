@@ -63,6 +63,7 @@ export interface ClientDirectiveDefinition {
 
 const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'public', 'assets', '.cache']);
 
 /** Shared directive configuration shape used by both the plugin and the runtime. */
 export interface DirectivesConfig {
@@ -149,7 +150,7 @@ function collectTagNames(dir: string, names: string[]): void {
     return;
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
     if (entry.isDirectory()) {
       collectTagNames(join(dir, entry.name), names);
     } else if (TS_JS_RE.test(entry.name)) {
@@ -167,7 +168,7 @@ function scanForIslandFiles(dir: string, found: Set<string>): void {
     return;
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       scanForIslandFiles(full, found);
@@ -225,9 +226,12 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     buildStart() {
       if (scanned) return;
       scanned = true;
+      const t0 = performance.now();
       scanForIslandFiles(root, islandFiles);
+      const scanMs = (performance.now() - t0).toFixed(1);
       for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
       if (debug) {
+        log(`Scanned in ${scanMs}ms`);
         log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
         const dirNames: string[] = [];
         for (const dir of absDirs) collectTagNames(dir, dirNames);

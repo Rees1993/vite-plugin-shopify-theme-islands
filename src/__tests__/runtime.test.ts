@@ -61,6 +61,63 @@ describe("revive", () => {
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("removes tag from queued on load failure, allowing retry on re-insertion", async () => {
+      const spy = spyOn(console, "error");
+      let moCallback: MutationCallback | undefined;
+      const OriginalMO = globalThis.MutationObserver;
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) { moCallback = cb; }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      let callCount = 0;
+      const loader = mock(async () => {
+        callCount++;
+        if (callCount === 1) throw new Error("network error");
+      });
+
+      document.body.innerHTML = "<retry-island></retry-island>";
+      revive({ "/islands/retry-island.ts": loader });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("Failed to load"), expect.any(Error));
+
+      // Simulate re-insertion via MutationObserver — queued was cleared on failure
+      const el2 = document.createElement("retry-island");
+      moCallback!([{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(2);
+
+      globalThis.MutationObserver = OriginalMO;
+      spy.mockRestore();
+    });
+
+    it("does not retry on re-insertion when load succeeds", async () => {
+      let moCallback: MutationCallback | undefined;
+      const OriginalMO = globalThis.MutationObserver;
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) { moCallback = cb; }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      const loader = mock(async () => {});
+
+      document.body.innerHTML = "<no-retry-island></no-retry-island>";
+      revive({ "/islands/no-retry-island.ts": loader });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+
+      // Simulate re-insertion — queued still has tagName, so load is blocked
+      const el2 = document.createElement("no-retry-island");
+      moCallback!([{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+
+      globalThis.MutationObserver = OriginalMO;
+    });
   });
 
   describe("client:idle", () => {
