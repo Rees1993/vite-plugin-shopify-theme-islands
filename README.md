@@ -100,6 +100,17 @@ The plugin detects the mixin import at build time and includes the file as a laz
 
 Both can be used together — directory scanning for new islands, the mixin for existing components you want to adopt without moving.
 
+### Child island cascade
+
+Child islands nested inside a parent island are automatically held until the parent's module has loaded. The runtime re-walks the parent's subtree on success, so child islands activate with their normal directives intact — no extra configuration needed.
+
+```html
+<product-form client:visible>
+  <!-- tab-switcher will not load until product-form has loaded -->
+  <tab-switcher client:idle></tab-switcher>
+</product-form>
+```
+
 ## Directives
 
 Add these attributes to your custom elements in Liquid to control when the JavaScript loads. Without a directive, the island loads immediately.
@@ -132,6 +143,8 @@ Loads the island when a CSS media query matches.
   <!-- ... -->
 </mobile-menu>
 ```
+
+An empty attribute (`client:media=""`) logs a console warning and skips the media check — the island still loads.
 
 ### `client:idle`
 
