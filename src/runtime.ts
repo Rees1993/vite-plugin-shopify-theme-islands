@@ -86,7 +86,8 @@ export function revive(
   const threshold   = options?.directives?.visible?.threshold  ?? 0;
   const idleTimeout = options?.directives?.idle?.timeout       ?? 500;
   const deferDelay  = options?.directives?.defer?.delay        ?? 3000;
-  const log = options?.debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
+  const debug = options?.debug ?? false;
+  const log = debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -99,7 +100,7 @@ export function revive(
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
-  log(`revive() ready — ${islandMap.size} island(s):`, [...islandMap.keys()]);
+  log(`revive() ready — ${islandMap.size} island(s)`);
 
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
@@ -109,17 +110,33 @@ export function revive(
   const pendingVisible = new Map<Element, () => void>();
 
   async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
+    // Log activating immediately so islands stuck waiting still appear in the console
     log(`<${tagName}> activating`);
+
+    // Buffer subsequent stages; flush as a collapsed group if there were any,
+    // or as a flat log if the island triggered with no intermediate steps
+    const msgs: string[] = [];
+    const note = debug ? (msg: string) => { msgs.push(msg); } : () => {};
+    const flush = debug ? (final: string) => {
+      if (msgs.length === 0) {
+        console.log('[islands]', `<${tagName}> ${final}`);
+      } else {
+        console.groupCollapsed(`[islands] <${tagName}>`);
+        for (const m of msgs) console.log(m);
+        console.log(final);
+        console.groupEnd();
+      }
+    } : () => {};
     try {
       if (el.hasAttribute(attrVisible)) {
         // Per-element value overrides global rootMargin (e.g. client:visible="0px")
         const elRootMargin = el.getAttribute(attrVisible) || rootMargin;
-        log(`<${tagName}> waiting for ${attrVisible}`);
+        note(`waiting for ${attrVisible}`);
         await visible(el, elRootMargin, threshold, pendingVisible);
       }
       const q = el.getAttribute(attrMedia);
       if (q) {
-        log(`<${tagName}> waiting for ${attrMedia}="${q}"`);
+        note(`waiting for ${attrMedia}="${q}"`);
         await media(q);
       }
       if (el.hasAttribute(attrIdle)) {
@@ -127,7 +144,7 @@ export function revive(
         // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
         const rawIdle = parseInt(el.getAttribute(attrIdle)!, 10);
         const elTimeout = Number.isNaN(rawIdle) ? idleTimeout : rawIdle;
-        log(`<${tagName}> waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
+        note(`waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
         await idle(elTimeout);
       }
       const d = el.getAttribute(attrDefer);
@@ -137,12 +154,12 @@ export function revive(
         if (d !== '' && Number.isNaN(raw)) {
           console.warn(`[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`);
         }
-        log(`<${tagName}> waiting for ${attrDefer} (${ms}ms)`);
+        note(`waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
       }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
-      log(`<${tagName}> aborted (element removed)`);
+      flush('aborted (element removed)');
       return;
     }
 
@@ -152,14 +169,14 @@ export function revive(
     if (customDirectives?.size) {
       for (const [attrName, directiveFn] of customDirectives) {
         if (el.hasAttribute(attrName)) {
-          log(`<${tagName}> dispatching to custom directive ${attrName}`);
+          flush(`dispatching to custom directive ${attrName}`);
           directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
           return; // directive owns the load call
         }
       }
     }
 
-    log(`<${tagName}> loading`);
+    flush('triggered');
     run();
   }
 

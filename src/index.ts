@@ -130,6 +130,24 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
+// Recursively collect tag names (filename without extension) from a directory
+function collectTagNames(dir: string, names: string[]): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.isDirectory()) {
+      collectTagNames(join(dir, entry.name), names);
+    } else if (TS_JS_RE.test(entry.name)) {
+      names.push(entry.name.replace(/\.(ts|js)$/, ''));
+    }
+  }
+}
+
 // Recursively scan a directory for files containing the Island import
 function scanForIslandFiles(dir: string, found: Set<string>): void {
   let entries;
@@ -201,6 +219,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
       if (debug) {
         log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
+        const dirNames: string[] = [];
+        for (const dir of absDirs) collectTagNames(dir, dirNames);
+        if (dirNames.length) log(`Found ${dirNames.length} directory island(s): [${dirNames.join(', ')}]`);
         if (islandFiles.size) {
           log(`Found ${islandFiles.size} island file(s) via mixin import:`);
           for (const f of islandFiles) log(' ', relative(root, f));
