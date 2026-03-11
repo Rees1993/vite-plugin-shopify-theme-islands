@@ -201,11 +201,11 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
       if (debug) {
         log('Scanning directories:', resolvedDirs.map((d) => d + '**/*.{ts,js}').join(', '));
-        log('Directives:', directives);
         if (islandFiles.size) {
           log(`Found ${islandFiles.size} island file(s) via mixin import:`);
           for (const f of islandFiles) log(' ', relative(root, f));
         }
+        log('Directives:', directives);
       }
     },
 

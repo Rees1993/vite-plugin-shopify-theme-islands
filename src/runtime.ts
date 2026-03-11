@@ -116,13 +116,11 @@ export function revive(
         const elRootMargin = el.getAttribute(attrVisible) || rootMargin;
         log(`<${tagName}> waiting for ${attrVisible}`);
         await visible(el, elRootMargin, threshold, pendingVisible);
-        log(`<${tagName}> ${attrVisible} resolved`);
       }
       const q = el.getAttribute(attrMedia);
       if (q) {
         log(`<${tagName}> waiting for ${attrMedia}="${q}"`);
         await media(q);
-        log(`<${tagName}> ${attrMedia} resolved`);
       }
       if (el.hasAttribute(attrIdle)) {
         // Per-element value overrides global timeout (e.g. client:idle="1000")
@@ -131,7 +129,6 @@ export function revive(
         const elTimeout = Number.isNaN(rawIdle) ? idleTimeout : rawIdle;
         log(`<${tagName}> waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
         await idle(elTimeout);
-        log(`<${tagName}> ${attrIdle} resolved`);
       }
       const d = el.getAttribute(attrDefer);
       if (d !== null) {
@@ -142,7 +139,6 @@ export function revive(
         }
         log(`<${tagName}> waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
-        log(`<${tagName}> ${attrDefer} resolved`);
       }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
@@ -203,7 +199,6 @@ export function revive(
   });
 
   function init(): void {
-    log('init() — walking DOM');
     walk(document.body);
     observer.observe(document.body, { childList: true, subtree: true });
   }
