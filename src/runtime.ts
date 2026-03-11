@@ -99,6 +99,8 @@ export function revive(
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
+  log(`revive() ready — ${islandMap.size} island(s):`, [...islandMap.keys()]);
+
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
 
@@ -201,6 +203,7 @@ export function revive(
   });
 
   function init(): void {
+    log('init() — walking DOM');
     walk(document.body);
     observer.observe(document.body, { childList: true, subtree: true });
   }
