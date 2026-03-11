@@ -200,12 +200,12 @@ export default hoverDirective;
 
 The function signature is `(load, options, el) => void | Promise<void>`:
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `load` | `() => Promise<unknown>` | Call this to trigger the island module load |
-| `options.name` | `string` | The matched attribute name, e.g. `'client:hover'` |
-| `options.value` | `string` | The attribute value; empty string if no value was set |
-| `el` | `HTMLElement` | The island element |
+| Parameter       | Type                     | Description                                           |
+| --------------- | ------------------------ | ----------------------------------------------------- |
+| `load`          | `() => Promise<unknown>` | Call this to trigger the island module load           |
+| `options.name`  | `string`                 | The matched attribute name, e.g. `'client:hover'`     |
+| `options.value` | `string`                 | The attribute value; empty string if no value was set |
+| `el`            | `HTMLElement`            | The island element                                    |
 
 #### 2. Register it in the plugin config
 
@@ -217,9 +217,7 @@ export default defineConfig({
   plugins: [
     shopifyThemeIslands({
       directives: {
-        custom: [
-          { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
-        ],
+        custom: [{ name: "client:hover", entrypoint: "./src/directives/hover.ts" }],
       },
     }),
   ],
@@ -249,11 +247,13 @@ Built-in directives always run first. A custom directive is only invoked after a
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
 
+> Only one custom directive can be active per element. If multiple custom directive attributes are present, the first registered one is used and a console warning is emitted. Combining multiple custom directives on one element is not yet supported.
+
 ## Configuration
 
-| Option        | Type                 | Default                     | Description                                                                       |
-| ------------- | -------------------- | --------------------------- | --------------------------------------------------------------------------------- |
-| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                       |
+| Option        | Type                 | Default                     | Description                                                                        |
+| ------------- | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
 | `directives`  | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
 | `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
 
@@ -264,21 +264,21 @@ shopifyThemeIslands({
   directives: {
     visible: {
       attribute: "client:visible", // HTML attribute name
-      rootMargin: "200px",         // passed to IntersectionObserver — pre-loads before scrolling into view
-      threshold: 0,                // passed to IntersectionObserver — ratio of element that must be visible
+      rootMargin: "200px", // passed to IntersectionObserver — pre-loads before scrolling into view
+      threshold: 0, // passed to IntersectionObserver — ratio of element that must be visible
     },
     idle: {
-      attribute: "client:idle",    // HTML attribute name
-      timeout: 500,                // deadline (ms) for requestIdleCallback; also the setTimeout fallback delay
+      attribute: "client:idle", // HTML attribute name
+      timeout: 500, // deadline (ms) for requestIdleCallback; also the setTimeout fallback delay
     },
     media: {
-      attribute: "client:media",   // HTML attribute name
+      attribute: "client:media", // HTML attribute name
     },
     defer: {
-      attribute: "client:defer",   // HTML attribute name
-      delay: 3000,                 // fallback delay (ms) when the attribute has no value
+      attribute: "client:defer", // HTML attribute name
+      delay: 3000, // fallback delay (ms) when the attribute has no value
     },
-    custom: [],                    // custom directives — see Custom directives above
+    custom: [], // custom directives — see Custom directives above
   },
 });
 ```

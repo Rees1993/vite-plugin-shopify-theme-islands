@@ -167,12 +167,20 @@ export function revive(
 
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {
+      const matched: Array<[string, ClientDirective]> = [];
       for (const [attrName, directiveFn] of customDirectives) {
-        if (el.hasAttribute(attrName)) {
-          flush(`dispatching to custom directive ${attrName}`);
-          directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
-          return; // directive owns the load call
-        }
+        if (el.hasAttribute(attrName)) matched.push([attrName, directiveFn]);
+      }
+      if (matched.length > 1) {
+        console.warn(
+          `[islands] <${tagName}> has multiple custom directives (${matched.map(([a]) => a).join(', ')}) — only "${matched[0][0]}" will be used. Combining custom directives is not yet supported.`,
+        );
+      }
+      if (matched.length > 0) {
+        const [attrName, directiveFn] = matched[0];
+        flush(`dispatching to custom directive ${attrName}`);
+        directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
+        return; // directive owns the load call
       }
     }
 
