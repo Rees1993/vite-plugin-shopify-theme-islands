@@ -101,7 +101,6 @@ export function revive(
     if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
   }
 
-
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
 
