@@ -100,7 +100,7 @@ The plugin detects the mixin import at build time and includes the file as a laz
 
 Both can be used together — directory scanning for new islands, the mixin for existing components you want to adopt without moving.
 
-## Loading directives
+## Directives
 
 Add these attributes to your custom elements in Liquid to control when the JavaScript loads. Without a directive, the island loads immediately.
 
@@ -169,7 +169,9 @@ Loads the island after a fixed delay. The delay in milliseconds is read from the
 
 Unlike `client:idle`, which waits for genuine browser idle time, `client:defer` always waits exactly the specified number of milliseconds.
 
-Directives can be combined — the element will wait for all conditions to be met before loading:
+### Combining directives
+
+Directives can be combined — the element waits for all conditions to be met before loading:
 
 ```html
 <heavy-widget client:visible client:idle>
@@ -177,11 +179,11 @@ Directives can be combined — the element will wait for all conditions to be me
 </heavy-widget>
 ```
 
-## Custom directives
+### Custom directives
 
 Register your own loading conditions via `directives.custom`. A custom directive is a function that receives a `load` callback and decides when to call it.
 
-### 1. Write the directive
+#### 1. Write the directive
 
 ```ts
 // src/directives/hover.ts
@@ -203,9 +205,9 @@ The function signature is `(load, options, el) => void | Promise<void>`:
 | `load` | `() => Promise<unknown>` | Call this to trigger the island module load |
 | `options.name` | `string` | The matched attribute name, e.g. `'client:hover'` |
 | `options.value` | `string` | The attribute value; empty string if no value was set |
-| `el` | `Element` | The island element |
+| `el` | `HTMLElement` | The island element |
 
-### 2. Register it in the plugin config
+#### 2. Register it in the plugin config
 
 ```ts
 // vite.config.ts
@@ -224,7 +226,9 @@ export default defineConfig({
 });
 ```
 
-### 3. Use it in Liquid
+The `entrypoint` supports Vite aliases.
+
+#### 3. Use it in Liquid
 
 ```html
 <quick-add client:hover>
@@ -232,7 +236,7 @@ export default defineConfig({
 </quick-add>
 ```
 
-### Ordering
+#### Ordering
 
 Built-in directives always run first. A custom directive is only invoked after all built-in conditions on the element have been met. This means you can gate a custom directive behind `client:visible` to avoid wiring event listeners for off-screen elements:
 
@@ -245,13 +249,13 @@ Built-in directives always run first. A custom directive is only invoked after a
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
 
-## Options
+## Configuration
 
-| Option        | Type                 | Default                     | Description                                                                            |
-| ------------- | -------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
-| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                            |
-| `directives`  | `object`             | see below                   | Per-directive configuration. Each directive has an `attribute` name and extra options. |
-| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.      |
+| Option        | Type                 | Default                     | Description                                                                       |
+| ------------- | -------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                       |
+| `directives`  | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
+| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
 
 ### Directive defaults
 
@@ -274,6 +278,7 @@ shopifyThemeIslands({
       attribute: "client:defer",   // HTML attribute name
       delay: 3000,                 // fallback delay (ms) when the attribute has no value
     },
+    custom: [],                    // custom directives — see Custom directives above
   },
 });
 ```
