@@ -126,10 +126,12 @@ describe("plugin", () => {
     it("generates directive imports and Map for custom directives", async () => {
       const plugin = makePlugin({
         directories: ["/islands/"],
-        clientDirectives: [
-          { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
-          { name: "client:hover",    entrypoint: "./src/directives/hover.ts" },
-        ],
+        directives: {
+          custom: [
+            { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
+            { name: "client:hover",    entrypoint: "./src/directives/hover.ts" },
+          ],
+        },
       });
       plugin.configResolved(makeConfig());
       const ctx = {
@@ -144,7 +146,7 @@ describe("plugin", () => {
       expect(output).toContain('_islands(islands, options, customDirectives)');
     });
 
-    it("omits customDirectives arg when no clientDirectives are configured", async () => {
+    it("omits customDirectives arg when no custom directives are configured", async () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
@@ -155,7 +157,7 @@ describe("plugin", () => {
     it("throws when a custom directive entrypoint cannot be resolved", async () => {
       const plugin = makePlugin({
         directories: ["/islands/"],
-        clientDirectives: [{ name: "client:on-click", entrypoint: "./nonexistent.ts" }],
+        directives: { custom: [{ name: "client:on-click", entrypoint: "./nonexistent.ts" }] },
       });
       plugin.configResolved(makeConfig());
       const ctx = { resolve: async () => null };

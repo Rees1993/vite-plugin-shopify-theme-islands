@@ -28,6 +28,7 @@ export interface ClientDirectiveOptions {
  *
  * @example
  * ```ts
+ * // src/directives/hover.ts
  * import type { ClientDirective } from 'vite-plugin-shopify-theme-islands';
  *
  * const hoverDirective: ClientDirective = (load, _opts, el) => {
@@ -36,11 +37,20 @@ export interface ClientDirectiveOptions {
  *
  * export default hoverDirective;
  * ```
+ *
+ * Register it in `vite.config.ts`:
+ * ```ts
+ * shopifyThemeIslands({
+ *   directives: {
+ *     custom: [{ name: 'client:hover', entrypoint: './src/directives/hover.ts' }],
+ *   },
+ * })
+ * ```
  */
 export type ClientDirective = (
   load: ClientDirectiveLoader,
   options: ClientDirectiveOptions,
-  el: Element,
+  el: HTMLElement,
 ) => void | Promise<void>;
 
 /** Plugin option entry for registering a custom client directive. */
@@ -84,6 +94,8 @@ export interface DirectivesConfig {
     /** Fallback delay (ms) when the attribute has no value. Default: `3000` */
     delay?: number;
   };
+  /** Custom client directives to register. Each entry maps an attribute name to a module entrypoint. */
+  custom?: ClientDirectiveDefinition[];
 }
 
 export interface ShopifyThemeIslandsOptions {
@@ -93,8 +105,6 @@ export interface ShopifyThemeIslandsOptions {
   debug?: boolean;
   /** Per-directive configuration. */
   directives?: DirectivesConfig;
-  /** Custom client directives to register. Each entry maps an attribute name to a module entrypoint. */
-  clientDirectives?: ClientDirectiveDefinition[];
 }
 
 export interface ReviveOptions {
@@ -178,8 +188,6 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     : [options.directories ?? defaults.directories[0]]
   ).map(normalizeDir);
 
-  const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.clientDirectives ?? [];
-
   // Deep merge directives — per-directive defaults are preserved when only some keys are overridden
   const directives: DirectivesConfig = {
     visible: { ...defaults.directives.visible, ...options.directives?.visible },
@@ -187,6 +195,8 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     media:   { ...defaults.directives.media,   ...options.directives?.media },
     defer:   { ...defaults.directives.defer,   ...options.directives?.defer },
   };
+
+  const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
 
   const debug = options.debug ?? false;
   const log = debug ? (...args: unknown[]) => console.log('[islands]', ...args) : () => {};
@@ -285,8 +295,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       // Resolve custom directive entrypoints via Vite's resolver (handles aliases, registers deps)
       const directiveImports: string[] = [];
       const mapEntries: string[] = [];
-      for (let i = 0; i < clientDirectiveDefinitions.length; i++) {
-        const def = clientDirectiveDefinitions[i];
+      for (const [i, def] of clientDirectiveDefinitions.entries()) {
         const resolved = await this.resolve(def.entrypoint);
         if (!resolved) {
           throw new Error(

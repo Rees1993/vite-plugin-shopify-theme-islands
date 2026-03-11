@@ -11,7 +11,7 @@ const IDLE_DEADLINE: IdleDeadline = { timeRemaining: () => 0, didTimeout: false 
 
 // Helper to install a mock IntersectionObserver and return the real one for restoration
 function mockIntersectionObserver(
-  impl: new (cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) => Pick<IntersectionObserver, 'observe' | 'disconnect'>
+  impl: new (cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) => Pick<IntersectionObserver, "observe" | "disconnect">
 ): typeof IntersectionObserver {
   const original = globalThis.IntersectionObserver;
   globalThis.IntersectionObserver = impl as unknown as typeof IntersectionObserver;

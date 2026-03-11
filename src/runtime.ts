@@ -109,7 +109,7 @@ export function revive(
   // Checked by the outer MutationObserver to abort loading if the element is removed.
   const pendingVisible = new Map<Element, () => void>();
 
-  async function loadIsland(tagName: string, el: Element, loader: () => Promise<unknown>): Promise<void> {
+  async function loadIsland(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): Promise<void> {
     // Log activating immediately so islands stuck waiting still appear in the console
     log(`<${tagName}> activating`);
 
@@ -134,10 +134,10 @@ export function revive(
         note(`waiting for ${attrVisible}`);
         await visible(el, elRootMargin, threshold, pendingVisible);
       }
-      const q = el.getAttribute(attrMedia);
-      if (q) {
-        note(`waiting for ${attrMedia}="${q}"`);
-        await media(q);
+      const query = el.getAttribute(attrMedia);
+      if (query) {
+        note(`waiting for ${attrMedia}="${query}"`);
+        await media(query);
       }
       if (el.hasAttribute(attrIdle)) {
         // Per-element value overrides global timeout (e.g. client:idle="1000")
@@ -180,7 +180,7 @@ export function revive(
     run();
   }
 
-  function activate(el: Element): void {
+  function activate(el: HTMLElement): void {
     const tagName = el.tagName.toLowerCase();
     if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
@@ -192,11 +192,11 @@ export function revive(
 
   // Walk a subtree using a native TreeWalker — faster than JS recursion for large DOMs
   // and avoids stack overflow on deeply nested pages
-  function walk(el: Element): void {
+  function walk(el: HTMLElement): void {
     activate(el);
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT, customElementFilter);
     let node: Node | null;
-    while ((node = walker.nextNode())) activate(node as Element);
+    while ((node = walker.nextNode())) activate(node as HTMLElement);
   }
 
   const observer = new MutationObserver((mutations) => {
@@ -210,7 +210,7 @@ export function revive(
     // Activate islands added dynamically
     for (const { addedNodes } of mutations) {
       for (const node of addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) walk(node as Element);
+        if (node.nodeType === Node.ELEMENT_NODE) walk(node as HTMLElement);
       }
     }
   });
