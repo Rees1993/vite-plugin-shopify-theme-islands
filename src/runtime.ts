@@ -35,14 +35,11 @@ function visible(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            io.disconnect();
-            pending.delete(element);
-            resolve();
-            return;
-          }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          io.disconnect();
+          pending.delete(element);
+          resolve();
         }
       },
       { rootMargin, threshold },
@@ -88,13 +85,11 @@ export function revive(
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
   for (const [key, loader] of Object.entries(islands)) {
-    const tagName = key
-      .split("/")
-      .pop()!
-      .replace(/\.(ts|js)$/, "");
+    const filename = key.split("/").pop()!;
+    const tagName = filename.replace(/\.(ts|js)$/, "");
     if (!tagName.includes("-")) {
       console.warn(
-        `[islands] Skipping "${key.split("/").pop()}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`,
+        `[islands] Skipping "${filename}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`,
       );
       continue;
     }
@@ -142,16 +137,13 @@ export function revive(
     // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
     if (debug && !initDone) {
       const parts: string[] = [];
-      if (el.hasAttribute(attrVisible)) {
-        const v = el.getAttribute(attrVisible);
-        parts.push(v ? `${attrVisible}="${v}"` : attrVisible);
-      }
+      const visibleVal = el.getAttribute(attrVisible);
+      if (visibleVal !== null)
+        parts.push(visibleVal ? `${attrVisible}="${visibleVal}"` : attrVisible);
       const mediaVal = el.getAttribute(attrMedia);
       if (mediaVal) parts.push(`${attrMedia}="${mediaVal}"`);
-      if (el.hasAttribute(attrIdle)) {
-        const v = el.getAttribute(attrIdle);
-        parts.push(v ? `${attrIdle}="${v}"` : attrIdle);
-      }
+      const idleVal = el.getAttribute(attrIdle);
+      if (idleVal !== null) parts.push(idleVal ? `${attrIdle}="${idleVal}"` : attrIdle);
       const deferVal = el.getAttribute(attrDefer);
       if (deferVal !== null) parts.push(deferVal ? `${attrDefer}="${deferVal}"` : attrDefer);
       if (customDirectives?.size) {
@@ -165,11 +157,7 @@ export function revive(
     // Buffer subsequent stages; flush as a collapsed group if there were any,
     // or as a flat log if the island triggered with no intermediate steps
     const msgs: string[] = [];
-    const note = debug
-      ? (msg: string) => {
-          msgs.push(msg);
-        }
-      : () => {};
+    const note = debug ? (msg: string) => msgs.push(msg) : () => {};
     const flush = debug
       ? (final: string) => {
           if (msgs.length === 0) {
@@ -182,11 +170,11 @@ export function revive(
         }
       : () => {};
     try {
-      if (el.hasAttribute(attrVisible)) {
+      const visibleAttr = el.getAttribute(attrVisible);
+      if (visibleAttr !== null) {
         // Per-element value overrides global rootMargin (e.g. client:visible="0px")
-        const elRootMargin = el.getAttribute(attrVisible) || rootMargin;
         note(`waiting for ${attrVisible}`);
-        await visible(el, elRootMargin, threshold, pendingVisible);
+        await visible(el, visibleAttr || rootMargin, threshold, pendingVisible);
       }
       const query = el.getAttribute(attrMedia);
       if (query === "") {
@@ -195,12 +183,13 @@ export function revive(
         note(`waiting for ${attrMedia}="${query}"`);
         await media(query);
       }
-      if (el.hasAttribute(attrIdle)) {
+      const idleAttr = el.getAttribute(attrIdle);
+      if (idleAttr !== null) {
         // Per-element value overrides global timeout (e.g. client:idle="1000")
         // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
-        const rawIdle = parseInt(el.getAttribute(attrIdle)!, 10);
-        const elTimeout = Number.isNaN(rawIdle) ? idleTimeout : rawIdle;
-        note(`waiting for ${attrIdle} (timeout: ${elTimeout}ms)`);
+        const raw = parseInt(idleAttr, 10);
+        const elTimeout = Number.isNaN(raw) ? idleTimeout : raw;
+        note(`waiting for ${attrIdle} (${elTimeout}ms)`);
         await idle(elTimeout);
       }
       const d = el.getAttribute(attrDefer);

@@ -36,6 +36,14 @@ import "vite-plugin-shopify-theme-islands/revive";
 
 That's it. The plugin automatically scans your islands directory and wires everything up.
 
+For SPA navigation teardown, import `disconnect` to stop the MutationObserver:
+
+```ts
+import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
+// Call during SPA teardown:
+disconnect();
+```
+
 ## Writing islands
 
 Two approaches — use either or both.

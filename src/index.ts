@@ -139,26 +139,8 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
-// Recursively collect tag names (filename without extension) from a directory
-function collectTagNames(dir: string, names: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-    if (entry.isDirectory()) {
-      collectTagNames(join(dir, entry.name), names);
-    } else if (TS_JS_RE.test(entry.name)) {
-      names.push(entry.name.replace(/\.(ts|js)$/, ""));
-    }
-  }
-}
-
-// Recursively scan a directory for files containing the Island import
-function scanForIslandFiles(dir: string, found: Set<string>): void {
+// Recursively walk a directory, calling visitor(name, fullPath) for each TS/JS file
+function walkDir(dir: string, visitor: (name: string, full: string) => void): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -168,17 +150,25 @@ function scanForIslandFiles(dir: string, found: Set<string>): void {
   for (const entry of entries) {
     if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      scanForIslandFiles(full, found);
-    } else if (TS_JS_RE.test(entry.name)) {
-      try {
-        const content = readFileSync(full, "utf-8");
-        if (ISLAND_IMPORT_RE.test(content)) found.add(full);
-      } catch {
-        // skip unreadable files
-      }
-    }
+    if (entry.isDirectory()) walkDir(full, visitor);
+    else if (TS_JS_RE.test(entry.name)) visitor(entry.name, full);
   }
+}
+
+// Collect tag names (filename without extension) from a directory
+function collectTagNames(dir: string, names: string[]): void {
+  walkDir(dir, (name) => names.push(name.replace(TS_JS_RE, "")));
+}
+
+// Scan a directory for files containing the Island import
+function scanForIslandFiles(dir: string, found: Set<string>): void {
+  walkDir(dir, (_, full) => {
+    try {
+      if (ISLAND_IMPORT_RE.test(readFileSync(full, "utf-8"))) found.add(full);
+    } catch {
+      // skip unreadable files
+    }
+  });
 }
 
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
@@ -325,10 +315,10 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
       if (mapEntries.length) {
         lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
-        lines.push(`_islands(islands, options, customDirectives);`);
-      } else {
-        lines.push(`_islands(islands, options);`);
       }
+      lines.push(
+        `export const disconnect = _islands(islands, options${mapEntries.length ? ", customDirectives" : ""});`,
+      );
 
       return lines.join("\n");
     },
