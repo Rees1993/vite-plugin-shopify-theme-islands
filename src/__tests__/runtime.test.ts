@@ -485,6 +485,42 @@ describe("revive", () => {
       await flush();
       expect(childLoader).toHaveBeenCalledTimes(1);
     });
+
+    it("grandchild loads only after mid-child cascade resolves (three-level nesting)", async () => {
+      let resolveGrandParent!: () => void;
+      const grandParentLoader = mock(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveGrandParent = resolve;
+          }),
+      );
+      const midChildLoader = mock(async () => {});
+      const deepChildLoader = mock(async () => {});
+
+      document.body.innerHTML = `
+        <grand-parent>
+          <mid-child>
+            <deep-child></deep-child>
+          </mid-child>
+        </grand-parent>
+      `;
+
+      revive({
+        "/islands/grand-parent.ts": grandParentLoader,
+        "/islands/mid-child.ts": midChildLoader,
+        "/islands/deep-child.ts": deepChildLoader,
+      });
+
+      await flush();
+      expect(grandParentLoader).toHaveBeenCalledTimes(1);
+      expect(midChildLoader).not.toHaveBeenCalled();
+      expect(deepChildLoader).not.toHaveBeenCalled();
+
+      resolveGrandParent();
+      await flush();
+      expect(midChildLoader).toHaveBeenCalledTimes(1);
+      expect(deepChildLoader).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("revive teardown", () => {
