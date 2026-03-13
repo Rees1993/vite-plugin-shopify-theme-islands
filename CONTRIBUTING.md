@@ -73,14 +73,15 @@ PRs require one approval before merging.
 
 ## Release Process
 
-Releases are tag-driven.
+Releases are manual and maintainer-driven.
 
 See [docs/release.md](./docs/release.md) for the release checklist. In short:
 
 - make sure `main` is green
-- create a tag like `v1.2.3` or `v1.2.3-alpha.1`
-- push the tag
-- CI publishes to npm and creates the GitHub Release automatically
+- update `package.json` to the release version and commit it
+- create and push the matching tag
+- publish the GitHub Release manually
+- CI publishes to npm automatically via OIDC once the release is published
 
 ## Questions
 
