@@ -71,13 +71,32 @@ Push your branch and open a PR against `main`. In the PR description:
 
 PRs require one approval before merging.
 
+### 5. Add a changeset
+
+Run the following and follow the prompts to describe your change:
+
+```bash
+bunx changeset
+```
+
+Select the bump type:
+- `patch` — bug fixes, internal refactors with no API change
+- `minor` — new features, new directives, new options (backward-compatible)
+- `major` — breaking changes
+
+Write a one-sentence summary — this becomes the public changelog entry. Commit the generated `.changeset/*.md` file with your PR.
+
+> **Not sure if your change needs a changeset?** Docs-only and CI-only changes don't need one. If in doubt, include one.
+
 ## Release Process
 
-Releases are managed by the maintainer. Once a PR is merged, the maintainer will:
+Releases are managed automatically via [Changesets](https://github.com/changesets/changesets).
 
-1. Bump the version in `package.json` following [semver](https://semver.org/)
-2. Create a GitHub Release with a tag matching the version (e.g. `v0.2.0`)
-3. The CI workflow automatically publishes to npm on release
+When PRs with changeset files are merged to `main`, a **"chore: version packages"** PR is automatically created (or updated) by CI. It contains:
+- The computed semver bump based on all pending changesets
+- An updated `CHANGELOG.md` with entries for each change
+
+When the maintainer merges the Version PR, CI publishes to npm and creates a GitHub Release automatically. No manual `npm publish` or version bumping is required.
 
 ## Questions
 
