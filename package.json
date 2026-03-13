@@ -51,7 +51,7 @@
   },
   "scripts": {
     "build:js": "bun build src/index.ts src/runtime.ts src/island.ts --outdir dist --format esm --target node",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --outDir dist",
     "build": "rm -rf dist && bun run build:js && bun run build:types",
     "check": "tsc --noEmit",
     "prepublishOnly": "bun run build",
@@ -61,14 +61,12 @@
     "test:watch": "bun test --watch",
     "lint": "oxlint src/",
     "format": "oxfmt src/",
-    "release": "changeset publish"
+    "release:version": "node ./scripts/update-release-package-version.mjs"
   },
   "peerDependencies": {
     "vite": ">=6"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.6.0",
-    "@changesets/cli": "^2.30.0",
     "@happy-dom/global-registrator": "^20.8.4",
     "@types/bun": "^1.3.10",
     "@types/node": "^24.0.0",

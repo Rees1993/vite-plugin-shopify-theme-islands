@@ -726,5 +726,103 @@ describe("revive", () => {
 
       globalThis.IntersectionObserver = originalIO;
     });
+
+    it("catches sync custom directive errors and allows retry on re-insertion", async () => {
+      let moCallback: MutationCallback | undefined;
+      const OriginalMO = globalThis.MutationObserver;
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      const loader = mock(async () => {});
+      const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+      const unhandledSpy = mock(() => {});
+      process.once("unhandledRejection", unhandledSpy);
+
+      const directiveFn = mock<ClientDirective>(() => {
+        throw new Error("directive failed");
+      });
+
+      document.body.innerHTML = "<broken-island client:on-click></broken-island>";
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      revive({ "/islands/broken-island.ts": loader }, {}, customDirectives);
+
+      await flush();
+      expect(directiveFn).toHaveBeenCalledTimes(1);
+      expect(loader).not.toHaveBeenCalled();
+      expect(unhandledSpy).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Custom directive client:on-click failed"),
+        expect.any(Error),
+      );
+
+      const el2 = document.createElement("broken-island");
+      el2.setAttribute("client:on-click", "");
+      moCallback!(
+        [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
+      await flush();
+      expect(directiveFn).toHaveBeenCalledTimes(2);
+      expect(loader).not.toHaveBeenCalled();
+      expect(unhandledSpy).not.toHaveBeenCalled();
+
+      process.off("unhandledRejection", unhandledSpy);
+      globalThis.MutationObserver = OriginalMO;
+      errorSpy.mockRestore();
+    });
+
+    it("catches async custom directive rejections and allows retry on re-insertion", async () => {
+      let moCallback: MutationCallback | undefined;
+      const OriginalMO = globalThis.MutationObserver;
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      const loader = mock(async () => {});
+      const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+      const unhandledSpy = mock(() => {});
+      process.once("unhandledRejection", unhandledSpy);
+
+      const directiveFn = mock<ClientDirective>(async () => {
+        throw new Error("async directive failed");
+      });
+
+      document.body.innerHTML = "<broken-async client:on-click></broken-async>";
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      revive({ "/islands/broken-async.ts": loader }, {}, customDirectives);
+
+      await flush();
+      expect(directiveFn).toHaveBeenCalledTimes(1);
+      expect(loader).not.toHaveBeenCalled();
+      expect(unhandledSpy).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Custom directive client:on-click failed"),
+        expect.any(Error),
+      );
+
+      const el2 = document.createElement("broken-async");
+      el2.setAttribute("client:on-click", "");
+      moCallback!(
+        [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
+      await flush();
+      expect(directiveFn).toHaveBeenCalledTimes(2);
+      expect(loader).not.toHaveBeenCalled();
+      expect(unhandledSpy).not.toHaveBeenCalled();
+
+      process.off("unhandledRejection", unhandledSpy);
+      globalThis.MutationObserver = OriginalMO;
+      errorSpy.mockRestore();
+    });
   });
 });

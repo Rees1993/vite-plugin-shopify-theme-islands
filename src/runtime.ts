@@ -221,6 +221,11 @@ export function revive(
           queued.delete(tagName);
         });
 
+    const handleDirectiveError = (attrName: string, err: unknown) => {
+      console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
+      queued.delete(tagName);
+    };
+
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {
       const matched: Array<[string, ClientDirective]> = [];
@@ -235,7 +240,13 @@ export function revive(
       if (matched.length > 0) {
         const [attrName, directiveFn] = matched[0];
         flush(`dispatching to custom directive ${attrName}`);
-        directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el);
+        try {
+          Promise.resolve(
+            directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el),
+          ).catch((err) => handleDirectiveError(attrName, err));
+        } catch (err) {
+          handleDirectiveError(attrName, err);
+        }
         return; // directive owns the load call
       }
     }
