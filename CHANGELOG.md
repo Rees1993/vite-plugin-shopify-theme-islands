@@ -1,5 +1,13 @@
 # vite-plugin-shopify-theme-islands
 
+## 0.7.2
+
+### Patch Changes
+
+- [#24](https://github.com/Rees1993/vite-plugin-shopify-theme-islands/pull/24) [`a14932e`](https://github.com/Rees1993/vite-plugin-shopify-theme-islands/commit/a14932e95a3387e7721e2e3c131037e0f3c81d34) Thanks [@Rees1993](https://github.com/Rees1993)! - Add Changesets release workflow and MIT LICENSE file. Releases are now automated via Changesets: merged PRs with changeset files trigger a Version Packages PR, and merging that PR publishes to npm automatically.
+
+- [#23](https://github.com/Rees1993/vite-plugin-shopify-theme-islands/pull/23) [`164c69c`](https://github.com/Rees1993/vite-plugin-shopify-theme-islands/commit/164c69c08665afc5e0a03ecda3b5b9a0431071c1) Thanks [@Rees1993](https://github.com/Rees1993)! - Update vite to v8, align @types/node to Node 24
+
 ## 0.7.1
 
 ### Patch Changes
