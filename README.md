@@ -221,12 +221,12 @@ export default hoverDirective;
 
 The function signature is `(load, options, el) => void | Promise<void>`:
 
-| Parameter       | Type                     | Description                                           |
-| --------------- | ------------------------ | ----------------------------------------------------- |
-| `load`          | `() => Promise<unknown>` | Call this to trigger the island module load           |
-| `options.name`  | `string`                 | The matched attribute name, e.g. `'client:hover'`     |
-| `options.value` | `string`                 | The attribute value; empty string if no value was set |
-| `el`            | `HTMLElement`            | The island element                                    |
+| Parameter       | Type                   | Description                                           |
+| --------------- | ---------------------- | ----------------------------------------------------- |
+| `load`          | `() => Promise<void>`  | Call this to trigger the island module load           |
+| `options.name`  | `string`               | The matched attribute name, e.g. `'client:hover'`     |
+| `options.value` | `string`               | The attribute value; empty string if no value was set |
+| `el`            | `HTMLElement`          | The island element                                    |
 
 #### 2. Register it in the plugin config
 
@@ -268,7 +268,14 @@ Built-in directives always run first. A custom directive is only invoked after a
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
 
-> Only one custom directive can be active per element. If multiple custom directive attributes are present, the first registered one is used and a console warning is emitted. Combining multiple custom directives on one element is not yet supported.
+Multiple custom directives on the same element use AND semantics — the island loads only once all matched directives have called `load()`. For example, given two registered custom directives `client:hover` and `client:focus`:
+
+```html
+<!-- client:visible runs first (built-in); then both client:hover and client:focus must fire -->
+<quick-add client:visible client:hover client:focus>
+  <!-- ... -->
+</quick-add>
+```
 
 ## Configuration
 
@@ -276,6 +283,7 @@ The custom directive owns the `load()` call — the built-in chain never calls i
 | ------------- | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
 | `directives`  | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
+| `retry`       | `object`             | —                           | Automatic retry behaviour for failed island loads. See [Retries](#retries).        |
 | `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
 
 ### Directive defaults
@@ -337,6 +345,43 @@ export default defineConfig({
   ],
 });
 ```
+
+## Retries
+
+Automatically retry failed island loads with exponential backoff:
+
+```ts
+shopifyThemeIslands({
+  retry: {
+    retries: 2,   // number of retries after the initial failure. Default: 0 (no retry)
+    delay: 1000,  // base delay in ms; doubles each attempt (1s, 2s, 4s…). Default: 1000
+  },
+});
+```
+
+Once retries are exhausted the island is dequeued — a fresh activation requires a new element instance.
+
+## Lifecycle events
+
+The runtime dispatches DOM events on `document` for observability use cases such as analytics and error reporting. Event types are fully typed via `DocumentEventMap` augmentation — available automatically when `vite-plugin-shopify-theme-islands` is present in your TypeScript compilation (e.g. via `vite.config.ts` or a directive type import).
+
+```ts
+document.addEventListener("islands:load", (e) => {
+  analytics.track("island_loaded", { tag: e.detail.tag });
+});
+
+document.addEventListener("islands:error", (e) => {
+  errorReporter.capture(e.detail.error, { context: e.detail.tag });
+});
+```
+
+| Event               | Detail properties          | When it fires                                              |
+| ------------------- | -------------------------- | ---------------------------------------------------------- |
+| `islands:activate`  | `tag`, `el`                | Island enters the DOM — before directive waits begin       |
+| `islands:load`      | `tag`                      | Island module resolves successfully                        |
+| `islands:error`     | `tag`, `error`             | Load or custom directive fails (alongside `console.error`) |
+
+`islands:error` fires on each retry attempt, not just the final failure. Multiple independent listeners are supported — each receives its own event.
 
 ## License
 

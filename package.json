@@ -14,6 +14,10 @@
     "./revive": {
       "types": "./revive.d.ts"
     },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
     "./island": {
       "types": "./dist/island.d.ts",
       "import": "./dist/island.js"

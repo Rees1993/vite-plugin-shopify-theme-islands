@@ -15,6 +15,12 @@
 
 import type { ClientDirective, ReviveOptions } from "./index.js";
 
+// Typed helper — event name and detail shape are checked against DocumentEventMap
+const dispatch = <K extends "islands:activate" | "islands:load" | "islands:error">(
+  name: K,
+  detail: DocumentEventMap[K] extends CustomEvent<infer D> ? D : never,
+) => document.dispatchEvent(new CustomEvent(name, { detail }));
+
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
   const m = window.matchMedia(query);
@@ -71,7 +77,7 @@ export function revive(
   islands: Record<string, () => Promise<unknown>>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
-): () => void {
+): { disconnect: () => void } {
   const attrVisible = options?.directives?.visible?.attribute ?? "client:visible";
   const attrMedia = options?.directives?.media?.attribute ?? "client:media";
   const attrIdle = options?.directives?.idle?.attribute ?? "client:idle";
@@ -81,6 +87,8 @@ export function revive(
   const idleTimeout = options?.directives?.idle?.timeout ?? 500;
   const deferDelay = options?.directives?.defer?.delay ?? 3000;
   const debug = options?.debug ?? false;
+  const retries = options?.retry?.retries ?? 0;
+  const retryDelay = options?.retry?.delay ?? 1000;
 
   // Precompute tag name → loader map from glob keys (filename without extension = tag name)
   const islandMap = new Map<string, () => Promise<unknown>>();
@@ -109,6 +117,9 @@ export function revive(
   // Elements awaiting client:visible — maps element to its IO cancel function.
   // Checked by the outer MutationObserver to abort loading if the element is removed.
   const pendingVisible = new Map<Element, () => void>();
+
+  // Tracks auto-retry attempts per tag — cleared on success or exhaustion.
+  const retryCount = new Map<string, number>();
 
   // Returns true if the tag is queued but not yet loaded.
   // Only islands can enter `queued`, so the islandMap check is redundant here.
@@ -210,42 +221,64 @@ export function revive(
       return;
     }
 
-    const run = () =>
-      loader()
+    const run = (): Promise<void> => {
+      if (disconnected) return Promise.resolve();
+      return loader()
         .then(() => {
           loaded.add(tagName);
+          retryCount.delete(tagName);
+          dispatch("islands:load", { tag: tagName });
           if (el.children.length) walk(el); // pick up child islands now that parent has loaded
         })
         .catch((err) => {
           console.error(`[islands] Failed to load <${tagName}>:`, err);
-          queued.delete(tagName);
+          dispatch("islands:error", { tag: tagName, error: err });
+          const attempt = retryCount.get(tagName) ?? 0;
+          if (attempt < retries) {
+            retryCount.set(tagName, attempt + 1);
+            setTimeout(run, retryDelay * (2 ** attempt));
+          } else {
+            retryCount.delete(tagName);
+            queued.delete(tagName);
+          }
         });
+    };
 
     const handleDirectiveError = (attrName: string, err: unknown) => {
       console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
+      dispatch("islands:error", { tag: tagName, error: err });
+      retryCount.delete(tagName);
       queued.delete(tagName);
     };
 
     // Custom directives run after built-ins — the directive owns the load() call
     if (customDirectives?.size) {
-      const matched: Array<[string, ClientDirective]> = [];
+      const matched: Array<[string, ClientDirective, string]> = [];
       for (const [attrName, directiveFn] of customDirectives) {
-        if (el.hasAttribute(attrName)) matched.push([attrName, directiveFn]);
-      }
-      if (matched.length > 1) {
-        console.warn(
-          `[islands] <${tagName}> has multiple custom directives (${matched.map(([a]) => a).join(", ")}) — only "${matched[0][0]}" will be used. Combining custom directives is not yet supported.`,
-        );
+        const value = el.getAttribute(attrName);
+        if (value !== null) matched.push([attrName, directiveFn, value]);
       }
       if (matched.length > 0) {
-        const [attrName, directiveFn] = matched[0];
-        flush(`dispatching to custom directive ${attrName}`);
-        try {
-          Promise.resolve(
-            directiveFn(run, { name: attrName, value: el.getAttribute(attrName)! }, el),
-          ).catch((err) => handleDirectiveError(attrName, err));
-        } catch (err) {
-          handleDirectiveError(attrName, err);
+        // AND latch: all matched directives must call load() before the island loads.
+        // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
+        flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${matched.map(([a]) => a).join(", ")}`);
+        let remaining = matched.length;
+        let fired = false;
+        let aborted = false;
+        const loadOnce = () => {
+          if (fired || aborted) return Promise.resolve();
+          if (--remaining === 0) { fired = true; return run(); }
+          return Promise.resolve();
+        };
+        for (const [attrName, directiveFn, value] of matched) {
+          try {
+            Promise.resolve(
+              directiveFn(loadOnce, { name: attrName, value }, el),
+            ).catch((err) => { aborted = true; handleDirectiveError(attrName, err); });
+          } catch (err) {
+            aborted = true;
+            handleDirectiveError(attrName, err);
+          }
         }
         return; // directive owns the load call
       }
@@ -269,6 +302,7 @@ export function revive(
     }
 
     queued.add(tagName);
+    dispatch("islands:activate", { tag: tagName, el });
     loadIsland(tagName, el, loader);
   }
 
@@ -282,11 +316,14 @@ export function revive(
   }
 
   const observer = new MutationObserver((mutations) => {
-    // Cancel loading for any pending-visible elements that were removed from the DOM
-    for (const [el, cancel] of pendingVisible) {
-      if (!el.isConnected) {
-        pendingVisible.delete(el);
-        cancel();
+    // Cancel loading for any pending-visible elements that were removed from the DOM.
+    // Only scan if there are removals and there are pending elements to cancel.
+    if (pendingVisible.size > 0 && mutations.some((m) => m.removedNodes.length > 0)) {
+      for (const [el, cancel] of pendingVisible) {
+        if (!el.isConnected) {
+          pendingVisible.delete(el);
+          cancel();
+        }
       }
     }
     // Activate islands added dynamically
@@ -305,11 +342,14 @@ export function revive(
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
+  let disconnected = false;
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
   } else {
     init();
   }
 
-  return () => observer.disconnect();
+  const disconnect = () => { disconnected = true; observer.disconnect(); };
+  return { disconnect };
 }

@@ -1,4 +1,4 @@
 declare module "vite-plugin-shopify-theme-islands/revive" {
-  /** Stops the island MutationObserver. Call during SPA navigation teardown. */
+  /** Stops the island MutationObserver. */
   export const disconnect: () => void;
 }
