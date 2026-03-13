@@ -51,7 +51,7 @@
   },
   "scripts": {
     "build:js": "bun build src/index.ts src/runtime.ts src/island.ts --outdir dist --format esm --target node",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --outDir dist",
     "build": "rm -rf dist && bun run build:js && bun run build:types",
     "check": "tsc --noEmit",
     "prepublishOnly": "bun run build",
