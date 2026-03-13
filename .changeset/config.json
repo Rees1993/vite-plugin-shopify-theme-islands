@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "Rees1993/vite-plugin-shopify-theme-islands" }],
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "fixed": [],
+  "linked": [],
+  "ignore": []
+}
