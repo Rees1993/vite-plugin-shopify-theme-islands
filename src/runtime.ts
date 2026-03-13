@@ -236,7 +236,7 @@ export function revive(
           const attempt = retryCount.get(tagName) ?? 0;
           if (attempt < retries) {
             retryCount.set(tagName, attempt + 1);
-            setTimeout(run, retryDelay * (2 ** attempt));
+            setTimeout(run, retryDelay * 2 ** attempt);
           } else {
             retryCount.delete(tagName);
             queued.delete(tagName);
@@ -261,20 +261,26 @@ export function revive(
       if (matched.length > 0) {
         // AND latch: all matched directives must call load() before the island loads.
         // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
-        flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${matched.map(([a]) => a).join(", ")}`);
+        flush(
+          `dispatching to custom directive${matched.length === 1 ? "" : "s"} ${matched.map(([a]) => a).join(", ")}`,
+        );
         let remaining = matched.length;
         let fired = false;
         let aborted = false;
         const loadOnce = () => {
           if (fired || aborted) return Promise.resolve();
-          if (--remaining === 0) { fired = true; return run(); }
+          if (--remaining === 0) {
+            fired = true;
+            return run();
+          }
           return Promise.resolve();
         };
         for (const [attrName, directiveFn, value] of matched) {
           try {
-            Promise.resolve(
-              directiveFn(loadOnce, { name: attrName, value }, el),
-            ).catch((err) => { aborted = true; handleDirectiveError(attrName, err); });
+            Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, el)).catch((err) => {
+              aborted = true;
+              handleDirectiveError(attrName, err);
+            });
           } catch (err) {
             aborted = true;
             handleDirectiveError(attrName, err);
@@ -350,6 +356,9 @@ export function revive(
     init();
   }
 
-  const disconnect = () => { disconnected = true; observer.disconnect(); };
+  const disconnect = () => {
+    disconnected = true;
+    observer.disconnect();
+  };
   return { disconnect };
 }

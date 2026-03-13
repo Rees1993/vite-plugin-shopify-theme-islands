@@ -800,7 +800,9 @@ describe("revive", () => {
     it("does not warn about multiple custom directives — AND latch handles them", async () => {
       const spy = spyOn(console, "warn");
       const loads: ClientDirectiveLoader[] = [];
-      const makeDir = (): ClientDirective => (load) => { loads.push(load); };
+      const makeDir = (): ClientDirective => (load) => {
+        loads.push(load);
+      };
       document.body.innerHTML = "<no-warn-multi client:on-a client:on-b></no-warn-multi>";
       const customDirectives = new Map<string, ClientDirective>([
         ["client:on-a", makeDir()],
@@ -975,7 +977,11 @@ describe("revive", () => {
       document.addEventListener("islands:error", handler);
       const err = new Error("load failed");
       document.body.innerHTML = "<error-ev></error-ev>";
-      revive({ "/islands/error-ev.ts": mock(async () => { throw err; }) });
+      revive({
+        "/islands/error-ev.ts": mock(async () => {
+          throw err;
+        }),
+      });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "error-ev", error: err });
@@ -991,7 +997,12 @@ describe("revive", () => {
       const err = new Error("directive failed");
       document.body.innerHTML = "<dir-err-ev client:on-click></dir-err-ev>";
       const customDirectives = new Map<string, ClientDirective>([
-        ["client:on-click", mock<ClientDirective>(() => { throw err; })],
+        [
+          "client:on-click",
+          mock<ClientDirective>(() => {
+            throw err;
+          }),
+        ],
       ]);
       revive({ "/islands/dir-err-ev.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
@@ -1021,8 +1032,12 @@ describe("revive", () => {
       const loader = mock(async () => {});
       let loadA!: ClientDirectiveLoader;
       let loadB!: ClientDirectiveLoader;
-      const directiveA = mock<ClientDirective>((load) => { loadA = load; });
-      const directiveB = mock<ClientDirective>((load) => { loadB = load; });
+      const directiveA = mock<ClientDirective>((load) => {
+        loadA = load;
+      });
+      const directiveB = mock<ClientDirective>((load) => {
+        loadB = load;
+      });
       document.body.innerHTML = "<and-island client:on-a client:on-b></and-island>";
       const customDirectives = new Map<string, ClientDirective>([
         ["client:on-a", directiveA],
@@ -1047,8 +1062,18 @@ describe("revive", () => {
       let loadB!: ClientDirectiveLoader;
       document.body.innerHTML = "<idem-island client:on-a client:on-b></idem-island>";
       const customDirectives = new Map<string, ClientDirective>([
-        ["client:on-a", (load) => { loadA = load; }],
-        ["client:on-b", (load) => { loadB = load; }],
+        [
+          "client:on-a",
+          (load) => {
+            loadA = load;
+          },
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            loadB = load;
+          },
+        ],
       ]);
       revive({ "/islands/idem-island.ts": loader }, {}, customDirectives);
       await flush();
@@ -1063,7 +1088,9 @@ describe("revive", () => {
     it("three directives — all must call load() before island loads", async () => {
       const loader = mock(async () => {});
       const loads: ClientDirectiveLoader[] = [];
-      const makeDir = (): ClientDirective => (load) => { loads.push(load); };
+      const makeDir = (): ClientDirective => (load) => {
+        loads.push(load);
+      };
       document.body.innerHTML = "<three-island client:on-a client:on-b client:on-c></three-island>";
       const customDirectives = new Map<string, ClientDirective>([
         ["client:on-a", makeDir()],
@@ -1090,8 +1117,18 @@ describe("revive", () => {
       let loadB!: ClientDirectiveLoader;
       document.body.innerHTML = "<abort-latch client:on-a client:on-b></abort-latch>";
       const customDirectives = new Map<string, ClientDirective>([
-        ["client:on-a", mock<ClientDirective>(() => { throw new Error("directive A failed"); })],
-        ["client:on-b", (load) => { loadB = load; }],
+        [
+          "client:on-a",
+          mock<ClientDirective>(() => {
+            throw new Error("directive A failed");
+          }),
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            loadB = load;
+          },
+        ],
       ]);
       revive({ "/islands/abort-latch.ts": loader }, {}, customDirectives);
       await flush();
@@ -1109,8 +1146,18 @@ describe("revive", () => {
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<multi-dbg client:on-a client:on-b></multi-dbg>";
       const customDirectives = new Map<string, ClientDirective>([
-        ["client:on-a", (load) => { load(); }],
-        ["client:on-b", (load) => { load(); }],
+        [
+          "client:on-a",
+          (load) => {
+            load();
+          },
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            load();
+          },
+        ],
       ]);
       revive({ "/islands/multi-dbg.ts": mock(async () => {}) }, { debug: true }, customDirectives);
       await flush();
