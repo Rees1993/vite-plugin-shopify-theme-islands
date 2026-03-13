@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { revive } from "../runtime";
+import { onIslandLoad, onIslandError } from "../events";
 import type { ClientDirective, ClientDirectiveLoader } from "../index";
 
 // Flush microtasks + a short timer tick so async directive chains resolve
@@ -926,40 +927,6 @@ describe("revive", () => {
   });
 
   describe("DOM events", () => {
-    it("islands:activate fires when an island is activated during init", async () => {
-      const handler = mock((e: CustomEvent) => e);
-      document.addEventListener("islands:activate", handler);
-      document.body.innerHTML = "<act-island></act-island>";
-      revive({ "/islands/act-island.ts": mock(async () => {}) });
-      await flush();
-      expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "act-island" });
-      expect(handler.mock.calls[0][0].detail.el).toBeInstanceOf(HTMLElement);
-      document.removeEventListener("islands:activate", handler);
-    });
-
-    it("islands:activate fires for dynamically inserted islands", async () => {
-      const handler = mock((e: CustomEvent) => e);
-      document.addEventListener("islands:activate", handler);
-      revive({ "/islands/dyn-act.ts": mock(async () => {}) });
-      const el = document.createElement("dyn-act");
-      document.body.appendChild(el);
-      await flush();
-      expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "dyn-act", el });
-      document.removeEventListener("islands:activate", handler);
-    });
-
-    it("islands:activate fires only once per tag even with multiple elements", async () => {
-      const handler = mock((e: CustomEvent) => e);
-      document.addEventListener("islands:activate", handler);
-      document.body.innerHTML = "<once-act></once-act><once-act></once-act>";
-      revive({ "/islands/once-act.ts": mock(async () => {}) });
-      await flush();
-      expect(handler).toHaveBeenCalledTimes(1);
-      document.removeEventListener("islands:activate", handler);
-    });
-
     it("islands:load fires after the module resolves", async () => {
       const handler = mock((e: CustomEvent) => e);
       document.addEventListener("islands:load", handler);
@@ -1024,6 +991,63 @@ describe("revive", () => {
       expect(handlerB).toHaveBeenCalledTimes(1);
       document.removeEventListener("islands:load", handlerA);
       document.removeEventListener("islands:load", handlerB);
+    });
+  });
+
+  describe("onIslandLoad / onIslandError helpers", () => {
+    it("onIslandLoad receives detail directly and returns a cleanup function", async () => {
+      const handler = mock((_detail: { tag: string }) => {});
+      const off = onIslandLoad(handler);
+      document.body.innerHTML = "<helper-load></helper-load>";
+      revive({ "/islands/helper-load.ts": mock(async () => {}) });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-load" });
+      off();
+    });
+
+    it("onIslandLoad cleanup removes the listener", async () => {
+      const handler = mock(() => {});
+      const off = onIslandLoad(handler);
+      off();
+      document.body.innerHTML = "<helper-off></helper-off>";
+      revive({ "/islands/helper-off.ts": mock(async () => {}) });
+      await flush();
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("onIslandError receives detail directly and returns a cleanup function", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((_detail: { tag: string; error: unknown }) => {});
+      const err = new Error("helper error");
+      const off = onIslandError(handler);
+      document.body.innerHTML = "<helper-err></helper-err>";
+      revive({
+        "/islands/helper-err.ts": mock(async () => {
+          throw err;
+        }),
+      });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-err", error: err });
+      off();
+      consoleSpy.mockRestore();
+    });
+
+    it("onIslandError cleanup removes the listener", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock(() => {});
+      const off = onIslandError(handler);
+      off();
+      document.body.innerHTML = "<helper-err-off></helper-err-off>";
+      revive({
+        "/islands/helper-err-off.ts": mock(async () => {
+          throw new Error("should not reach handler");
+        }),
+      });
+      await flush();
+      expect(handler).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
   });
 

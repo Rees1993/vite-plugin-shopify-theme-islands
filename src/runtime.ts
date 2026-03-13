@@ -16,7 +16,7 @@
 import type { ClientDirective, ReviveOptions } from "./index.js";
 
 // Typed helper — event name and detail shape are checked against DocumentEventMap
-const dispatch = <K extends "islands:activate" | "islands:load" | "islands:error">(
+const dispatch = <K extends "islands:load" | "islands:error">(
   name: K,
   detail: DocumentEventMap[K] extends CustomEvent<infer D> ? D : never,
 ) => document.dispatchEvent(new CustomEvent(name, { detail }));
@@ -308,7 +308,6 @@ export function revive(
     }
 
     queued.add(tagName);
-    dispatch("islands:activate", { tag: tagName, el });
     loadIsland(tagName, el, loader);
   }
 

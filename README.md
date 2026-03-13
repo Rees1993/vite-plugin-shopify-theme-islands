@@ -363,23 +363,42 @@ Once retries are exhausted the island is dequeued — a fresh activation require
 
 ## Lifecycle events
 
-The runtime dispatches DOM events on `document` for observability use cases such as analytics and error reporting. Event types are fully typed via `DocumentEventMap` augmentation — available automatically when `vite-plugin-shopify-theme-islands` is present in your TypeScript compilation (e.g. via `vite.config.ts` or a directive type import).
+The runtime dispatches DOM events on `document` for observability use cases such as analytics and error reporting.
+
+### Typed helpers
+
+The `/events` entry point provides typed helpers that unwrap `e.detail` for you and return a cleanup function:
+
+```ts
+import { onIslandLoad, onIslandError } from "vite-plugin-shopify-theme-islands/events";
+
+const offLoad = onIslandLoad(({ tag }) => {
+  analytics.track("island_loaded", { tag });
+});
+
+const offError = onIslandError(({ tag, error }) => {
+  errorReporter.capture(error, { context: tag });
+});
+
+// Remove listeners when no longer needed (e.g. SPA teardown)
+offLoad();
+offError();
+```
+
+### Raw DOM events
+
+The events are also available via the standard `document.addEventListener` API. Event types are fully typed via `DocumentEventMap` augmentation — available automatically when `vite-plugin-shopify-theme-islands` is present in your TypeScript compilation (e.g. via `vite.config.ts` or a directive type import).
 
 ```ts
 document.addEventListener("islands:load", (e) => {
   analytics.track("island_loaded", { tag: e.detail.tag });
 });
-
-document.addEventListener("islands:error", (e) => {
-  errorReporter.capture(e.detail.error, { context: e.detail.tag });
-});
 ```
 
-| Event               | Detail properties          | When it fires                                              |
-| ------------------- | -------------------------- | ---------------------------------------------------------- |
-| `islands:activate`  | `tag`, `el`                | Island enters the DOM — before directive waits begin       |
-| `islands:load`      | `tag`                      | Island module resolves successfully                        |
-| `islands:error`     | `tag`, `error`             | Load or custom directive fails (alongside `console.error`) |
+| Event           | Detail properties | When it fires                                              |
+| --------------- | ----------------- | ---------------------------------------------------------- |
+| `islands:load`  | `tag`             | Island module resolves successfully                        |
+| `islands:error` | `tag`, `error`    | Load or custom directive fails (alongside `console.error`) |
 
 `islands:error` fires on each retry attempt, not just the final failure. Multiple independent listeners are supported — each receives its own event.
 

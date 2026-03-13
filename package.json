@@ -21,6 +21,10 @@
     "./island": {
       "types": "./dist/island.d.ts",
       "import": "./dist/island.js"
+    },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "import": "./dist/events.js"
     }
   },
   "files": [
@@ -54,7 +58,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build:js": "bun build src/index.ts src/runtime.ts src/island.ts --outdir dist --format esm --target node",
+    "build:js": "bun build src/index.ts src/runtime.ts src/island.ts src/events.ts --outdir dist --format esm --target node",
     "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --outDir dist",
     "build": "rm -rf dist && bun run build:js && bun run build:types",
     "check": "tsc --noEmit",

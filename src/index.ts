@@ -110,14 +110,6 @@ export interface RetryConfig {
   delay?: number;
 }
 
-/** Event detail for the `islands:activate` DOM event. */
-export interface IslandActivateDetail {
-  /** The custom element tag name, e.g. `'product-form'` */
-  tag: string;
-  /** The element instance that was activated */
-  el: HTMLElement;
-}
-
 /** Event detail for the `islands:load` DOM event. */
 export interface IslandLoadDetail {
   /** The custom element tag name, e.g. `'product-form'` */
@@ -134,8 +126,6 @@ export interface IslandErrorDetail {
 
 declare global {
   interface DocumentEventMap {
-    /** Fired when an island is activated — before directive waits begin. */
-    "islands:activate": CustomEvent<IslandActivateDetail>;
     /** Fired after an island module resolves successfully. */
     "islands:load": CustomEvent<IslandLoadDetail>;
     /** Fired when an island load or custom directive fails. Fired on each retry attempt. */
