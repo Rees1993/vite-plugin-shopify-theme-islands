@@ -1,0 +1,148 @@
+library:
+  name: vite-plugin-shopify-theme-islands
+  version: "1.0.0"
+  repository: https://github.com/Rees1993/vite-plugin-shopify-theme-islands
+  description: >
+    Vite plugin for island architecture in Shopify themes. Lazily loads custom
+    element modules based on client directives (visible, media, idle, defer) and
+    handles DOM lifecycle events, retry, and SPA teardown.
+
+domains:
+  - slug: setup
+    name: Plugin Setup
+    description: >
+      Installing the plugin, configuring vite.config.ts, setting directories,
+      debug mode, and retry behaviour.
+    failure_modes:
+      - id: retry-wrong-nesting
+        description: >
+          Agent nests retry inside directives config instead of at plugin root.
+          retry.retries silently becomes undefined; no retries happen.
+        priority: HIGH
+      - id: missing-virtual-import
+        description: >
+          Plugin is configured in vite.config.ts but the virtual module
+          "vite-plugin-shopify-theme-islands/revive" is never imported in the
+          theme JS entry point. Islands are never activated.
+        priority: CRITICAL
+      - id: wrong-retry-key
+        description: >
+          Agent writes retry.count or retry.attempts instead of retry.retries.
+          Field is silently ignored; no retries happen.
+        priority: HIGH
+
+  - slug: writing-islands
+    name: Writing Islands
+    description: >
+      Creating island files via directory scanning or the Island mixin,
+      registering custom elements, and understanding child cascade behaviour.
+    failure_modes:
+      - id: island-mixin-not-imported
+        description: >
+          Agent moves island file outside the configured directories without
+          adding the Island mixin import. Plugin cannot discover the file.
+        priority: HIGH
+      - id: no-custom-elements-define
+        description: >
+          Agent exports a class but forgets to call customElements.define.
+          Tag appears in DOM but never upgrades.
+        priority: HIGH
+      - id: child-island-wrong-assumption
+        description: >
+          Agent assumes child islands activate in parallel with their parent.
+          Children wait until the parent island's module resolves before their
+          own directives are evaluated.
+        priority: MEDIUM
+
+  - slug: directives
+    name: Built-in Directives
+    description: >
+      client:visible, client:media, client:idle, client:defer — how they work,
+      how to combine them, per-element value overrides, and the client:media
+      empty-value warning.
+    failure_modes:
+      - id: media-empty-value
+        description: >
+          client:media="" (empty string) skips the media check entirely with
+          a console warning. Agent may expect it to block loading.
+        priority: HIGH
+      - id: combine-is-and-not-or
+        description: >
+          Agent uses multiple directives expecting OR semantics (load when any
+          condition fires). All directives must resolve before the island loads.
+        priority: HIGH
+      - id: defer-empty-vs-value
+        description: >
+          client:defer with no value uses the global delay (3000ms default);
+          client:defer="0" uses 0ms. Agent may write client:defer expecting
+          immediate load and get a 3-second wait.
+        priority: MEDIUM
+      - id: visible-per-element-override
+        description: >
+          client:visible="0px" overrides the global rootMargin for that element.
+          Agent writes client:visible expecting the global default to apply.
+        priority: MEDIUM
+
+  - slug: custom-directives
+    name: Custom Directives
+    description: >
+      Registering custom directives, the (load, options, el) signature,
+      AND-latch semantics when multiple custom directives match an element.
+    failure_modes:
+      - id: forgetting-to-call-load
+        description: >
+          Agent's custom directive function never calls load(). Island never
+          activates — no error is thrown, no timeout fires.
+        priority: CRITICAL
+      - id: calling-load-multiple-times
+        description: >
+          Agent calls load() more than once in a directive. Only the first call
+          has effect (fired guard prevents duplicate execution).
+        priority: MEDIUM
+      - id: and-latch-misunderstanding
+        description: >
+          Two custom directives match the same element. Agent expects the island
+          to load after either one calls load(). Both must call load() first.
+        priority: HIGH
+      - id: custom-directives-run-after-builtins
+        description: >
+          Agent expects custom directives to intercept before built-in
+          directives. Custom directives run after all built-in directive awaits
+          complete.
+        priority: MEDIUM
+      - id: entrypoint-path-wrong
+        description: >
+          Agent uses a relative path without the leading ./ for the entrypoint.
+          Vite resolver may fail to locate the file.
+        priority: HIGH
+
+  - slug: lifecycle
+    name: Lifecycle Events and Teardown
+    description: >
+      onIslandLoad and onIslandError helpers from the /events entry point,
+      raw DOM events (islands:load, islands:error), and disconnect() for SPA
+      teardown.
+    failure_modes:
+      - id: raw-event-listener-untyped
+        description: >
+          Agent uses document.addEventListener("islands:load", ...) without
+          importing from the events entry point or main package. e.detail is
+          untyped (Event, not CustomEvent<IslandLoadDetail>).
+        priority: HIGH
+      - id: error-fires-on-each-retry
+        description: >
+          Agent attaches one onIslandError handler expecting it to fire once
+          on final failure. It fires on every retry attempt — handler must
+          deduplicate by tag if needed.
+        priority: MEDIUM
+      - id: disconnect-wrong-import
+        description: >
+          Agent imports disconnect from the runtime or island entry point
+          instead of from the virtual module revive. Only the virtual module
+          export is wired to the plugin-managed revive() instance.
+        priority: CRITICAL
+      - id: error-fires-for-custom-directive-failures
+        description: >
+          Agent expects islands:error to fire only for import() failures.
+          It also fires when a custom directive throws or rejects.
+        priority: MEDIUM
