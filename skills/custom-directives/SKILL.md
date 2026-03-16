@@ -1,5 +1,5 @@
 ---
-name: vite-plugin-shopify-theme-islands/custom-directives
+name: custom-directives
 description: >
   Custom client directives registered via directives.custom in vite.config.ts.
   ClientDirective function signature (load, options, el). AND-latch: when

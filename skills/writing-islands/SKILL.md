@@ -1,5 +1,5 @@
 ---
-name: vite-plugin-shopify-theme-islands/writing-islands
+name: writing-islands
 description: >
   Writing island files. Two discovery modes: directory scanning (files in
   configured directories auto-discovered by tag name = filename) and Island
