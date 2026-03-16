@@ -913,6 +913,25 @@ describe("revive", () => {
       spy.mockRestore();
     });
 
+    it("islands:error fires on each retry attempt", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:error", handler);
+
+      const loader = mock(() => Promise.reject(new Error("fail")));
+      document.body.innerHTML = "<retry-ev></retry-ev>";
+      revive({ "/islands/retry-ev.ts": loader }, { retry: { retries: 2, delay: 10 } });
+
+      await flush(200); // wait for initial attempt + 2 retries (10ms + 20ms delays)
+
+      // islands:error should fire on the initial attempt + each retry = 3 total
+      expect(handler).toHaveBeenCalledTimes(3);
+      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "retry-ev" });
+
+      document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
     it("retries: 0 (default) does not auto-retry — existing failure clears queued immediately", async () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const loader = mock(async () => {
