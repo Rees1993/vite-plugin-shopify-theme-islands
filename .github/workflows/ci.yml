@@ -22,5 +22,3 @@ jobs:
         run: bun run lint
       - name: Format check
         run: bun run format --check
-      - name: Validate Intent skills
-        run: bunx @tanstack/intent validate

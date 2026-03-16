@@ -402,6 +402,16 @@ document.addEventListener("islands:load", (e) => {
 
 `islands:error` fires on each retry attempt, not just the final failure. Multiple independent listeners are supported — each receives its own event.
 
+## AI Agents
+
+If you use an AI coding agent (Claude Code, Cursor, Copilot, etc.), run:
+
+```bash
+npx @tanstack/intent@latest install
+```
+
+This loads versioned skills from `node_modules` so your agent has accurate guidance for the v1 API.
+
 ## License
 
 MIT
