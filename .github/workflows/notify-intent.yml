@@ -18,7 +18,8 @@ name: Notify Intent
 on:
   push:
     branches: [main]
-    paths:      - 'docs/**'
+    paths:
+      - 'docs/**'
       - 'src/**'
 
 jobs:
