@@ -1,7 +1,8 @@
 /// <reference lib="dom" />
 import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { revive } from "../runtime";
-import type { ClientDirective } from "../index";
+import { onIslandLoad, onIslandError } from "../events";
+import type { ClientDirective, ClientDirectiveLoader } from "../index";
 
 // Flush microtasks + a short timer tick so async directive chains resolve
 const flush = (ms = 50) => new Promise<void>((r) => setTimeout(r, ms));
@@ -526,7 +527,7 @@ describe("revive", () => {
   describe("revive teardown", () => {
     it("returned disconnect() stops the MutationObserver — islands added after disconnect are not activated", async () => {
       const loader = mock(async () => {});
-      const disconnect = revive({ "/islands/post-disconnect.ts": loader });
+      const { disconnect } = revive({ "/islands/post-disconnect.ts": loader });
 
       disconnect();
 
@@ -534,6 +535,27 @@ describe("revive", () => {
       document.body.appendChild(el);
       await flush();
       expect(loader).not.toHaveBeenCalled();
+    });
+
+    it("disconnect() cancels pending retries — run() does not execute after teardown", async () => {
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      let callCount = 0;
+      const loader = mock(async () => {
+        callCount++;
+        throw new Error("fail");
+      });
+      document.body.innerHTML = "<dc-retry></dc-retry>";
+      const { disconnect } = revive(
+        { "/islands/dc-retry.ts": loader },
+        { retry: { retries: 3, delay: 100 } },
+      );
+      await flush(); // initial attempt fires and fails; first retry at 100ms not yet due
+      expect(callCount).toBe(1);
+
+      disconnect(); // cancel before any retry fires
+      await flush(400); // wait long enough for retries to have fired if not cancelled
+      expect(callCount).toBe(1); // no retries executed after disconnect
+      spy.mockRestore();
     });
   });
 
@@ -776,6 +798,23 @@ describe("revive", () => {
       errorSpy.mockRestore();
     });
 
+    it("does not warn about multiple custom directives — AND latch handles them", async () => {
+      const spy = spyOn(console, "warn");
+      const loads: ClientDirectiveLoader[] = [];
+      const makeDir = (): ClientDirective => (load) => {
+        loads.push(load);
+      };
+      document.body.innerHTML = "<no-warn-multi client:on-a client:on-b></no-warn-multi>";
+      const customDirectives = new Map<string, ClientDirective>([
+        ["client:on-a", makeDir()],
+        ["client:on-b", makeDir()],
+      ]);
+      revive({ "/islands/no-warn-multi.ts": mock(async () => {}) }, {}, customDirectives);
+      await flush();
+      expect(spy).not.toHaveBeenCalledWith(expect.stringContaining("multiple custom directives"));
+      spy.mockRestore();
+    });
+
     it("catches async custom directive rejections and allows retry on re-insertion", async () => {
       let moCallback: MutationCallback | undefined;
       const OriginalMO = globalThis.MutationObserver;
@@ -823,6 +862,339 @@ describe("revive", () => {
       process.off("unhandledRejection", unhandledSpy);
       globalThis.MutationObserver = OriginalMO;
       errorSpy.mockRestore();
+    });
+  });
+
+  describe("retries", () => {
+    it("retries specified number of times before succeeding", async () => {
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      let callCount = 0;
+      const loader = mock(async () => {
+        callCount++;
+        if (callCount < 3) throw new Error("network error");
+      });
+      document.body.innerHTML = "<retry-success></retry-success>";
+      revive({ "/islands/retry-success.ts": loader }, { retry: { retries: 2, delay: 10 } });
+      await flush(200);
+      expect(loader).toHaveBeenCalledTimes(3); // initial + 2 retries
+      spy.mockRestore();
+    });
+
+    it("exhausting retries clears queued allowing manual re-insertion", async () => {
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      let moCallback: MutationCallback | undefined;
+      const OriginalMO = globalThis.MutationObserver;
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      const loader = mock(async () => {
+        throw new Error("always fails");
+      });
+      document.body.innerHTML = "<retry-exhaust></retry-exhaust>";
+      revive({ "/islands/retry-exhaust.ts": loader }, { retry: { retries: 1, delay: 10 } });
+      await flush(200);
+      expect(loader).toHaveBeenCalledTimes(2); // initial + 1 retry
+
+      // After exhaustion, queued is cleared — re-insertion triggers a fresh activation
+      const el2 = document.createElement("retry-exhaust");
+      moCallback!(
+        [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
+      await flush(200);
+      expect(loader).toHaveBeenCalledTimes(4); // 2 more (initial + 1 retry again)
+
+      globalThis.MutationObserver = OriginalMO;
+      spy.mockRestore();
+    });
+
+    it("retries: 0 (default) does not auto-retry — existing failure clears queued immediately", async () => {
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const loader = mock(async () => {
+        throw new Error("fail");
+      });
+      document.body.innerHTML = "<no-retry-default></no-retry-default>";
+      revive({ "/islands/no-retry-default.ts": loader });
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+  });
+
+  describe("DOM events", () => {
+    it("islands:load fires after the module resolves", async () => {
+      const handler = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:load", handler);
+      document.body.innerHTML = "<load-ev></load-ev>";
+      revive({ "/islands/load-ev.ts": mock(async () => {}) });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "load-ev" });
+      document.removeEventListener("islands:load", handler);
+    });
+
+    it("islands:error fires on loader failure alongside console.error", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:error", handler);
+      const err = new Error("load failed");
+      document.body.innerHTML = "<error-ev></error-ev>";
+      revive({
+        "/islands/error-ev.ts": mock(async () => {
+          throw err;
+        }),
+      });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "error-ev", error: err });
+      expect(consoleSpy).toHaveBeenCalled();
+      document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
+    it("islands:error fires on custom directive failure", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:error", handler);
+      const err = new Error("directive failed");
+      document.body.innerHTML = "<dir-err-ev client:on-click></dir-err-ev>";
+      const customDirectives = new Map<string, ClientDirective>([
+        [
+          "client:on-click",
+          mock<ClientDirective>(() => {
+            throw err;
+          }),
+        ],
+      ]);
+      revive({ "/islands/dir-err-ev.ts": mock(async () => {}) }, {}, customDirectives);
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "dir-err-ev", error: err });
+      document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
+    it("multiple independent listeners each receive the event", async () => {
+      const handlerA = mock((e: CustomEvent) => e);
+      const handlerB = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:load", handlerA);
+      document.addEventListener("islands:load", handlerB);
+      document.body.innerHTML = "<multi-listener></multi-listener>";
+      revive({ "/islands/multi-listener.ts": mock(async () => {}) });
+      await flush();
+      expect(handlerA).toHaveBeenCalledTimes(1);
+      expect(handlerB).toHaveBeenCalledTimes(1);
+      document.removeEventListener("islands:load", handlerA);
+      document.removeEventListener("islands:load", handlerB);
+    });
+  });
+
+  describe("onIslandLoad / onIslandError helpers", () => {
+    it("onIslandLoad receives detail directly and returns a cleanup function", async () => {
+      const handler = mock((_detail: { tag: string }) => {});
+      const off = onIslandLoad(handler);
+      document.body.innerHTML = "<helper-load></helper-load>";
+      revive({ "/islands/helper-load.ts": mock(async () => {}) });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-load" });
+      off();
+    });
+
+    it("onIslandLoad cleanup removes the listener", async () => {
+      const handler = mock(() => {});
+      const off = onIslandLoad(handler);
+      off();
+      document.body.innerHTML = "<helper-off></helper-off>";
+      revive({ "/islands/helper-off.ts": mock(async () => {}) });
+      await flush();
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("onIslandError receives detail directly and returns a cleanup function", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((_detail: { tag: string; error: unknown }) => {});
+      const err = new Error("helper error");
+      const off = onIslandError(handler);
+      document.body.innerHTML = "<helper-err></helper-err>";
+      revive({
+        "/islands/helper-err.ts": mock(async () => {
+          throw err;
+        }),
+      });
+      await flush();
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-err", error: err });
+      off();
+      consoleSpy.mockRestore();
+    });
+
+    it("onIslandError cleanup removes the listener", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock(() => {});
+      const off = onIslandError(handler);
+      off();
+      document.body.innerHTML = "<helper-err-off></helper-err-off>";
+      revive({
+        "/islands/helper-err-off.ts": mock(async () => {
+          throw new Error("should not reach handler");
+        }),
+      });
+      await flush();
+      expect(handler).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("multiple custom directives (AND latch)", () => {
+    it("loads only after both custom directives call load()", async () => {
+      const loader = mock(async () => {});
+      let loadA!: ClientDirectiveLoader;
+      let loadB!: ClientDirectiveLoader;
+      const directiveA = mock<ClientDirective>((load) => {
+        loadA = load;
+      });
+      const directiveB = mock<ClientDirective>((load) => {
+        loadB = load;
+      });
+      document.body.innerHTML = "<and-island client:on-a client:on-b></and-island>";
+      const customDirectives = new Map<string, ClientDirective>([
+        ["client:on-a", directiveA],
+        ["client:on-b", directiveB],
+      ]);
+      revive({ "/islands/and-island.ts": loader }, {}, customDirectives);
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+
+      await loadA();
+      await flush();
+      expect(loader).not.toHaveBeenCalled(); // only A has fired
+
+      await loadB();
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1); // both fired
+    });
+
+    it("island loads exactly once even when load() is called more than once", async () => {
+      const loader = mock(async () => {});
+      let loadA!: ClientDirectiveLoader;
+      let loadB!: ClientDirectiveLoader;
+      document.body.innerHTML = "<idem-island client:on-a client:on-b></idem-island>";
+      const customDirectives = new Map<string, ClientDirective>([
+        [
+          "client:on-a",
+          (load) => {
+            loadA = load;
+          },
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            loadB = load;
+          },
+        ],
+      ]);
+      revive({ "/islands/idem-island.ts": loader }, {}, customDirectives);
+      await flush();
+
+      await loadA();
+      await loadB();
+      await loadA(); // extra call — fired is already true, ignored
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("three directives — all must call load() before island loads", async () => {
+      const loader = mock(async () => {});
+      const loads: ClientDirectiveLoader[] = [];
+      const makeDir = (): ClientDirective => (load) => {
+        loads.push(load);
+      };
+      document.body.innerHTML = "<three-island client:on-a client:on-b client:on-c></three-island>";
+      const customDirectives = new Map<string, ClientDirective>([
+        ["client:on-a", makeDir()],
+        ["client:on-b", makeDir()],
+        ["client:on-c", makeDir()],
+      ]);
+      revive({ "/islands/three-island.ts": loader }, {}, customDirectives);
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+
+      await loads[0]();
+      await loads[1]();
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+
+      await loads[2]();
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("surviving directive cannot trigger load after sibling directive fails", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const loader = mock(async () => {});
+      let loadB!: ClientDirectiveLoader;
+      document.body.innerHTML = "<abort-latch client:on-a client:on-b></abort-latch>";
+      const customDirectives = new Map<string, ClientDirective>([
+        [
+          "client:on-a",
+          mock<ClientDirective>(() => {
+            throw new Error("directive A failed");
+          }),
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            loadB = load;
+          },
+        ],
+      ]);
+      revive({ "/islands/abort-latch.ts": loader }, {}, customDirectives);
+      await flush();
+      expect(loader).not.toHaveBeenCalled(); // A failed → latch aborted
+
+      await loadB(); // B calls load() — but aborted is true, should be ignored
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it("debug log names all matched directives when multiple are present", async () => {
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
+      document.body.innerHTML = "<multi-dbg client:on-a client:on-b></multi-dbg>";
+      const customDirectives = new Map<string, ClientDirective>([
+        [
+          "client:on-a",
+          (load) => {
+            load();
+          },
+        ],
+        [
+          "client:on-b",
+          (load) => {
+            load();
+          },
+        ],
+      ]);
+      revive({ "/islands/multi-dbg.ts": mock(async () => {}) }, { debug: true }, customDirectives);
+      await flush();
+      const dispatchCall = logSpy.mock.calls.find(
+        (args) =>
+          String(args[1]).includes("dispatching to custom directives") &&
+          String(args[1]).includes("client:on-a") &&
+          String(args[1]).includes("client:on-b"),
+      );
+      expect(dispatchCall).toBeDefined();
+      logSpy.mockRestore();
+      groupCollapsed.mockRestore();
+      groupEnd.mockRestore();
     });
   });
 });

@@ -10,7 +10,7 @@ const runtimePath = fileURLToPath(new URL("./runtime.js", import.meta.url));
 const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 
 /** A function that triggers the load of an island module. */
-export type ClientDirectiveLoader = () => Promise<unknown>;
+export type ClientDirectiveLoader = () => Promise<void>;
 
 /** Options passed to a custom client directive function. */
 export interface ClientDirectiveOptions {
@@ -99,6 +99,40 @@ export interface DirectivesConfig {
   custom?: ClientDirectiveDefinition[];
 }
 
+/** Runtime-facing directive configuration — omits plugin-only `custom` directives. */
+export type RuntimeDirectivesConfig = Omit<DirectivesConfig, "custom">;
+
+/** Retry configuration for failed island loads. */
+export interface RetryConfig {
+  /** Number of times to retry after the initial failure. Default: `0` (no auto-retry) */
+  retries?: number;
+  /** Base delay in ms between retries; doubles each attempt. Default: `1000` */
+  delay?: number;
+}
+
+/** Event detail for the `islands:load` DOM event. */
+export interface IslandLoadDetail {
+  /** The custom element tag name, e.g. `'product-form'` */
+  tag: string;
+}
+
+/** Event detail for the `islands:error` DOM event. */
+export interface IslandErrorDetail {
+  /** The custom element tag name, e.g. `'product-form'` */
+  tag: string;
+  /** The error thrown by the loader or custom directive */
+  error: unknown;
+}
+
+declare global {
+  interface DocumentEventMap {
+    /** Fired after an island module resolves successfully. */
+    "islands:load": CustomEvent<IslandLoadDetail>;
+    /** Fired when an island load or custom directive fails. Fired on each retry attempt. */
+    "islands:error": CustomEvent<IslandErrorDetail>;
+  }
+}
+
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
   directories?: string | string[];
@@ -106,12 +140,16 @@ export interface ShopifyThemeIslandsOptions {
   debug?: boolean;
   /** Per-directive configuration. */
   directives?: DirectivesConfig;
+  /** Automatic retry behaviour for failed island loads. */
+  retry?: RetryConfig;
 }
 
 export interface ReviveOptions {
-  directives?: DirectivesConfig;
+  directives?: RuntimeDirectivesConfig;
   /** Log island activation and directive events to the console. Default: `false` */
   debug?: boolean;
+  /** Automatic retry behaviour for failed island loads. */
+  retry?: RetryConfig;
 }
 
 const defaults = {
@@ -310,14 +348,14 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         ...directiveImports,
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
         `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify({ directives, debug })};`,
+        `const options = ${JSON.stringify({ directives, debug, retry: options.retry })};`,
       ];
 
       if (mapEntries.length) {
         lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
       }
       lines.push(
-        `export const disconnect = _islands(islands, options${mapEntries.length ? ", customDirectives" : ""});`,
+        `export const { disconnect } = _islands(islands, options${mapEntries.length ? ", customDirectives" : ""});`,
       );
 
       return lines.join("\n");

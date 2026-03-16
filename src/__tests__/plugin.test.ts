@@ -54,7 +54,7 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
       expect(output).toContain("import { revive as _islands }");
-      expect(output).toContain("export const disconnect = _islands(islands, options)");
+      expect(output).toContain("export const { disconnect } = _islands(islands, options)");
     });
 
     it("generates import.meta.glob for multiple directories", async () => {
@@ -77,6 +77,22 @@ describe("plugin", () => {
       expect(output).toContain('"attribute":"client:media"');
       expect(output).toContain('"attribute":"client:defer"');
       expect(output).toContain('"delay":3000');
+    });
+
+    it("includes retry config in options when set", async () => {
+      const plugin = makePlugin({ directories: ["/islands/"], retry: { retries: 2, delay: 500 } });
+      plugin.configResolved(makeConfig());
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).toContain('"retry"');
+      expect(output).toContain('"retries":2');
+      expect(output).toContain('"delay":500');
+    });
+
+    it("omits retry from options when not configured", async () => {
+      const plugin = makePlugin({ directories: ["/islands/"] });
+      plugin.configResolved(makeConfig());
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).not.toContain('"retry"');
     });
 
     it("merges custom visible config with defaults", async () => {
@@ -148,7 +164,7 @@ describe("plugin", () => {
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
       expect(output).toContain(
-        "export const disconnect = _islands(islands, options, customDirectives)",
+        "export const { disconnect } = _islands(islands, options, customDirectives)",
       );
     });
 
@@ -156,7 +172,7 @@ describe("plugin", () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
-      expect(output).toContain("export const disconnect = _islands(islands, options)");
+      expect(output).toContain("export const { disconnect } = _islands(islands, options)");
       expect(output).not.toContain("customDirectives");
     });
 
