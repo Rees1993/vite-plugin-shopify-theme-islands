@@ -1,18 +1,27 @@
 ---
 name: setup
 description: >
-  Plugin install and vite.config.ts configuration. Covers shopifyThemeIslands()
-  options: directories (string | string[]), debug, directives deep-merge, and
-  retry (retries, delay with exponential backoff). Load when configuring the
-  plugin, setting island scan directories, or enabling retry.
+  Getting-started journey and plugin configuration. Covers the full path from
+  install to first working island. shopifyThemeIslands() options: directories
+  (string | string[]), debug, directives deep-merge, and retry (retries, delay
+  with exponential backoff). Load when setting up the plugin, configuring
+  island scan directories, or enabling retry.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.0"
+library_version: "1.0.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
 ---
 
 ## Setup
+
+This plugin is framework-agnostic but designed for Shopify themes. Most Shopify
+projects also use
+[vite-plugin-shopify](https://github.com/barrel/vite-plugin-shopify) to handle
+Shopify-specific asset serving — if the project uses it, add this plugin
+alongside it in the existing `plugins` array.
+
+### 1. Add the plugin to `vite.config.ts`
 
 ```ts
 // vite.config.ts
@@ -20,22 +29,30 @@ import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
-  plugins: [
-    shopifyThemeIslands({
-      directories: ["/frontend/js/islands/"],
-      debug: false,
-      retry: { retries: 2, delay: 500 },
-    }),
-  ],
+  plugins: [shopifyThemeIslands()],
 });
 ```
 
-Import the virtual module in the theme JS entry point to activate islands:
+All options are optional. The default islands directory is `/frontend/js/islands/`.
+
+### 2. Import the virtual module in the theme JS entry point
 
 ```ts
 // frontend/js/theme.ts
 import "vite-plugin-shopify-theme-islands/revive";
 ```
+
+This activates the runtime — islands are never loaded without this import.
+
+### 3. Add directives to Liquid templates
+
+```html
+<!-- sections/product.liquid -->
+<product-form client:visible></product-form>
+```
+
+That's a working setup. Islands in `/frontend/js/islands/` matching the tag
+name are loaded lazily when the directive condition is met.
 
 ## Core Patterns
 
@@ -100,6 +117,58 @@ import "vite-plugin-shopify-theme-islands/revive";
 The plugin generates the virtual module but has no effect until it is imported in the browser entry point. Islands are silently never activated.
 
 Source: src/index.ts — VIRTUAL_ID / RESOLVED_ID
+
+### HIGH Agent hardcodes default values — unnecessary noise
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directories: ["/frontend/js/islands/"],
+  debug: false,
+  directives: {
+    visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
+    idle: { attribute: "client:idle", timeout: 500 },
+    media: { attribute: "client:media" },
+    defer: { attribute: "client:defer", delay: 3000 },
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands();
+```
+
+All options are optional and default to sensible values. Only include options that differ from the defaults.
+
+### HIGH Agent overwrites existing `vite.config.ts` instead of appending
+
+Before adding the plugin, read the existing `vite.config.ts`. Projects commonly
+already have `vite-plugin-shopify` or other plugins — the island plugin must be
+added to the existing `plugins` array, not replace it.
+
+Wrong:
+
+```ts
+// Replaces existing plugins
+export default defineConfig({
+  plugins: [shopifyThemeIslands()],
+});
+```
+
+Correct:
+
+```ts
+// Appends to existing plugins
+export default defineConfig({
+  plugins: [
+    shopify(), // pre-existing plugin preserved
+    shopifyThemeIslands(),
+  ],
+});
+```
 
 ### HIGH `retry` nested inside `directives` — no retries happen
 

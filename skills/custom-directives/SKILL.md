@@ -7,7 +7,7 @@ description: >
   the island activates. Error handling — thrown errors fire islands:error.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.0"
+library_version: "1.0.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts

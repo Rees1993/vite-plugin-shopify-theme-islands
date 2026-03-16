@@ -8,7 +8,7 @@ description: >
   module revive for SPA navigation teardown.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.0"
+library_version: "1.0.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
