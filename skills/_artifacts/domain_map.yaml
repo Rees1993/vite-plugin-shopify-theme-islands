@@ -1,6 +1,6 @@
 library:
   name: vite-plugin-shopify-theme-islands
-  version: "1.0.0"
+  version: "1.0.2"
   repository: https://github.com/Rees1993/vite-plugin-shopify-theme-islands
   description: >
     Vite plugin for island architecture in Shopify themes. Lazily loads custom
@@ -11,8 +11,9 @@ domains:
   - slug: setup
     name: Plugin Setup
     description: >
-      Installing the plugin, configuring vite.config.ts, setting directories,
-      debug mode, and retry behaviour.
+      Full getting-started journey — installing the plugin, configuring
+      vite.config.ts, setting directories, debug mode, and retry behaviour.
+      vite-plugin-shopify is a common companion for Shopify projects.
     failure_modes:
       - id: retry-wrong-nesting
         description: >
@@ -29,6 +30,18 @@ domains:
         description: >
           Agent writes retry.count or retry.attempts instead of retry.retries.
           Field is silently ignored; no retries happen.
+        priority: HIGH
+      - id: hardcoding-defaults
+        description: >
+          Agent explicitly sets all plugin options to their default values
+          (directories, rootMargin, attribute names, etc.) instead of using
+          zero-config. Produces noisy config and makes future changes confusing.
+        priority: HIGH
+      - id: not-reading-existing-config
+        description: >
+          Agent adds the plugin without reading the existing vite.config.ts.
+          Overwrites the plugins array instead of appending, losing other
+          plugins (e.g. vite-plugin-shopify).
         priority: HIGH
 
   - slug: writing-islands
@@ -82,6 +95,20 @@ domains:
           client:visible="0px" overrides the global rootMargin for that element.
           Agent writes client:visible expecting the global default to apply.
         priority: MEDIUM
+      - id: directive-attribute-typo
+        description: >
+          Agent writes a directive with a typo (e.g. client:visibled,
+          client:Visible). Directive attributes are case-sensitive and
+          unrecognised attributes are silently ignored — the island loads
+          immediately as if no directive were set.
+        priority: HIGH
+      - id: renamed-attribute-not-used
+        description: >
+          Developer has overridden a directive attribute name in plugin config
+          (e.g. visible.attribute: "data:visible") but agent still writes the
+          default client:visible in Liquid. The directive silently never
+          activates. Agent must read vite.config.ts before writing directives.
+        priority: HIGH
 
   - slug: custom-directives
     name: Custom Directives

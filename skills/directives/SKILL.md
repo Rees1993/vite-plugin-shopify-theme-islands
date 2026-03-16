@@ -7,7 +7,7 @@ description: >
   all must resolve. Per-element value overrides. Empty client:media warning.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.0"
+library_version: "1.0.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -165,3 +165,41 @@ Correct:
 The attribute value is passed directly to `IntersectionObserver` as `rootMargin`, fully replacing the global default.
 
 Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, pendingVisible)`
+
+### HIGH Directive attribute typo — island loads without condition
+
+Wrong:
+
+```html
+<product-form client:visibled></product-form>
+<product-form client:Visible></product-form>
+```
+
+Correct:
+
+```html
+<product-form client:visible></product-form>
+```
+
+Directive attributes are case-sensitive. An unrecognised attribute is silently ignored — the island loads immediately as if no directive were set. No warning is emitted. Check for typos if an island activates earlier than expected.
+
+Source: src/runtime.ts — runtime checks exact attribute names from plugin config
+
+### HIGH Agent uses default attribute name when developer has configured a custom one
+
+Wrong:
+
+```html
+<!-- developer has set visible.attribute: "data:visible" in vite.config.ts -->
+<product-form client:visible></product-form>
+```
+
+Correct:
+
+```html
+<product-form data:visible></product-form>
+```
+
+When `directives.visible.attribute` (or any directive's `attribute` option) is overridden in `vite.config.ts`, all Liquid templates must use the configured name. The default `client:*` names no longer apply. Always read `vite.config.ts` to check for overridden attribute names before writing directives in Liquid.
+
+Source: src/index.ts:DirectivesConfig — `attribute` field per directive; src/runtime.ts reads configured attribute names at runtime

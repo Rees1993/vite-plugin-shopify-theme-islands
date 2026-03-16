@@ -152,6 +152,51 @@ export interface ReviveOptions {
   retry?: RetryConfig;
 }
 
+const PREFIX = "[vite-plugin-shopify-theme-islands]";
+
+function validateOptions(options: ShopifyThemeIslandsOptions, directives: DirectivesConfig): void {
+  const customDefs = options.directives?.custom ?? [];
+  if (Array.isArray(options.directories) && options.directories.length === 0) {
+    throw new Error(`${PREFIX} "directories" must not be empty`);
+  }
+
+  const threshold = options.directives?.visible?.threshold;
+  if (threshold !== undefined && (threshold < 0 || threshold > 1)) {
+    throw new Error(
+      `${PREFIX} "directives.visible.threshold" must be between 0 and 1, got ${threshold}`,
+    );
+  }
+
+  if (options.retry !== undefined) {
+    const { retries, delay } = options.retry;
+    if (retries !== undefined && retries < 0) {
+      throw new Error(`${PREFIX} "retry.retries" must be >= 0, got ${retries}`);
+    }
+    if (delay !== undefined && delay < 0) {
+      throw new Error(`${PREFIX} "retry.delay" must be >= 0, got ${delay}`);
+    }
+  }
+
+  const builtinAttributes = new Set([
+    directives.visible!.attribute!,
+    directives.idle!.attribute!,
+    directives.media!.attribute!,
+    directives.defer!.attribute!,
+  ]);
+  const seen = new Set<string>();
+  for (const def of customDefs) {
+    if (seen.has(def.name)) {
+      throw new Error(`${PREFIX} Duplicate custom directive name: "${def.name}"`);
+    }
+    if (builtinAttributes.has(def.name)) {
+      throw new Error(
+        `${PREFIX} Custom directive "${def.name}" conflicts with a built-in directive`,
+      );
+    }
+    seen.add(def.name);
+  }
+}
+
 const defaults = {
   directories: ["/frontend/js/islands/"],
   directives: {
@@ -225,6 +270,8 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   };
 
   const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
+
+  validateOptions(options, directives);
 
   const debug = options.debug ?? false;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};

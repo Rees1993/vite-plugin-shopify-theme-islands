@@ -29,6 +29,71 @@ function makePlugin(opts?: ShopifyThemeIslandsOptions): PluginUnderTest {
 }
 
 describe("plugin", () => {
+  describe("validateOptions", () => {
+    it("throws for an empty directories array", () => {
+      expect(() => makePlugin({ directories: [] })).toThrow('"directories" must not be empty');
+    });
+
+    it("throws for threshold below 0", () => {
+      expect(() => makePlugin({ directives: { visible: { threshold: -0.1 } } })).toThrow(
+        '"directives.visible.threshold" must be between 0 and 1',
+      );
+    });
+
+    it("throws for threshold above 1", () => {
+      expect(() => makePlugin({ directives: { visible: { threshold: 1.1 } } })).toThrow(
+        '"directives.visible.threshold" must be between 0 and 1',
+      );
+    });
+
+    it("accepts threshold of 0 and 1", () => {
+      expect(() => makePlugin({ directives: { visible: { threshold: 0 } } })).not.toThrow();
+      expect(() => makePlugin({ directives: { visible: { threshold: 1 } } })).not.toThrow();
+    });
+
+    it("throws for negative retry.retries", () => {
+      expect(() => makePlugin({ retry: { retries: -1 } })).toThrow('"retry.retries" must be >= 0');
+    });
+
+    it("throws for negative retry.delay", () => {
+      expect(() => makePlugin({ retry: { delay: -1 } })).toThrow('"retry.delay" must be >= 0');
+    });
+
+    it("accepts retry.retries of 0", () => {
+      expect(() => makePlugin({ retry: { retries: 0 } })).not.toThrow();
+    });
+
+    it("throws for duplicate custom directive names", () => {
+      expect(() =>
+        makePlugin({
+          directives: {
+            custom: [
+              { name: "client:hover", entrypoint: "./a.ts" },
+              { name: "client:hover", entrypoint: "./b.ts" },
+            ],
+          },
+        }),
+      ).toThrow('Duplicate custom directive name: "client:hover"');
+    });
+
+    it("throws when custom directive name collides with a built-in", () => {
+      expect(() =>
+        makePlugin({ directives: { custom: [{ name: "client:visible", entrypoint: "./a.ts" }] } }),
+      ).toThrow("conflicts with a built-in directive");
+    });
+
+    it("throws when custom directive name collides with a renamed built-in", () => {
+      expect(() =>
+        makePlugin({
+          directives: {
+            visible: { attribute: "data:visible" },
+            custom: [{ name: "data:visible", entrypoint: "./a.ts" }],
+          },
+        }),
+      ).toThrow("conflicts with a built-in directive");
+    });
+  });
+
   describe("resolveId", () => {
     it("resolves the virtual revive ID", () => {
       const plugin = makePlugin();

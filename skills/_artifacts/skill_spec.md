@@ -3,7 +3,7 @@
 ## Library
 
 - **Name:** vite-plugin-shopify-theme-islands
-- **Version target:** 1.0.0
+- **Version target:** 1.0.2
 - **Repository:** https://github.com/Rees1993/vite-plugin-shopify-theme-islands
 - **Type:** Vite plugin (node) + browser runtime
 
@@ -16,7 +16,7 @@ Each skill is standalone type `core`.
 
 | Skill | Path | Description |
 |-------|------|-------------|
-| setup | skills/setup/SKILL.md | Plugin install, vite.config.ts, directories, debug, retry |
+| setup | skills/setup/SKILL.md | Getting-started journey, plugin install, vite.config.ts, directories, debug, retry |
 | writing-islands | skills/writing-islands/SKILL.md | Directory scanning, Island mixin, child cascade |
 | directives | skills/directives/SKILL.md | client:visible/media/idle/defer, combining, per-element overrides |
 | custom-directives | skills/custom-directives/SKILL.md | Register custom directives, signature, AND-latch |
