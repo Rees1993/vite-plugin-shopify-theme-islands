@@ -29,7 +29,9 @@
   },
   "files": [
     "dist",
-    "revive.d.ts"
+    "revive.d.ts",
+    "skills",
+    "!skills/_artifacts"
   ],
   "sideEffects": [
     "./dist/runtime.js"
@@ -38,7 +40,8 @@
     "vite",
     "shopify",
     "islands",
-    "vite-plugin"
+    "vite-plugin",
+    "tanstack-intent"
   ],
   "license": "MIT",
   "author": {
@@ -75,6 +78,7 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.8.4",
+    "@tanstack/intent": "^0.0.19",
     "@types/bun": "^1.3.10",
     "@types/node": "^22.0.0",
     "oxfmt": "^0.40.0",
