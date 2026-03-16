@@ -31,8 +31,7 @@
     "dist",
     "revive.d.ts",
     "skills",
-    "!skills/_artifacts",
-    "bin"
+    "!skills/_artifacts"
   ],
   "sideEffects": [
     "./dist/runtime.js"
@@ -86,8 +85,5 @@
     "oxlint": "^1.55.0",
     "typescript": "^5.0.0",
     "vite": "^8.0.0"
-  },
-  "bin": {
-    "intent": "./bin/intent.js"
   }
 }
