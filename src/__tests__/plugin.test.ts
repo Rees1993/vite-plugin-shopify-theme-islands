@@ -35,15 +35,15 @@ describe("plugin", () => {
     });
 
     it("throws for threshold below 0", () => {
-      expect(() =>
-        makePlugin({ directives: { visible: { threshold: -0.1 } } }),
-      ).toThrow('"directives.visible.threshold" must be between 0 and 1');
+      expect(() => makePlugin({ directives: { visible: { threshold: -0.1 } } })).toThrow(
+        '"directives.visible.threshold" must be between 0 and 1',
+      );
     });
 
     it("throws for threshold above 1", () => {
-      expect(() =>
-        makePlugin({ directives: { visible: { threshold: 1.1 } } }),
-      ).toThrow('"directives.visible.threshold" must be between 0 and 1');
+      expect(() => makePlugin({ directives: { visible: { threshold: 1.1 } } })).toThrow(
+        '"directives.visible.threshold" must be between 0 and 1',
+      );
     });
 
     it("accepts threshold of 0 and 1", () => {
@@ -79,7 +79,7 @@ describe("plugin", () => {
     it("throws when custom directive name collides with a built-in", () => {
       expect(() =>
         makePlugin({ directives: { custom: [{ name: "client:visible", entrypoint: "./a.ts" }] } }),
-      ).toThrow('conflicts with a built-in directive');
+      ).toThrow("conflicts with a built-in directive");
     });
 
     it("throws when custom directive name collides with a renamed built-in", () => {
@@ -90,7 +90,7 @@ describe("plugin", () => {
             custom: [{ name: "data:visible", entrypoint: "./a.ts" }],
           },
         }),
-      ).toThrow('conflicts with a built-in directive');
+      ).toThrow("conflicts with a built-in directive");
     });
   });
 

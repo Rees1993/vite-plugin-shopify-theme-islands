@@ -189,7 +189,9 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
       throw new Error(`${PREFIX} Duplicate custom directive name: "${def.name}"`);
     }
     if (builtinAttributes.has(def.name)) {
-      throw new Error(`${PREFIX} Custom directive "${def.name}" conflicts with a built-in directive`);
+      throw new Error(
+        `${PREFIX} Custom directive "${def.name}" conflicts with a built-in directive`,
+      );
     }
     seen.add(def.name);
   }
