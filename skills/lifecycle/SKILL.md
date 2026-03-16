@@ -1,5 +1,5 @@
 ---
-name: vite-plugin-shopify-theme-islands/lifecycle
+name: lifecycle
 description: >
   Island lifecycle events and SPA teardown. onIslandLoad and onIslandError
   helpers from vite-plugin-shopify-theme-islands/events — prefer these over

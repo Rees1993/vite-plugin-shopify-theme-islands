@@ -1,5 +1,5 @@
 ---
-name: vite-plugin-shopify-theme-islands/directives
+name: directives
 description: >
   Built-in client directives: client:visible (IntersectionObserver, rootMargin),
   client:media (matchMedia query), client:idle (requestIdleCallback),

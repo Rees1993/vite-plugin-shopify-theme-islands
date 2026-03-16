@@ -1,5 +1,5 @@
 ---
-name: vite-plugin-shopify-theme-islands/setup
+name: setup
 description: >
   Plugin install and vite.config.ts configuration. Covers shopifyThemeIslands()
   options: directories (string | string[]), debug, directives deep-merge, and
