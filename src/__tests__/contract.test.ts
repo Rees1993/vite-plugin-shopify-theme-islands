@@ -11,6 +11,7 @@ import {
   resolveStrategies,
   buildIslandMap,
   normalizeReviveOptions,
+  DEFAULT_DIRECTIVES,
   type RevivePayload,
 } from "../contract";
 
@@ -51,6 +52,12 @@ describe("contract", () => {
       expect(opts.directives.visible.attribute).toBe("client:visible");
       expect(opts.directives.idle.timeout).toBe(100);
       expect(opts.debug).toBe(true);
+    });
+
+    it("options built from DEFAULT_DIRECTIVES (plugin merge with no overrides) normalize to same directives as undefined", () => {
+      const fromPlugin = normalizeReviveOptions({ directives: DEFAULT_DIRECTIVES });
+      const fromUndefined = normalizeReviveOptions(undefined);
+      expect(fromPlugin.directives).toEqual(fromUndefined.directives);
     });
   });
 

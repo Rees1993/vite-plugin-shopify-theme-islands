@@ -125,6 +125,7 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
+import { DEFAULT_DIRECTIVES } from "./contract.js";
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -183,19 +184,7 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
   }
 }
 
-const defaults = {
-  directories: ["/frontend/js/islands/"],
-  directives: {
-    visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
-    idle: { attribute: "client:idle", timeout: 500 },
-    media: { attribute: "client:media" },
-    defer: { attribute: "client:defer", delay: 3000 },
-    interaction: {
-      attribute: "client:interaction",
-      events: ["mouseenter", "touchstart", "focusin"],
-    },
-  },
-};
+const defaultDirectories = ["/frontend/js/islands/"];
 
 function normalizeDir(dir: string): string {
   return dir.endsWith("/") ? dir : dir + "/";
@@ -254,16 +243,16 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const rawDirs = (
     Array.isArray(options.directories)
       ? options.directories
-      : [options.directories ?? defaults.directories[0]]
+      : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  // Deep merge directives — per-directive defaults are preserved when only some keys are overridden
+  // Deep merge directives — contract is single source of truth for defaults
   const directives: DirectivesConfig = {
-    visible: { ...defaults.directives.visible, ...options.directives?.visible },
-    idle: { ...defaults.directives.idle, ...options.directives?.idle },
-    media: { ...defaults.directives.media, ...options.directives?.media },
-    defer: { ...defaults.directives.defer, ...options.directives?.defer },
-    interaction: { ...defaults.directives.interaction, ...options.directives?.interaction },
+    visible: { ...DEFAULT_DIRECTIVES.visible, ...options.directives?.visible },
+    idle: { ...DEFAULT_DIRECTIVES.idle, ...options.directives?.idle },
+    media: { ...DEFAULT_DIRECTIVES.media, ...options.directives?.media },
+    defer: { ...DEFAULT_DIRECTIVES.defer, ...options.directives?.defer },
+    interaction: { ...DEFAULT_DIRECTIVES.interaction, ...options.directives?.interaction },
   };
 
   const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];

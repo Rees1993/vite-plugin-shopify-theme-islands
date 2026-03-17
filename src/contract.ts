@@ -97,7 +97,8 @@ export interface NormalizedReviveOptions {
   retry: { retries: number; delay: number };
 }
 
-const DEFAULT_DIRECTIVES: NormalizedReviveOptions["directives"] = {
+/** Default directive config. Single source of truth for plugin merge and runtime normalization. */
+export const DEFAULT_DIRECTIVES: NormalizedReviveOptions["directives"] = {
   visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
   idle: { attribute: "client:idle", timeout: 500 },
   media: { attribute: "client:media" },
