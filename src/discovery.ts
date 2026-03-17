@@ -5,9 +5,11 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const TS_JS_RE = /\.(ts|js)$/;
+/** Matches .ts or .js extension. Exported for plugin transform/watch filters. */
+export const TS_JS_RE = /\.(ts|js)$/;
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "public", "assets", ".cache"]);
-const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
+/** Matches the island mixin import. Exported for plugin transform/watch detection. */
+export const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 
 /** True if file is under any of the given absolute directory paths. */
 export function inDirectory(file: string, absDirs: string[]): boolean {

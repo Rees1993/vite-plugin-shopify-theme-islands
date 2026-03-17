@@ -5,6 +5,8 @@ import {
   getIslandPathsForLoad,
   discoverIslandFiles,
   collectTagNames,
+  ISLAND_IMPORT_RE,
+  TS_JS_RE,
 } from "./discovery.js";
 import { buildReviveModuleSource } from "./revive-module.js";
 import { fileURLToPath } from "node:url";
@@ -71,9 +73,6 @@ export interface ClientDirectiveDefinition {
   /** Path to the directive module (supports Vite aliases) */
   entrypoint: string;
 }
-
-const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
-const TS_JS_RE = /\.(ts|js)$/;
 
 /** Shared directive configuration shape used by both the plugin and the runtime. */
 export interface DirectivesConfig {
