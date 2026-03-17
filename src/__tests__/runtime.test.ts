@@ -1298,23 +1298,33 @@ describe("revive", () => {
         expect(loader).toHaveBeenCalledTimes(1);
       });
 
-      it("unknown token warns and is skipped, valid tokens still work", async () => {
-        const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      it("per-element value overrides global events config", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML =
-          '<warn-interaction client:interaction="mouseenter"></warn-interaction>';
+          '<override-events client:interaction="mouseenter"></override-events>';
         revive(
-          { "/islands/warn-interaction.ts": loader },
-          {
-            directives: {
-              interaction: {
-                events: ["mouseenter"],
-              },
-            },
-          },
+          { "/islands/override-events.ts": loader },
+          { directives: { interaction: { events: ["focusin"] } } },
         );
         await flush();
-        document.querySelector("warn-interaction")!.dispatchEvent(new Event("mouseenter"));
+        // Global config says focusin, but per-element overrides to mouseenter
+        document.querySelector("override-events")!.dispatchEvent(new Event("focusin"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("override-events")!.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("all-whitespace attribute value warns and falls back to default events", async () => {
+        const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+        const loader = mock(async () => {});
+        document.body.innerHTML = '<ws-interaction client:interaction="   "></ws-interaction>';
+        revive({ "/islands/ws-interaction.ts": loader });
+        await flush();
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no valid event tokens"));
+        // Falls back to default events — touchstart should trigger
+        document.querySelector("ws-interaction")!.dispatchEvent(new Event("touchstart"));
         await flush();
         expect(loader).toHaveBeenCalledTimes(1);
         warnSpy.mockRestore();
@@ -1371,16 +1381,12 @@ describe("revive", () => {
 
       it("combines with client:visible — interaction fires only after visible resolves", async () => {
         let ioCallback: IntersectionObserverCallback | undefined;
-        let ioInstance: { observe: ReturnType<typeof mock>; disconnect: ReturnType<typeof mock> };
         const origIO = globalThis.IntersectionObserver;
         globalThis.IntersectionObserver = class {
-          observe: ReturnType<typeof mock>;
-          disconnect: ReturnType<typeof mock>;
+          observe = mock(() => {});
+          disconnect = mock(() => {});
           constructor(cb: IntersectionObserverCallback) {
             ioCallback = cb;
-            this.observe = mock(() => {});
-            this.disconnect = mock(() => {});
-            ioInstance = this as typeof ioInstance;
           }
         } as unknown as typeof IntersectionObserver;
 

@@ -230,7 +230,13 @@ function normalizeDir(dir: string): string {
 }
 
 function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
-  const aliases = config.resolve.alias;
+  // Sort string aliases by length descending so more-specific prefixes match first
+  // (e.g. "@islands" before "@" — matches Vite's own alias resolution order)
+  const aliases = [...config.resolve.alias].sort(
+    (a, b) =>
+      (typeof b.find === "string" ? b.find.length : 0) -
+      (typeof a.find === "string" ? a.find.length : 0),
+  );
   return dirs.map((dir) => {
     for (const { find, replacement } of aliases) {
       if (typeof find === "string" && dir.startsWith(find)) return dir.replace(find, replacement);
@@ -419,10 +425,10 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
       if (mapEntries.length) {
         lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
+        lines.push(`export const { disconnect } = _islands(islands, options, customDirectives);`);
+      } else {
+        lines.push(`export const { disconnect } = _islands(islands, options);`);
       }
-      lines.push(
-        `export const { disconnect } = _islands(islands, options${mapEntries.length ? ", customDirectives" : ""});`,
-      );
 
       return lines.join("\n");
     },

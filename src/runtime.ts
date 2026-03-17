@@ -77,7 +77,7 @@ function interaction(
       cleanup();
       resolve();
     };
-    for (const name of events) element.addEventListener(name, handler, { once: true });
+    for (const name of events) element.addEventListener(name, handler);
     pending.set(element, () => {
       cleanup();
       reject();
@@ -98,6 +98,8 @@ function idle(timeout: number): Promise<void> {
     else setTimeout(resolve, timeout);
   });
 }
+
+const noop = (..._: unknown[]) => {};
 
 export function revive(
   islands: Record<string, () => Promise<unknown>>,
@@ -180,18 +182,17 @@ export function revive(
     // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
     if (debug && !initDone) {
       const parts: string[] = [];
-      const visibleVal = el.getAttribute(attrVisible);
-      if (visibleVal !== null)
-        parts.push(visibleVal ? `${attrVisible}="${visibleVal}"` : attrVisible);
+      // Push `attr` or `attr="val"` when the element has the attribute; skip null (absent)
+      const pushAttr = (attr: string, val: string | null) => {
+        if (val !== null) parts.push(val ? `${attr}="${val}"` : attr);
+      };
+      pushAttr(attrVisible, el.getAttribute(attrVisible));
+      // client:media excluded when empty — it warns+skips, so the island fires immediately
       const mediaVal = el.getAttribute(attrMedia);
       if (mediaVal) parts.push(`${attrMedia}="${mediaVal}"`);
-      const idleVal = el.getAttribute(attrIdle);
-      if (idleVal !== null) parts.push(idleVal ? `${attrIdle}="${idleVal}"` : attrIdle);
-      const deferVal = el.getAttribute(attrDefer);
-      if (deferVal !== null) parts.push(deferVal ? `${attrDefer}="${deferVal}"` : attrDefer);
-      const interactionVal = el.getAttribute(attrInteraction);
-      if (interactionVal !== null)
-        parts.push(interactionVal ? `${attrInteraction}="${interactionVal}"` : attrInteraction);
+      pushAttr(attrIdle, el.getAttribute(attrIdle));
+      pushAttr(attrDefer, el.getAttribute(attrDefer));
+      pushAttr(attrInteraction, el.getAttribute(attrInteraction));
       if (customDirectives?.size) {
         for (const a of customDirectives.keys()) {
           if (el.hasAttribute(a)) parts.push(a);
@@ -202,9 +203,9 @@ export function revive(
 
     // Buffer subsequent stages; flush as a collapsed group if there were any,
     // or as a flat log if the island triggered with no intermediate steps
-    const msgs: string[] = [];
-    const note = debug ? (msg: string) => msgs.push(msg) : () => {};
-    const flush = debug
+    const msgs = debug ? ([] as string[]) : null;
+    const note = msgs ? (msg: string) => msgs.push(msg) : noop;
+    const flush = msgs
       ? (final: string) => {
           if (msgs.length === 0) {
             console.log("[islands]", `<${tagName}> ${final}`);
@@ -214,7 +215,7 @@ export function revive(
             console.groupEnd();
           }
         }
-      : () => {};
+      : noop;
     try {
       const visibleAttr = el.getAttribute(attrVisible);
       if (visibleAttr !== null) {
@@ -242,13 +243,13 @@ export function revive(
       }
       const d = el.getAttribute(attrDefer);
       if (d !== null) {
-        const raw = parseInt(d, 10);
-        const ms = Number.isNaN(raw) ? deferDelay : raw;
-        if (d !== "" && Number.isNaN(raw)) {
+        const dMs = parseInt(d, 10);
+        if (d !== "" && Number.isNaN(dMs)) {
           console.warn(
             `[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`,
           );
         }
+        const ms = Number.isNaN(dMs) ? deferDelay : dMs;
         note(`waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
       }
@@ -256,28 +257,13 @@ export function revive(
       if (interactionAttr !== null) {
         // Per-element value overrides global events (space-separated MDN event names)
         let events = interactionEvents;
-        if (interactionAttr !== "") {
+        if (interactionAttr) {
           const tokens = interactionAttr.split(/\s+/).filter(Boolean);
-          const valid: string[] = [];
-          for (const token of tokens) {
-            // Warn on obviously invalid tokens (empty after trim is already filtered)
-            // We accept all non-empty strings as event names; DOM simply won't fire unknown ones
-            if (/\s/.test(token)) {
-              console.warn(
-                `[islands] <${tagName}> unknown ${attrInteraction} token "${token}" — skipping`,
-              );
-            } else {
-              valid.push(token);
-            }
-          }
-          if (valid.length === 0) {
+          if (tokens.length > 0) events = tokens;
+          else
             console.warn(
               `[islands] <${tagName}> ${attrInteraction} has no valid event tokens — using default events`,
             );
-            events = interactionEvents;
-          } else {
-            events = valid;
-          }
         }
         note(`waiting for ${attrInteraction} (${events.join(", ")})`);
         await interaction(el, events, pendingCancellable);
