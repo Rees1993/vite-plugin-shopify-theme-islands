@@ -190,15 +190,50 @@ Loads the island after a fixed delay. The delay in milliseconds is read from the
 
 Unlike `client:idle`, which waits for genuine browser idle time, `client:defer` always waits exactly the specified number of milliseconds.
 
-### Combining directives
+### `client:interaction`
 
-Directives can be combined — the element waits for all conditions to be met before loading:
+Loads the island when the user interacts with the element. Listens for `mouseenter`, `touchstart`, and `focusin` by default — the module starts downloading the moment the user moves their cursor toward or focuses the element.
 
 ```html
+<cart-flyout client:interaction>
+  <!-- ... -->
+</cart-flyout>
+```
+
+The attribute value overrides the events for that element only (space-separated MDN event names):
+
+```html
+<!-- only mouseenter — touchstart and focusin are excluded -->
+<cart-flyout client:interaction="mouseenter">
+  <!-- ... -->
+</cart-flyout>
+```
+
+Combine with `client:visible` to avoid attaching listeners to off-screen elements. Because directives resolve sequentially, interaction listeners are only registered once the element has entered the viewport:
+
+```html
+<mega-menu client:visible client:interaction>
+  <!-- loads when visible, then waits for hover/touch/focus -->
+</mega-menu>
+```
+
+### Combining directives
+
+Directives can be combined — the element works through each condition in sequence before loading. The resolution order is: `visible` → `media` → `idle` → `defer` → `interaction` → custom directives.
+
+```html
+<!-- must scroll into view, then wait for user interaction -->
+<product-recommendations client:visible client:interaction>
+  <!-- ... -->
+</product-recommendations>
+
+<!-- must scroll into view, then wait for idle time -->
 <heavy-widget client:visible client:idle>
   <!-- ... -->
 </heavy-widget>
 ```
+
+Because conditions resolve sequentially, each directive is only evaluated after the previous one has passed. Interaction listeners, for example, are never attached to an element that isn't yet visible.
 
 ### Custom directives
 
@@ -207,24 +242,28 @@ Register your own loading conditions via `directives.custom`. A custom directive
 #### 1. Write the directive
 
 ```ts
-// src/directives/hover.ts
+// src/directives/hash.ts
 import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
 
-const hoverDirective: ClientDirective = (load, _opts, el) => {
-  el.addEventListener("mouseenter", load, { once: true });
+const hashDirective: ClientDirective = (load, opts) => {
+  const target = opts.value;
+  if (location.hash === target) { load(); return; }
+  window.addEventListener("hashchange", () => {
+    if (location.hash === target) load();
+  });
 };
 
-export default hoverDirective;
+export default hashDirective;
 ```
 
-`mouseenter` fires before `click`, so the module starts downloading the moment the user moves their cursor toward the element — by the time they click it's already loaded.
+Useful for anchor-linked sections — `<product-reviews client:hash="#reviews">` loads only when the URL fragment matches, so deep-links like `/products/shirt#reviews` activate the island immediately while other visitors never load it.
 
 The function signature is `(load, options, el) => void | Promise<void>`:
 
 | Parameter       | Type                   | Description                                           |
 | --------------- | ---------------------- | ----------------------------------------------------- |
 | `load`          | `() => Promise<void>`  | Call this to trigger the island module load           |
-| `options.name`  | `string`               | The matched attribute name, e.g. `'client:hover'`     |
+| `options.name`  | `string`               | The matched attribute name, e.g. `'client:hash'`      |
 | `options.value` | `string`               | The attribute value; empty string if no value was set |
 | `el`            | `HTMLElement`          | The island element                                    |
 
@@ -238,7 +277,7 @@ export default defineConfig({
   plugins: [
     shopifyThemeIslands({
       directives: {
-        custom: [{ name: "client:hover", entrypoint: "./src/directives/hover.ts" }],
+        custom: [{ name: "client:hash", entrypoint: "./src/directives/hash.ts" }],
       },
     }),
   ],
@@ -250,9 +289,9 @@ The `entrypoint` supports Vite aliases.
 #### 3. Use it in Liquid
 
 ```html
-<quick-add client:hover>
+<product-reviews client:hash="#reviews">
   <!-- ... -->
-</quick-add>
+</product-reviews>
 ```
 
 #### Ordering
@@ -260,21 +299,21 @@ The `entrypoint` supports Vite aliases.
 Built-in directives always run first. A custom directive is only invoked after all built-in conditions on the element have been met. This means you can gate a custom directive behind `client:visible` to avoid wiring event listeners for off-screen elements:
 
 ```html
-<!-- element must enter the viewport before the hover handler is registered -->
-<quick-add client:visible client:hover>
+<!-- element must enter the viewport before the hash handler is registered -->
+<product-reviews client:visible client:hash="#reviews">
   <!-- ... -->
-</quick-add>
+</product-reviews>
 ```
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
 
-Multiple custom directives on the same element use AND semantics — the island loads only once all matched directives have called `load()`. For example, given two registered custom directives `client:hover` and `client:focus`:
+Multiple custom directives on the same element use AND semantics — the island loads only once all matched directives have called `load()`. For example, given two registered custom directives `client:hash` and `client:network`:
 
 ```html
-<!-- client:visible runs first (built-in); then both client:hover and client:focus must fire -->
-<quick-add client:visible client:hover client:focus>
+<!-- client:visible runs first (built-in); then both client:hash and client:network must fire -->
+<product-reviews client:visible client:hash="#reviews" client:network="4g">
   <!-- ... -->
-</quick-add>
+</product-reviews>
 ```
 
 ## Configuration
@@ -306,6 +345,10 @@ shopifyThemeIslands({
     defer: {
       attribute: "client:defer", // HTML attribute name
       delay: 3000, // fallback delay (ms) when the attribute has no value
+    },
+    interaction: {
+      attribute: "client:interaction", // HTML attribute name
+      events: ["mouseenter", "touchstart", "focusin"], // DOM events that trigger load
     },
     custom: [], // custom directives — see Custom directives above
   },
@@ -372,12 +415,12 @@ The `/events` entry point provides typed helpers that unwrap `e.detail` for you 
 ```ts
 import { onIslandLoad, onIslandError } from "vite-plugin-shopify-theme-islands/events";
 
-const offLoad = onIslandLoad(({ tag }) => {
-  analytics.track("island_loaded", { tag });
+const offLoad = onIslandLoad(({ tag, duration, attempt }) => {
+  analytics.track("island_loaded", { tag, duration, attempt });
 });
 
-const offError = onIslandError(({ tag, error }) => {
-  errorReporter.capture(error, { context: tag });
+const offError = onIslandError(({ tag, error, attempt }) => {
+  errorReporter.capture(error, { context: tag, attempt });
 });
 
 // Remove listeners when no longer needed (e.g. SPA teardown)
@@ -395,10 +438,10 @@ document.addEventListener("islands:load", (e) => {
 });
 ```
 
-| Event           | Detail properties | When it fires                                              |
-| --------------- | ----------------- | ---------------------------------------------------------- |
-| `islands:load`  | `tag`             | Island module resolves successfully                        |
-| `islands:error` | `tag`, `error`    | Load or custom directive fails (alongside `console.error`) |
+| Event           | Detail properties              | When it fires                                              |
+| --------------- | ------------------------------ | ---------------------------------------------------------- |
+| `islands:load`  | `tag`, `duration`, `attempt`   | Island module resolves successfully                        |
+| `islands:error` | `tag`, `error`, `attempt`      | Load or custom directive fails (alongside `console.error`) |
 
 `islands:error` fires on each retry attempt, not just the final failure. Multiple independent listeners are supported — each receives its own event.
 

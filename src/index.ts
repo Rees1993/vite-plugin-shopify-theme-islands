@@ -28,21 +28,25 @@ export interface ClientDirectiveOptions {
  *
  * @example
  * ```ts
- * // src/directives/hover.ts
+ * // src/directives/hash.ts
  * import type { ClientDirective } from 'vite-plugin-shopify-theme-islands';
  *
- * const hoverDirective: ClientDirective = (load, _opts, el) => {
- *   el.addEventListener('mouseenter', load, { once: true });
+ * const hashDirective: ClientDirective = (load, opts) => {
+ *   const target = opts.value;
+ *   if (location.hash === target) { load(); return; }
+ *   window.addEventListener('hashchange', () => {
+ *     if (location.hash === target) load();
+ *   });
  * };
  *
- * export default hoverDirective;
+ * export default hashDirective;
  * ```
  *
  * Register it in `vite.config.ts`:
  * ```ts
  * shopifyThemeIslands({
  *   directives: {
- *     custom: [{ name: 'client:hover', entrypoint: './src/directives/hover.ts' }],
+ *     custom: [{ name: 'client:hash', entrypoint: './src/directives/hash.ts' }],
  *   },
  * })
  * ```
