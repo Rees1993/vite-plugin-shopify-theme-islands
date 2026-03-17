@@ -1,5 +1,11 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import {
+  inDirectory,
+  getIslandPathsForLoad,
+  discoverIslandFiles,
+  collectTagNames,
+} from "./discovery.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -67,7 +73,6 @@ export interface ClientDirectiveDefinition {
 
 const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 const TS_JS_RE = /\.(ts|js)$/;
-const SKIP_DIRS = new Set(["node_modules", "dist", "build", "public", "assets", ".cache"]);
 
 /** Shared directive configuration shape used by both the plugin and the runtime. */
 export interface DirectivesConfig {
@@ -207,38 +212,6 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
-// Recursively walk a directory, calling visitor(name, fullPath) for each TS/JS file
-function walkDir(dir: string, visitor: (name: string, full: string) => void): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) walkDir(full, visitor);
-    else if (TS_JS_RE.test(entry.name)) visitor(entry.name, full);
-  }
-}
-
-// Collect tag names (filename without extension) from a directory
-function collectTagNames(dir: string, names: string[]): void {
-  walkDir(dir, (name) => names.push(name.replace(TS_JS_RE, "")));
-}
-
-// Scan a directory for files containing the Island import
-function scanForIslandFiles(dir: string, found: Set<string>): void {
-  walkDir(dir, (_, full) => {
-    try {
-      if (ISLAND_IMPORT_RE.test(readFileSync(full, "utf-8"))) found.add(full);
-    } catch {
-      // skip unreadable files
-    }
-  });
-}
-
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
   const rawDirs = (
     Array.isArray(options.directories)
@@ -270,9 +243,6 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const islandFiles = new Set<string>();
   let scanned = false;
 
-  // Returns true if the file is already covered by a scanned directory glob.
-  const inDirectory = (file: string) => absDirs.some((dir) => file.startsWith(dir));
-
   return {
     name: "vite-plugin-shopify-theme-islands",
     enforce: "pre",
@@ -289,14 +259,14 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (scanned) return;
       scanned = true;
       const t0 = performance.now();
-      scanForIslandFiles(root, islandFiles);
-      const scanMs = (performance.now() - t0).toFixed(1);
-      for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
+      const initial = discoverIslandFiles(root, absDirs);
+      islandFiles.clear();
+      initial.forEach((f) => islandFiles.add(f));
       if (debug) {
+        const scanMs = (performance.now() - t0).toFixed(1);
         log(`Scanned in ${scanMs}ms`);
         log("Scanning directories:", resolvedDirs.map((d) => d + "**/*.{ts,js}").join(", "));
-        const dirNames: string[] = [];
-        for (const dir of absDirs) collectTagNames(dir, dirNames);
+        const dirNames = absDirs.flatMap((dir) => collectTagNames(dir));
         if (dirNames.length)
           log(`Found ${dirNames.length} directory island(s): [${dirNames.join(", ")}]`);
         if (islandFiles.size) {
@@ -313,7 +283,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (
         code.includes("shopify-theme-islands/island") &&
         ISLAND_IMPORT_RE.test(code) &&
-        !inDirectory(id)
+        !inDirectory(id, absDirs)
       ) {
         islandFiles.add(id);
         log("Detected island:", relative(root, id));
@@ -329,7 +299,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       } else {
         try {
           const content = readFileSync(id, "utf-8");
-          if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id)) {
+            if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id, absDirs)) {
             islandFiles.add(id);
             log("Detected island (watchChange):", relative(root, id));
           } else {
@@ -355,9 +325,8 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
       // Use import.meta.glob for island files so Vite handles base URL rewriting
       // (hand-crafted import() calls resolve against the page origin, not the dev server)
-      const islandPaths = islandFiles.size
-        ? [...islandFiles].map((file) => "/" + relative(root, file).replace(/\\/g, "/"))
-        : null;
+      const islandPaths =
+        islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
 
       // globs always has at least one entry (rawDirs is never empty)
       const islandsEntries = [`{ ${globs.join(", ")} }`];
