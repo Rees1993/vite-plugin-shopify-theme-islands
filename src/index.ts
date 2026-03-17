@@ -6,6 +6,7 @@ import {
   discoverIslandFiles,
   collectTagNames,
 } from "./discovery.js";
+import { buildReviveModuleSource } from "./revive-module.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -347,22 +348,14 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       }
 
       const reviveOptions = { directives, debug, retry: options.retry };
-      const lines = [
-        ...directiveImports,
-        `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
-        `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify(reviveOptions)};`,
-      ];
-
-      if (mapEntries.length) {
-        lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
-        lines.push(`const payload = { islands, options, customDirectives };`);
-      } else {
-        lines.push(`const payload = { islands, options };`);
-      }
-      lines.push(`export const { disconnect } = _islands(payload);`);
-
-      return lines.join("\n");
+      const islandsObjectExpr = `Object.assign({}, ${islandsEntries.join(", ")})`;
+      return buildReviveModuleSource({
+        runtimePath,
+        directiveImportLines: directiveImports,
+        islandsObjectExpr,
+        customDirectivesMapLines: mapEntries.length ? mapEntries : null,
+        reviveOptions,
+      });
     },
   };
 }
