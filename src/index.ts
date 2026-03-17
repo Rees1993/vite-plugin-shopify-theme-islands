@@ -95,6 +95,13 @@ export interface DirectivesConfig {
     /** Fallback delay (ms) when the attribute has no value. Default: `3000` */
     delay?: number;
   };
+  /** Configuration for the `client:interaction` directive (mouseenter/touchstart/focusin). */
+  interaction?: {
+    /** HTML attribute name. Default: `'client:interaction'` */
+    attribute?: string;
+    /** DOM event names to listen for. Default: `['mouseenter', 'touchstart', 'focusin']` */
+    events?: string[];
+  };
   /** Custom client directives to register. Each entry maps an attribute name to a module entrypoint. */
   custom?: ClientDirectiveDefinition[];
 }
@@ -114,6 +121,10 @@ export interface RetryConfig {
 export interface IslandLoadDetail {
   /** The custom element tag name, e.g. `'product-form'` */
   tag: string;
+  /** Milliseconds from directive resolution to successful module load (chunk fetch time). */
+  duration: number;
+  /** Which attempt succeeded. 1 = first try, 2 = first retry, etc. */
+  attempt: number;
 }
 
 /** Event detail for the `islands:error` DOM event. */
@@ -122,6 +133,8 @@ export interface IslandErrorDetail {
   tag: string;
   /** The error thrown by the loader or custom directive */
   error: unknown;
+  /** Which attempt failed. 1 = initial attempt, 2 = first retry, etc. */
+  attempt: number;
 }
 
 declare global {
@@ -182,6 +195,7 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
     directives.idle!.attribute!,
     directives.media!.attribute!,
     directives.defer!.attribute!,
+    directives.interaction!.attribute!,
   ]);
   const seen = new Set<string>();
   for (const def of customDefs) {
@@ -204,6 +218,10 @@ const defaults = {
     idle: { attribute: "client:idle", timeout: 500 },
     media: { attribute: "client:media" },
     defer: { attribute: "client:defer", delay: 3000 },
+    interaction: {
+      attribute: "client:interaction",
+      events: ["mouseenter", "touchstart", "focusin"],
+    },
   },
 };
 
@@ -267,6 +285,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     idle: { ...defaults.directives.idle, ...options.directives?.idle },
     media: { ...defaults.directives.media, ...options.directives?.media },
     defer: { ...defaults.directives.defer, ...options.directives?.defer },
+    interaction: { ...defaults.directives.interaction, ...options.directives?.interaction },
   };
 
   const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
