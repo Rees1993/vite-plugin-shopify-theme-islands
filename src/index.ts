@@ -110,45 +110,21 @@ export interface DirectivesConfig {
   custom?: ClientDirectiveDefinition[];
 }
 
-/** Runtime-facing directive configuration — omits plugin-only `custom` directives. */
-export type RuntimeDirectivesConfig = Omit<DirectivesConfig, "custom">;
-
-/** Retry configuration for failed island loads. */
-export interface RetryConfig {
-  /** Number of times to retry after the initial failure. Default: `0` (no auto-retry) */
-  retries?: number;
-  /** Base delay in ms between retries; doubles each attempt. Default: `1000` */
-  delay?: number;
-}
-
-/** Event detail for the `islands:load` DOM event. */
-export interface IslandLoadDetail {
-  /** The custom element tag name, e.g. `'product-form'` */
-  tag: string;
-  /** Milliseconds from directive resolution to successful module load (chunk fetch time). */
-  duration: number;
-  /** Which attempt succeeded. 1 = first try, 2 = first retry, etc. */
-  attempt: number;
-}
-
-/** Event detail for the `islands:error` DOM event. */
-export interface IslandErrorDetail {
-  /** The custom element tag name, e.g. `'product-form'` */
-  tag: string;
-  /** The error thrown by the loader or custom directive */
-  error: unknown;
-  /** Which attempt failed. 1 = initial attempt, 2 = first retry, etc. */
-  attempt: number;
-}
-
-declare global {
-  interface DocumentEventMap {
-    /** Fired after an island module resolves successfully. */
-    "islands:load": CustomEvent<IslandLoadDetail>;
-    /** Fired when an island load or custom directive fails. Fired on each retry attempt. */
-    "islands:error": CustomEvent<IslandErrorDetail>;
-  }
-}
+/** Event detail and runtime options (single source of truth in contract). */
+import type {
+  IslandLoadDetail,
+  IslandErrorDetail,
+  ReviveOptions,
+  RetryConfig,
+  RuntimeDirectivesConfig,
+} from "./contract.js";
+export type {
+  IslandLoadDetail,
+  IslandErrorDetail,
+  ReviveOptions,
+  RetryConfig,
+  RuntimeDirectivesConfig,
+} from "./contract.js";
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -157,14 +133,6 @@ export interface ShopifyThemeIslandsOptions {
   debug?: boolean;
   /** Per-directive configuration. */
   directives?: DirectivesConfig;
-  /** Automatic retry behaviour for failed island loads. */
-  retry?: RetryConfig;
-}
-
-export interface ReviveOptions {
-  directives?: RuntimeDirectivesConfig;
-  /** Log island activation and directive events to the console. Default: `false` */
-  debug?: boolean;
   /** Automatic retry behaviour for failed island loads. */
   retry?: RetryConfig;
 }
@@ -420,19 +388,21 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         mapEntries.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
       }
 
+      const reviveOptions = { directives, debug, retry: options.retry };
       const lines = [
         ...directiveImports,
         `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
         `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify({ directives, debug, retry: options.retry })};`,
+        `const options = ${JSON.stringify(reviveOptions)};`,
       ];
 
       if (mapEntries.length) {
         lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
-        lines.push(`export const { disconnect } = _islands(islands, options, customDirectives);`);
+        lines.push(`const payload = { islands, options, customDirectives };`);
       } else {
-        lines.push(`export const { disconnect } = _islands(islands, options);`);
+        lines.push(`const payload = { islands, options };`);
       }
+      lines.push(`export const { disconnect } = _islands(payload);`);
 
       return lines.join("\n");
     },

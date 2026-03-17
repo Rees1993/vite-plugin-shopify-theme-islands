@@ -3,6 +3,16 @@ import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:te
 import { revive } from "../runtime";
 import { onIslandLoad, onIslandError } from "../events";
 import type { ClientDirective, ClientDirectiveLoader } from "../index";
+import type { ReviveOptions } from "../contract";
+
+/** Wraps revive so tests can keep using (islands, options?, customDirectives?) style. */
+function r(
+  islands: Record<string, () => Promise<unknown>>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+) {
+  return revive({ islands, options, customDirectives });
+}
 
 // Flush microtasks + a short timer tick so async directive chains resolve
 const flush = (ms = 50) => new Promise<void>((r) => setTimeout(r, ms));
@@ -27,10 +37,27 @@ describe("revive", () => {
     document.body.innerHTML = "";
   });
 
+  describe("plugin–runtime contract boundary (tracer bullet)", () => {
+    it("revive(payload) activates islands by tag and applies options when given payload shape the plugin emits", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<product-form></product-form>";
+      const payload = {
+        islands: { "/frontend/js/islands/product-form.ts": loader } as Record<
+          string,
+          () => Promise<unknown>
+        >,
+        options: { directives: { idle: { timeout: 100 } } },
+      };
+      revive(payload);
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("islandMap", () => {
     it("warns and skips non-hyphenated filenames", () => {
       const spy = spyOn(console, "warn");
-      revive({ "/islands/myisland.ts": async () => {} });
+      r({ "/islands/myisland.ts": async () => {} });
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("must contain a hyphen"));
       spy.mockRestore();
     });
@@ -38,7 +65,7 @@ describe("revive", () => {
     it("loads an island that matches the tag name", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<my-island></my-island>";
-      revive({ "/islands/my-island.ts": loader });
+      r({ "/islands/my-island.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -47,7 +74,7 @@ describe("revive", () => {
       const first = mock(async () => {});
       const second = mock(async () => {});
       document.body.innerHTML = "<my-island></my-island>";
-      revive({
+      r({
         "/islands/my-island.ts": first,
         "/components/my-island.ts": second,
       });
@@ -61,7 +88,7 @@ describe("revive", () => {
     it("prevents loading the same tag twice even when multiple elements exist", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<my-counter></my-counter><my-counter></my-counter>";
-      revive({ "/islands/my-counter.ts": loader });
+      r({ "/islands/my-counter.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -85,7 +112,7 @@ describe("revive", () => {
       });
 
       document.body.innerHTML = "<retry-island></retry-island>";
-      revive({ "/islands/retry-island.ts": loader });
+      r({ "/islands/retry-island.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(
@@ -120,7 +147,7 @@ describe("revive", () => {
       const loader = mock(async () => {});
 
       document.body.innerHTML = "<no-retry-island></no-retry-island>";
-      revive({ "/islands/no-retry-island.ts": loader });
+      r({ "/islands/no-retry-island.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
 
@@ -158,7 +185,7 @@ describe("revive", () => {
       // happy-dom does not implement requestIdleCallback, so the fallback (setTimeout) is used
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-widget client:idle></idle-widget>";
-      revive({ "/islands/idle-widget.ts": loader }, { directives: { idle: { timeout: 20 } } });
+      r({ "/islands/idle-widget.ts": loader }, { directives: { idle: { timeout: 20 } } });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -172,7 +199,7 @@ describe("revive", () => {
 
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-box client:idle></idle-box>";
-      revive({ "/islands/idle-box.ts": loader });
+      r({ "/islands/idle-box.ts": loader });
 
       expect(loader).not.toHaveBeenCalled();
       cb(IDLE_DEADLINE);
@@ -188,7 +215,7 @@ describe("revive", () => {
       };
 
       document.body.innerHTML = "<idle-opts client:idle></idle-opts>";
-      revive(
+      r(
         { "/islands/idle-opts.ts": mock(async () => {}) },
         { directives: { idle: { timeout: 300 } } },
       );
@@ -200,7 +227,7 @@ describe("revive", () => {
       // global=5000ms but per-element="20" → should load within 80ms
       const loader = mock(async () => {});
       document.body.innerHTML = '<idle-per-el client:idle="20"></idle-per-el>';
-      revive({ "/islands/idle-per-el.ts": loader }, { directives: { idle: { timeout: 5000 } } });
+      r({ "/islands/idle-per-el.ts": loader }, { directives: { idle: { timeout: 5000 } } });
       await flush(80);
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -208,7 +235,7 @@ describe("revive", () => {
     it("empty attribute value falls back to global timeout", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-per-el-default client:idle></idle-per-el-default>";
-      revive(
+      r(
         { "/islands/idle-per-el-default.ts": loader },
         { directives: { idle: { timeout: 20 } } },
       );
@@ -242,7 +269,7 @@ describe("revive", () => {
     it("does not load until the IntersectionObserver callback fires", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<lazy-section client:visible></lazy-section>";
-      revive({ "/islands/lazy-section.ts": loader });
+      r({ "/islands/lazy-section.ts": loader });
 
       expect(loader).not.toHaveBeenCalled();
       trigger([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -253,7 +280,7 @@ describe("revive", () => {
     it("does not load when IntersectionObserver fires with isIntersecting false", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<off-screen client:visible></off-screen>";
-      revive({ "/islands/off-screen.ts": loader });
+      r({ "/islands/off-screen.ts": loader });
 
       trigger([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
       await flush();
@@ -262,13 +289,13 @@ describe("revive", () => {
 
     it("passes 200px rootMargin to IntersectionObserver by default", () => {
       document.body.innerHTML = "<margin-default client:visible></margin-default>";
-      revive({ "/islands/margin-default.ts": mock(async () => {}) });
+      r({ "/islands/margin-default.ts": mock(async () => {}) });
       expect(ioOptions?.rootMargin).toBe("200px");
     });
 
     it("passes custom rootMargin to IntersectionObserver", () => {
       document.body.innerHTML = "<margin-custom client:visible></margin-custom>";
-      revive(
+      r(
         { "/islands/margin-custom.ts": mock(async () => {}) },
         { directives: { visible: { rootMargin: "0px" } } },
       );
@@ -277,7 +304,7 @@ describe("revive", () => {
 
     it("passes custom threshold to IntersectionObserver", () => {
       document.body.innerHTML = "<threshold-test client:visible></threshold-test>";
-      revive(
+      r(
         { "/islands/threshold-test.ts": mock(async () => {}) },
         { directives: { visible: { threshold: 0.5 } } },
       );
@@ -289,7 +316,7 @@ describe("revive", () => {
       const el = document.createElement("ghost-island");
       el.setAttribute("client:visible", "");
       document.body.appendChild(el);
-      revive({ "/islands/ghost-island.ts": loader });
+      r({ "/islands/ghost-island.ts": loader });
 
       document.body.removeChild(el);
       await flush();
@@ -298,7 +325,7 @@ describe("revive", () => {
 
     it("attribute value overrides global rootMargin per element", () => {
       document.body.innerHTML = '<vis-override client:visible="0px"></vis-override>';
-      revive(
+      r(
         { "/islands/vis-override.ts": mock(async () => {}) },
         { directives: { visible: { rootMargin: "200px" } } },
       );
@@ -307,7 +334,7 @@ describe("revive", () => {
 
     it("empty attribute value falls back to global rootMargin", () => {
       document.body.innerHTML = "<vis-fallback client:visible></vis-fallback>";
-      revive(
+      r(
         { "/islands/vis-fallback.ts": mock(async () => {}) },
         { directives: { visible: { rootMargin: "100px" } } },
       );
@@ -332,7 +359,7 @@ describe("revive", () => {
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
-      revive({ "/islands/media-panel.ts": loader });
+      r({ "/islands/media-panel.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -349,7 +376,7 @@ describe("revive", () => {
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
-      revive({ "/islands/media-panel.ts": loader });
+      r({ "/islands/media-panel.ts": loader });
       await flush();
       expect(loader).not.toHaveBeenCalled();
 
@@ -363,7 +390,7 @@ describe("revive", () => {
     it("loads after the specified delay", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-widget client:defer="20"></defer-widget>';
-      revive({ "/islands/defer-widget.ts": loader });
+      r({ "/islands/defer-widget.ts": loader });
       await flush(); // 50ms — past the 20ms delay
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -371,7 +398,7 @@ describe("revive", () => {
     it("does not load before the delay has elapsed", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-slow client:defer="500"></defer-slow>';
-      revive({ "/islands/defer-slow.ts": loader });
+      r({ "/islands/defer-slow.ts": loader });
       await flush(); // 50ms — well before 500ms
       expect(loader).not.toHaveBeenCalled();
     });
@@ -379,7 +406,7 @@ describe("revive", () => {
     it("uses configured fallback delay when attribute has no value", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<defer-novalue client:defer></defer-novalue>";
-      revive({ "/islands/defer-novalue.ts": loader }, { directives: { defer: { delay: 20 } } });
+      r({ "/islands/defer-novalue.ts": loader }, { directives: { defer: { delay: 20 } } });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -387,7 +414,7 @@ describe("revive", () => {
     it("respects custom attribute name", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-custom data:defer="20"></defer-custom>';
-      revive(
+      r(
         { "/islands/defer-custom.ts": loader },
         { directives: { defer: { attribute: "data:defer" } } },
       );
@@ -399,7 +426,7 @@ describe("revive", () => {
       const spy = spyOn(console, "warn");
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-nan client:defer="abc"></defer-nan>';
-      revive({ "/islands/defer-nan.ts": loader }, { directives: { defer: { delay: 20 } } });
+      r({ "/islands/defer-nan.ts": loader }, { directives: { defer: { delay: 20 } } });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("invalid"));
@@ -409,7 +436,7 @@ describe("revive", () => {
     it('treats client:defer="0" as a zero ms delay, not the default', async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-zero client:defer="0"></defer-zero>';
-      revive({ "/islands/defer-zero.ts": loader });
+      r({ "/islands/defer-zero.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -417,7 +444,7 @@ describe("revive", () => {
     it("waits for both defer and idle when combined", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = '<defer-combo client:defer="20" client:idle></defer-combo>';
-      revive({ "/islands/defer-combo.ts": loader }, { directives: { idle: { timeout: 20 } } });
+      r({ "/islands/defer-combo.ts": loader }, { directives: { idle: { timeout: 20 } } });
       await flush(80);
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -426,7 +453,7 @@ describe("revive", () => {
   describe("MutationObserver", () => {
     it("activates islands added to the DOM after init", async () => {
       const loader = mock(async () => {});
-      revive({ "/islands/late-arrival.ts": loader });
+      r({ "/islands/late-arrival.ts": loader });
 
       const el = document.createElement("late-arrival");
       document.body.appendChild(el);
@@ -446,7 +473,7 @@ describe("revive", () => {
         </parent-widget>
       `;
 
-      revive({
+      r({
         "/islands/parent-widget.ts": parentLoader,
         "/islands/child-widget.ts": childLoader,
       });
@@ -473,7 +500,7 @@ describe("revive", () => {
         </parent-cascade>
       `;
 
-      revive({
+      r({
         "/islands/parent-cascade.ts": parentLoader,
         "/islands/child-cascade.ts": childLoader,
       });
@@ -506,7 +533,7 @@ describe("revive", () => {
         </grand-parent>
       `;
 
-      revive({
+      r({
         "/islands/grand-parent.ts": grandParentLoader,
         "/islands/mid-child.ts": midChildLoader,
         "/islands/deep-child.ts": deepChildLoader,
@@ -527,7 +554,7 @@ describe("revive", () => {
   describe("revive teardown", () => {
     it("returned disconnect() stops the MutationObserver — islands added after disconnect are not activated", async () => {
       const loader = mock(async () => {});
-      const { disconnect } = revive({ "/islands/post-disconnect.ts": loader });
+      const { disconnect } = r({ "/islands/post-disconnect.ts": loader });
 
       disconnect();
 
@@ -545,7 +572,7 @@ describe("revive", () => {
         throw new Error("fail");
       });
       document.body.innerHTML = "<dc-retry></dc-retry>";
-      const { disconnect } = revive(
+      const { disconnect } = r(
         { "/islands/dc-retry.ts": loader },
         { retry: { retries: 3, delay: 100 } },
       );
@@ -564,7 +591,7 @@ describe("revive", () => {
       const spy = spyOn(console, "warn");
       const loader = mock(async () => {});
       document.body.innerHTML = '<empty-media client:media=""></empty-media>';
-      revive({ "/islands/empty-media.ts": loader });
+      r({ "/islands/empty-media.ts": loader });
       await flush();
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("has no value"));
       // Island still loads (media check is skipped, not the whole island)
@@ -577,7 +604,7 @@ describe("revive", () => {
     it("does not call console.groupCollapsed when debug is false (default)", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       document.body.innerHTML = "<no-debug-island></no-debug-island>";
-      revive({ "/islands/no-debug-island.ts": mock(async () => {}) });
+      r({ "/islands/no-debug-island.ts": mock(async () => {}) });
       expect(groupCollapsed).not.toHaveBeenCalled();
       groupCollapsed.mockRestore();
     });
@@ -586,7 +613,7 @@ describe("revive", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<dbg-init></dbg-init>";
-      revive({ "/islands/dbg-init.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-init.ts": mock(async () => {}) }, { debug: true });
       expect(groupCollapsed).toHaveBeenCalledWith("[islands] ready — 1 island(s)");
       expect(groupEnd).toHaveBeenCalled();
       groupCollapsed.mockRestore();
@@ -598,7 +625,7 @@ describe("revive", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = '<dbg-waiting client:defer="500"></dbg-waiting>';
-      revive({ "/islands/dbg-waiting.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-waiting.ts": mock(async () => {}) }, { debug: true });
       const waitingCalls = logSpy.mock.calls.filter((args) =>
         String(args[1]).includes("waiting ·"),
       );
@@ -614,7 +641,7 @@ describe("revive", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<dbg-instant></dbg-instant>";
-      revive({ "/islands/dbg-instant.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-instant.ts": mock(async () => {}) }, { debug: true });
       const waitingCalls = logSpy.mock.calls.filter((args) =>
         String(args[1]).includes("waiting ·"),
       );
@@ -628,7 +655,7 @@ describe("revive", () => {
       const logSpy = spyOn(console, "log").mockImplementation(() => {});
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
-      revive({ "/islands/dbg-dynamic.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-dynamic.ts": mock(async () => {}) }, { debug: true });
       logSpy.mockClear();
       const el = document.createElement("dbg-dynamic");
       el.setAttribute("client:defer", "500");
@@ -647,7 +674,7 @@ describe("revive", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = '<dbg-outcome client:defer="20"></dbg-outcome>';
-      revive({ "/islands/dbg-outcome.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-outcome.ts": mock(async () => {}) }, { debug: true });
       await flush();
       const triggered = groupCollapsed.mock.calls.find((args) =>
         String(args[0]).includes("<dbg-outcome> triggered"),
@@ -662,7 +689,7 @@ describe("revive", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<dbg-flat></dbg-flat>";
-      revive({ "/islands/dbg-flat.ts": mock(async () => {}) }, { debug: true });
+      r({ "/islands/dbg-flat.ts": mock(async () => {}) }, { debug: true });
       await flush();
       expect(logSpy).toHaveBeenCalledWith("[islands]", "<dbg-flat> triggered");
       // outcome is a flat log, not a group
@@ -681,7 +708,7 @@ describe("revive", () => {
       const directiveFn = mock<ClientDirective>((_load, _opts, _el) => {});
       document.body.innerHTML = "<click-island client:on-click></click-island>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/click-island.ts": mock(async () => {}) }, {}, customDirectives);
+      r({ "/islands/click-island.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(directiveFn).toHaveBeenCalledTimes(1);
       const [loadArg, optsArg, elArg] = directiveFn.mock.calls[0];
@@ -694,7 +721,7 @@ describe("revive", () => {
       const directiveFn = mock<ClientDirective>((_load, _opts, _el) => {});
       document.body.innerHTML = '<val-island client:on-click="submit"></val-island>';
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/val-island.ts": mock(async () => {}) }, {}, customDirectives);
+      r({ "/islands/val-island.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(directiveFn.mock.calls[0][1].value).toBe("submit");
     });
@@ -706,7 +733,7 @@ describe("revive", () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<no-auto-load client:on-click></no-auto-load>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/no-auto-load.ts": loader }, {}, customDirectives);
+      r({ "/islands/no-auto-load.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).not.toHaveBeenCalled();
       expect(directiveFn).toHaveBeenCalledTimes(1);
@@ -718,7 +745,7 @@ describe("revive", () => {
       const customDirectives = new Map<string, ClientDirective>([
         ["client:on-click", mock<ClientDirective>(() => {})],
       ]);
-      revive({ "/islands/no-attr-island.ts": loader }, {}, customDirectives);
+      r({ "/islands/no-attr-island.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -738,7 +765,7 @@ describe("revive", () => {
       const directiveFn = mock<ClientDirective>(() => {});
       document.body.innerHTML = "<gated-island client:visible client:on-click></gated-island>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/gated-island.ts": mock(async () => {}) }, {}, customDirectives);
+      r({ "/islands/gated-island.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
 
       expect(directiveFn).not.toHaveBeenCalled();
@@ -771,7 +798,7 @@ describe("revive", () => {
 
       document.body.innerHTML = "<broken-island client:on-click></broken-island>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/broken-island.ts": loader }, {}, customDirectives);
+      r({ "/islands/broken-island.ts": loader }, {}, customDirectives);
 
       await flush();
       expect(directiveFn).toHaveBeenCalledTimes(1);
@@ -809,7 +836,7 @@ describe("revive", () => {
         ["client:on-a", makeDir()],
         ["client:on-b", makeDir()],
       ]);
-      revive({ "/islands/no-warn-multi.ts": mock(async () => {}) }, {}, customDirectives);
+      r({ "/islands/no-warn-multi.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(spy).not.toHaveBeenCalledWith(expect.stringContaining("multiple custom directives"));
       spy.mockRestore();
@@ -837,7 +864,7 @@ describe("revive", () => {
 
       document.body.innerHTML = "<broken-async client:on-click></broken-async>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      revive({ "/islands/broken-async.ts": loader }, {}, customDirectives);
+      r({ "/islands/broken-async.ts": loader }, {}, customDirectives);
 
       await flush();
       expect(directiveFn).toHaveBeenCalledTimes(1);
@@ -874,7 +901,7 @@ describe("revive", () => {
         if (callCount < 3) throw new Error("network error");
       });
       document.body.innerHTML = "<retry-success></retry-success>";
-      revive({ "/islands/retry-success.ts": loader }, { retry: { retries: 2, delay: 10 } });
+      r({ "/islands/retry-success.ts": loader }, { retry: { retries: 2, delay: 10 } });
       await flush(200);
       expect(loader).toHaveBeenCalledTimes(3); // initial + 2 retries
       spy.mockRestore();
@@ -896,7 +923,7 @@ describe("revive", () => {
         throw new Error("always fails");
       });
       document.body.innerHTML = "<retry-exhaust></retry-exhaust>";
-      revive({ "/islands/retry-exhaust.ts": loader }, { retry: { retries: 1, delay: 10 } });
+      r({ "/islands/retry-exhaust.ts": loader }, { retry: { retries: 1, delay: 10 } });
       await flush(200);
       expect(loader).toHaveBeenCalledTimes(2); // initial + 1 retry
 
@@ -920,7 +947,7 @@ describe("revive", () => {
 
       const loader = mock(() => Promise.reject(new Error("fail")));
       document.body.innerHTML = "<retry-ev></retry-ev>";
-      revive({ "/islands/retry-ev.ts": loader }, { retry: { retries: 2, delay: 10 } });
+      r({ "/islands/retry-ev.ts": loader }, { retry: { retries: 2, delay: 10 } });
 
       await flush(200); // wait for initial attempt + 2 retries (10ms + 20ms delays)
 
@@ -944,7 +971,7 @@ describe("revive", () => {
         if (callCount === 1) throw new Error("first attempt fails");
       });
       document.body.innerHTML = "<retry-attempt-load></retry-attempt-load>";
-      revive({ "/islands/retry-attempt-load.ts": loader }, { retry: { retries: 1, delay: 10 } });
+      r({ "/islands/retry-attempt-load.ts": loader }, { retry: { retries: 1, delay: 10 } });
       await flush(200);
       expect(loadHandler).toHaveBeenCalledTimes(1);
       expect(loadHandler.mock.calls[0][0].detail).toMatchObject({
@@ -961,7 +988,7 @@ describe("revive", () => {
         throw new Error("fail");
       });
       document.body.innerHTML = "<no-retry-default></no-retry-default>";
-      revive({ "/islands/no-retry-default.ts": loader });
+      r({ "/islands/no-retry-default.ts": loader });
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
       spy.mockRestore();
@@ -973,7 +1000,7 @@ describe("revive", () => {
       const handler = mock((e: CustomEvent) => e);
       document.addEventListener("islands:load", handler);
       document.body.innerHTML = "<load-ev></load-ev>";
-      revive({ "/islands/load-ev.ts": mock(async () => {}) });
+      r({ "/islands/load-ev.ts": mock(async () => {}) });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
       const detail = handler.mock.calls[0][0].detail;
@@ -989,7 +1016,7 @@ describe("revive", () => {
       document.addEventListener("islands:error", handler);
       const err = new Error("load failed");
       document.body.innerHTML = "<error-ev></error-ev>";
-      revive({
+      r({
         "/islands/error-ev.ts": mock(async () => {
           throw err;
         }),
@@ -1020,7 +1047,7 @@ describe("revive", () => {
           }),
         ],
       ]);
-      revive({ "/islands/dir-err-ev.ts": mock(async () => {}) }, {}, customDirectives);
+      r({ "/islands/dir-err-ev.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler.mock.calls[0][0].detail).toMatchObject({
@@ -1038,7 +1065,7 @@ describe("revive", () => {
       document.addEventListener("islands:load", handlerA);
       document.addEventListener("islands:load", handlerB);
       document.body.innerHTML = "<multi-listener></multi-listener>";
-      revive({ "/islands/multi-listener.ts": mock(async () => {}) });
+      r({ "/islands/multi-listener.ts": mock(async () => {}) });
       await flush();
       expect(handlerA).toHaveBeenCalledTimes(1);
       expect(handlerB).toHaveBeenCalledTimes(1);
@@ -1052,7 +1079,7 @@ describe("revive", () => {
       const handler = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
       const off = onIslandLoad(handler);
       document.body.innerHTML = "<helper-load></helper-load>";
-      revive({ "/islands/helper-load.ts": mock(async () => {}) });
+      r({ "/islands/helper-load.ts": mock(async () => {}) });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-load", attempt: 1 });
@@ -1065,7 +1092,7 @@ describe("revive", () => {
       const off = onIslandLoad(handler);
       off();
       document.body.innerHTML = "<helper-off></helper-off>";
-      revive({ "/islands/helper-off.ts": mock(async () => {}) });
+      r({ "/islands/helper-off.ts": mock(async () => {}) });
       await flush();
       expect(handler).not.toHaveBeenCalled();
     });
@@ -1076,7 +1103,7 @@ describe("revive", () => {
       const err = new Error("helper error");
       const off = onIslandError(handler);
       document.body.innerHTML = "<helper-err></helper-err>";
-      revive({
+      r({
         "/islands/helper-err.ts": mock(async () => {
           throw err;
         }),
@@ -1094,7 +1121,7 @@ describe("revive", () => {
       const off = onIslandError(handler);
       off();
       document.body.innerHTML = "<helper-err-off></helper-err-off>";
-      revive({
+      r({
         "/islands/helper-err-off.ts": mock(async () => {
           throw new Error("should not reach handler");
         }),
@@ -1121,7 +1148,7 @@ describe("revive", () => {
         ["client:on-a", directiveA],
         ["client:on-b", directiveB],
       ]);
-      revive({ "/islands/and-island.ts": loader }, {}, customDirectives);
+      r({ "/islands/and-island.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).not.toHaveBeenCalled();
 
@@ -1153,7 +1180,7 @@ describe("revive", () => {
           },
         ],
       ]);
-      revive({ "/islands/idem-island.ts": loader }, {}, customDirectives);
+      r({ "/islands/idem-island.ts": loader }, {}, customDirectives);
       await flush();
 
       await loadA();
@@ -1175,7 +1202,7 @@ describe("revive", () => {
         ["client:on-b", makeDir()],
         ["client:on-c", makeDir()],
       ]);
-      revive({ "/islands/three-island.ts": loader }, {}, customDirectives);
+      r({ "/islands/three-island.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).not.toHaveBeenCalled();
 
@@ -1208,7 +1235,7 @@ describe("revive", () => {
           },
         ],
       ]);
-      revive({ "/islands/abort-latch.ts": loader }, {}, customDirectives);
+      r({ "/islands/abort-latch.ts": loader }, {}, customDirectives);
       await flush();
       expect(loader).not.toHaveBeenCalled(); // A failed → latch aborted
 
@@ -1222,7 +1249,7 @@ describe("revive", () => {
       it("loads on mouseenter (default events)", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<hover-island client:interaction></hover-island>";
-        revive({ "/islands/hover-island.ts": loader });
+        r({ "/islands/hover-island.ts": loader });
         await flush();
         expect(loader).not.toHaveBeenCalled();
         document.querySelector("hover-island")!.dispatchEvent(new Event("mouseenter"));
@@ -1233,7 +1260,7 @@ describe("revive", () => {
       it("loads on touchstart (default events)", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<touch-island client:interaction></touch-island>";
-        revive({ "/islands/touch-island.ts": loader });
+        r({ "/islands/touch-island.ts": loader });
         await flush();
         expect(loader).not.toHaveBeenCalled();
         document.querySelector("touch-island")!.dispatchEvent(new Event("touchstart"));
@@ -1244,7 +1271,7 @@ describe("revive", () => {
       it("loads on focusin (default events)", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<focus-island client:interaction></focus-island>";
-        revive({ "/islands/focus-island.ts": loader });
+        r({ "/islands/focus-island.ts": loader });
         await flush();
         expect(loader).not.toHaveBeenCalled();
         document.querySelector("focus-island")!.dispatchEvent(new Event("focusin"));
@@ -1255,7 +1282,7 @@ describe("revive", () => {
       it("does not load before any event fires", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<no-fire-island client:interaction></no-fire-island>";
-        revive({ "/islands/no-fire-island.ts": loader });
+        r({ "/islands/no-fire-island.ts": loader });
         await flush();
         expect(loader).not.toHaveBeenCalled();
       });
@@ -1264,7 +1291,7 @@ describe("revive", () => {
         const loader = mock(async () => {});
         document.body.innerHTML =
           '<per-event-island client:interaction="mouseenter"></per-event-island>';
-        revive({ "/islands/per-event-island.ts": loader });
+        r({ "/islands/per-event-island.ts": loader });
         await flush();
         const el = document.querySelector("per-event-island")!;
         el.dispatchEvent(new Event("touchstart"));
@@ -1279,7 +1306,7 @@ describe("revive", () => {
         const loader = mock(async () => {});
         document.body.innerHTML =
           '<multi-event-island client:interaction="mouseenter focusin"></multi-event-island>';
-        revive({ "/islands/multi-event-island.ts": loader });
+        r({ "/islands/multi-event-island.ts": loader });
         await flush();
         const el = document.querySelector("multi-event-island")!;
         el.dispatchEvent(new Event("focusin"));
@@ -1290,7 +1317,7 @@ describe("revive", () => {
       it("empty attribute uses global default events", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = '<empty-interaction client:interaction=""></empty-interaction>';
-        revive({ "/islands/empty-interaction.ts": loader });
+        r({ "/islands/empty-interaction.ts": loader });
         await flush();
         const el = document.querySelector("empty-interaction")!;
         el.dispatchEvent(new Event("touchstart"));
@@ -1302,7 +1329,7 @@ describe("revive", () => {
         const loader = mock(async () => {});
         document.body.innerHTML =
           '<override-events client:interaction="mouseenter"></override-events>';
-        revive(
+        r(
           { "/islands/override-events.ts": loader },
           { directives: { interaction: { events: ["focusin"] } } },
         );
@@ -1320,7 +1347,7 @@ describe("revive", () => {
         const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
         const loader = mock(async () => {});
         document.body.innerHTML = '<ws-interaction client:interaction="   "></ws-interaction>';
-        revive({ "/islands/ws-interaction.ts": loader });
+        r({ "/islands/ws-interaction.ts": loader });
         await flush();
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no valid event tokens"));
         // Falls back to default events — touchstart should trigger
@@ -1333,7 +1360,7 @@ describe("revive", () => {
       it("event listeners removed after load (does not fire twice)", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<cleanup-island client:interaction></cleanup-island>";
-        revive({ "/islands/cleanup-island.ts": loader });
+        r({ "/islands/cleanup-island.ts": loader });
         await flush();
         const el = document.querySelector("cleanup-island")!;
         el.dispatchEvent(new Event("mouseenter"));
@@ -1358,7 +1385,7 @@ describe("revive", () => {
 
         const loader = mock(async () => {});
         document.body.innerHTML = "<cancel-interact client:interaction></cancel-interact>";
-        revive({ "/islands/cancel-interact.ts": loader });
+        r({ "/islands/cancel-interact.ts": loader });
         await flush();
         expect(loader).not.toHaveBeenCalled();
 
@@ -1392,7 +1419,7 @@ describe("revive", () => {
 
         const loader = mock(async () => {});
         document.body.innerHTML = "<combo-island client:visible client:interaction></combo-island>";
-        revive({ "/islands/combo-island.ts": loader });
+        r({ "/islands/combo-island.ts": loader });
         await flush();
 
         // Interaction fires before visible — should not load
@@ -1420,7 +1447,7 @@ describe("revive", () => {
       it("custom attribute name via directives.interaction.attribute", async () => {
         const loader = mock(async () => {});
         document.body.innerHTML = "<custom-attr-island data-lazy></custom-attr-island>";
-        revive(
+        r(
           { "/islands/custom-attr-island.ts": loader },
           { directives: { interaction: { attribute: "data-lazy" } } },
         );
@@ -1451,7 +1478,7 @@ describe("revive", () => {
           },
         ],
       ]);
-      revive({ "/islands/multi-dbg.ts": mock(async () => {}) }, { debug: true }, customDirectives);
+      r({ "/islands/multi-dbg.ts": mock(async () => {}) }, { debug: true }, customDirectives);
       await flush();
       const dispatchCall = logSpy.mock.calls.find(
         (args) =>
