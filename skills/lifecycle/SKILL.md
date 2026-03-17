@@ -4,11 +4,13 @@ description: >
   Island lifecycle events and SPA teardown. onIslandLoad and onIslandError
   helpers from vite-plugin-shopify-theme-islands/events — prefer these over
   raw document.addEventListener for guaranteed type safety. Raw DOM events
-  islands:load and islands:error on document. disconnect() from the virtual
-  module revive for SPA navigation teardown.
+  islands:load and islands:error on document. islands:load detail includes tag,
+  duration (ms), and attempt (1-based). islands:error detail includes tag,
+  error, and attempt. disconnect() from the virtual module revive for SPA
+  navigation teardown.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.2"
+library_version: "1.1.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -20,12 +22,12 @@ sources:
 ```ts
 import { onIslandLoad, onIslandError } from "vite-plugin-shopify-theme-islands/events";
 
-const offLoad = onIslandLoad(({ tag }) => {
-  console.log("loaded:", tag);
+const offLoad = onIslandLoad(({ tag, duration, attempt }) => {
+  console.log("loaded:", tag, `${duration.toFixed(1)}ms`, `attempt ${attempt}`);
 });
 
-const offError = onIslandError(({ tag, error }) => {
-  console.error("failed:", tag, error);
+const offError = onIslandError(({ tag, error, attempt }) => {
+  console.error("failed:", tag, `attempt ${attempt}`, error);
 });
 
 // Remove listeners when no longer needed
@@ -40,24 +42,38 @@ offError();
 ```ts
 import { onIslandLoad } from "vite-plugin-shopify-theme-islands/events";
 
-onIslandLoad(({ tag }) => {
-  analytics.track("island_loaded", { component: tag });
+onIslandLoad(({ tag, duration, attempt }) => {
+  analytics.track("island_loaded", { component: tag, duration, attempt });
 });
 ```
 
-`tag` is the lowercased custom element tag name (e.g. `"product-form"`).
+`tag` is the lowercased custom element tag name (e.g. `"product-form"`). `duration` is the time in milliseconds from when all directives resolved to when the module finished loading. `attempt` is 1 on the first successful load, 2 if it succeeded on the first retry, etc.
+
+### Track load performance
+
+```ts
+import { onIslandLoad } from "vite-plugin-shopify-theme-islands/events";
+
+onIslandLoad(({ tag, duration }) => {
+  if (duration > 3000) {
+    performance.mark(`island-slow:${tag}`);
+  }
+});
+```
+
+`duration` measures only the chunk fetch time — time spent waiting on directives (e.g. `client:visible`) is not included.
 
 ### Report errors to a monitoring service
 
 ```ts
 import { onIslandError } from "vite-plugin-shopify-theme-islands/events";
 
-onIslandError(({ tag, error }) => {
-  Sentry.captureException(error, { extra: { island: tag } });
+onIslandError(({ tag, error, attempt }) => {
+  Sentry.captureException(error, { extra: { island: tag, attempt } });
 });
 ```
 
-`onIslandError` fires on each retry attempt and on custom directive failures. If retry is enabled, a single island may produce multiple error events before succeeding or exhausting retries.
+`onIslandError` fires on each retry attempt and on custom directive failures. `attempt` tells you which attempt failed — 1 is the initial load, 2 is the first retry, etc.
 
 ### Teardown for SPA navigation
 
@@ -77,7 +93,7 @@ disconnect();
 import type {} from "vite-plugin-shopify-theme-islands";
 
 document.addEventListener("islands:load", (e) => {
-  console.log(e.detail.tag); // typed as string
+  console.log(e.detail.tag, e.detail.duration, e.detail.attempt);
 });
 ```
 
@@ -143,16 +159,15 @@ onIslandError(({ tag }) => {
 Correct:
 
 ```ts
-const seen = new Set<string>();
-onIslandError(({ tag, error }) => {
-  if (!seen.has(tag)) {
-    seen.add(tag);
+onIslandError(({ tag, error, attempt }) => {
+  // attempt === 1 is the first failure; higher values are retries
+  if (attempt === 1) {
     reportFirstFailure(tag, error);
   }
 });
 ```
 
-With `retry: { retries: 3 }`, a single island can fire `islands:error` up to 4 times before exhausting retries. Deduplicate by `tag` if only the first failure matters.
+With `retry: { retries: 3 }`, a single island can fire `islands:error` up to 4 times before exhausting retries. Use `attempt` to distinguish the initial failure from retries.
 
 Source: src/runtime.ts — `dispatch("islands:error", ...)` inside `.catch()` before retry check
 

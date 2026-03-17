@@ -3,11 +3,12 @@ name: directives
 description: >
   Built-in client directives: client:visible (IntersectionObserver, rootMargin),
   client:media (matchMedia query), client:idle (requestIdleCallback),
-  client:defer (setTimeout delay). Combining directives uses AND semantics —
-  all must resolve. Per-element value overrides. Empty client:media warning.
+  client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
+  Directives resolve sequentially — visible → media → idle → defer → interaction → custom.
+  Per-element value overrides. Empty client:media warning.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.2"
+library_version: "1.1.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -29,16 +30,24 @@ Add one or more directives as HTML attributes on any custom element:
 
 <!-- Load after a fixed delay (ms) -->
 <chat-widget client:defer="5000"></chat-widget>
+
+<!-- Load on mouseenter, touchstart, or focusin (hover/touch/keyboard intent) -->
+<cart-flyout client:interaction></cart-flyout>
 ```
 
 No JS changes needed — the runtime reads these attributes during DOM walk.
 
 ## Core Patterns
 
-### Combining directives — all conditions must pass
+### Combining directives — sequential resolution order
+
+Directives resolve in a fixed order: `visible → media → idle → defer → interaction → custom`. Each condition is only evaluated after the previous one has passed.
 
 ```html
-<!-- Loads only when BOTH visible AND the media query match -->
+<!-- Loads when visible AND on interaction — interaction listeners only attach after scroll-in -->
+<mega-menu client:visible client:interaction></mega-menu>
+
+<!-- Loads when visible AND the media query matches -->
 <product-recommendations
   client:visible
   client:media="(min-width: 768px)"
@@ -58,6 +67,9 @@ Combined directives are AND-latched. The island loads only after every condition
 
 <!-- Fixed delay in ms; empty attribute uses the global default (3000ms) -->
 <chat-widget client:defer="8000"></chat-widget>
+
+<!-- Override interaction events for this element only (space-separated MDN event names) -->
+<cart-flyout client:interaction="mouseenter"></cart-flyout>
 ```
 
 The attribute value overrides the globally configured default for that element. Other elements are unaffected.
@@ -74,6 +86,18 @@ The attribute value overrides the globally configured default for that element. 
 
 An empty `client:defer` attribute is NOT zero — it falls back to the configured `defer.delay` (default 3000ms).
 
+### `client:interaction` with no value uses the default events
+
+```html
+<!-- Uses default events: mouseenter, touchstart, focusin -->
+<cart-flyout client:interaction></cart-flyout>
+
+<!-- Uses only mouseenter -->
+<cart-flyout client:interaction="mouseenter"></cart-flyout>
+```
+
+An empty `client:interaction` attribute silently uses the configured default events — no warning is emitted (unlike `client:media`).
+
 ### Changing built-in directive defaults globally
 
 ```ts
@@ -82,6 +106,7 @@ shopifyThemeIslands({
   directives: {
     visible: { rootMargin: "0px" },
     defer: { delay: 5000 },
+    interaction: { events: ["mouseenter"] },
   },
 });
 ```
@@ -164,7 +189,7 @@ Correct:
 
 The attribute value is passed directly to `IntersectionObserver` as `rootMargin`, fully replacing the global default.
 
-Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, pendingVisible)`
+Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable)`
 
 ### HIGH Directive attribute typo — island loads without condition
 
