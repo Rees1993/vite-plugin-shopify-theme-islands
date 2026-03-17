@@ -926,9 +926,32 @@ describe("revive", () => {
 
       // islands:error should fire on the initial attempt + each retry = 3 total
       expect(handler).toHaveBeenCalledTimes(3);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "retry-ev" });
+      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "retry-ev", attempt: 1 });
+      expect(handler.mock.calls[1][0].detail).toMatchObject({ tag: "retry-ev", attempt: 2 });
+      expect(handler.mock.calls[2][0].detail).toMatchObject({ tag: "retry-ev", attempt: 3 });
 
       document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
+    it("islands:load detail.attempt is 2 when first attempt fails and retry succeeds", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const loadHandler = mock((e: CustomEvent) => e);
+      document.addEventListener("islands:load", loadHandler);
+      let callCount = 0;
+      const loader = mock(async () => {
+        callCount++;
+        if (callCount === 1) throw new Error("first attempt fails");
+      });
+      document.body.innerHTML = "<retry-attempt-load></retry-attempt-load>";
+      revive({ "/islands/retry-attempt-load.ts": loader }, { retry: { retries: 1, delay: 10 } });
+      await flush(200);
+      expect(loadHandler).toHaveBeenCalledTimes(1);
+      expect(loadHandler.mock.calls[0][0].detail).toMatchObject({
+        tag: "retry-attempt-load",
+        attempt: 2,
+      });
+      document.removeEventListener("islands:load", loadHandler);
       consoleSpy.mockRestore();
     });
 
@@ -953,7 +976,10 @@ describe("revive", () => {
       revive({ "/islands/load-ev.ts": mock(async () => {}) });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "load-ev" });
+      const detail = handler.mock.calls[0][0].detail;
+      expect(detail).toMatchObject({ tag: "load-ev", attempt: 1 });
+      expect(typeof detail.duration).toBe("number");
+      expect(detail.duration).toBeGreaterThanOrEqual(0);
       document.removeEventListener("islands:load", handler);
     });
 
@@ -970,7 +996,11 @@ describe("revive", () => {
       });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "error-ev", error: err });
+      expect(handler.mock.calls[0][0].detail).toMatchObject({
+        tag: "error-ev",
+        error: err,
+        attempt: 1,
+      });
       expect(consoleSpy).toHaveBeenCalled();
       document.removeEventListener("islands:error", handler);
       consoleSpy.mockRestore();
@@ -993,7 +1023,11 @@ describe("revive", () => {
       revive({ "/islands/dir-err-ev.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ tag: "dir-err-ev", error: err });
+      expect(handler.mock.calls[0][0].detail).toMatchObject({
+        tag: "dir-err-ev",
+        error: err,
+        attempt: 1,
+      });
       document.removeEventListener("islands:error", handler);
       consoleSpy.mockRestore();
     });
@@ -1015,13 +1049,14 @@ describe("revive", () => {
 
   describe("onIslandLoad / onIslandError helpers", () => {
     it("onIslandLoad receives detail directly and returns a cleanup function", async () => {
-      const handler = mock((_detail: { tag: string }) => {});
+      const handler = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
       const off = onIslandLoad(handler);
       document.body.innerHTML = "<helper-load></helper-load>";
       revive({ "/islands/helper-load.ts": mock(async () => {}) });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-load" });
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-load", attempt: 1 });
+      expect(typeof handler.mock.calls[0][0].duration).toBe("number");
       off();
     });
 
@@ -1037,7 +1072,7 @@ describe("revive", () => {
 
     it("onIslandError receives detail directly and returns a cleanup function", async () => {
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
-      const handler = mock((_detail: { tag: string; error: unknown }) => {});
+      const handler = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
       const err = new Error("helper error");
       const off = onIslandError(handler);
       document.body.innerHTML = "<helper-err></helper-err>";
@@ -1048,7 +1083,7 @@ describe("revive", () => {
       });
       await flush();
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-err", error: err });
+      expect(handler.mock.calls[0][0]).toMatchObject({ tag: "helper-err", error: err, attempt: 1 });
       off();
       consoleSpy.mockRestore();
     });
@@ -1181,6 +1216,220 @@ describe("revive", () => {
       await flush();
       expect(loader).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    describe("client:interaction", () => {
+      it("loads on mouseenter (default events)", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<hover-island client:interaction></hover-island>";
+        revive({ "/islands/hover-island.ts": loader });
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("hover-island")!.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("loads on touchstart (default events)", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<touch-island client:interaction></touch-island>";
+        revive({ "/islands/touch-island.ts": loader });
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("touch-island")!.dispatchEvent(new Event("touchstart"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("loads on focusin (default events)", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<focus-island client:interaction></focus-island>";
+        revive({ "/islands/focus-island.ts": loader });
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("focus-island")!.dispatchEvent(new Event("focusin"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not load before any event fires", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<no-fire-island client:interaction></no-fire-island>";
+        revive({ "/islands/no-fire-island.ts": loader });
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+      });
+
+      it("per-element value 'mouseenter' only fires on mouseenter, not touchstart", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<per-event-island client:interaction="mouseenter"></per-event-island>';
+        revive({ "/islands/per-event-island.ts": loader });
+        await flush();
+        const el = document.querySelector("per-event-island")!;
+        el.dispatchEvent(new Event("touchstart"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("per-element value 'mouseenter focusin' fires on either event", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<multi-event-island client:interaction="mouseenter focusin"></multi-event-island>';
+        revive({ "/islands/multi-event-island.ts": loader });
+        await flush();
+        const el = document.querySelector("multi-event-island")!;
+        el.dispatchEvent(new Event("focusin"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("empty attribute uses global default events", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = '<empty-interaction client:interaction=""></empty-interaction>';
+        revive({ "/islands/empty-interaction.ts": loader });
+        await flush();
+        const el = document.querySelector("empty-interaction")!;
+        el.dispatchEvent(new Event("touchstart"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("per-element value overrides global events config", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<override-events client:interaction="mouseenter"></override-events>';
+        revive(
+          { "/islands/override-events.ts": loader },
+          { directives: { interaction: { events: ["focusin"] } } },
+        );
+        await flush();
+        // Global config says focusin, but per-element overrides to mouseenter
+        document.querySelector("override-events")!.dispatchEvent(new Event("focusin"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("override-events")!.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("all-whitespace attribute value warns and falls back to default events", async () => {
+        const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+        const loader = mock(async () => {});
+        document.body.innerHTML = '<ws-interaction client:interaction="   "></ws-interaction>';
+        revive({ "/islands/ws-interaction.ts": loader });
+        await flush();
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("no valid event tokens"));
+        // Falls back to default events — touchstart should trigger
+        document.querySelector("ws-interaction")!.dispatchEvent(new Event("touchstart"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+        warnSpy.mockRestore();
+      });
+
+      it("event listeners removed after load (does not fire twice)", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<cleanup-island client:interaction></cleanup-island>";
+        revive({ "/islands/cleanup-island.ts": loader });
+        await flush();
+        const el = document.querySelector("cleanup-island")!;
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+        // Fire again — listener should be gone
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not load when element removed before interaction fires", async () => {
+        let moCallback: MutationCallback | undefined;
+        const OriginalMO = globalThis.MutationObserver;
+        globalThis.MutationObserver = class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver;
+
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<cancel-interact client:interaction></cancel-interact>";
+        revive({ "/islands/cancel-interact.ts": loader });
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+
+        // Simulate removal
+        const el = document.querySelector("cancel-interact")!;
+        document.body.removeChild(el);
+        moCallback!(
+          [{ addedNodes: [], removedNodes: [el] } as unknown as MutationRecord],
+          {} as MutationObserver,
+        );
+        await flush();
+
+        // Fire interaction on removed element — should not load
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+
+        globalThis.MutationObserver = OriginalMO;
+      });
+
+      it("combines with client:visible — interaction fires only after visible resolves", async () => {
+        let ioCallback: IntersectionObserverCallback | undefined;
+        const origIO = globalThis.IntersectionObserver;
+        globalThis.IntersectionObserver = class {
+          observe = mock(() => {});
+          disconnect = mock(() => {});
+          constructor(cb: IntersectionObserverCallback) {
+            ioCallback = cb;
+          }
+        } as unknown as typeof IntersectionObserver;
+
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<combo-island client:visible client:interaction></combo-island>";
+        revive({ "/islands/combo-island.ts": loader });
+        await flush();
+
+        // Interaction fires before visible — should not load
+        document.querySelector("combo-island")!.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+
+        // Now visible resolves
+        const el = document.querySelector("combo-island")!;
+        ioCallback!(
+          [{ isIntersecting: true, target: el } as unknown as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+        await flush();
+        expect(loader).not.toHaveBeenCalled(); // still waiting for interaction
+
+        // Now fire interaction
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+
+        globalThis.IntersectionObserver = origIO;
+      });
+
+      it("custom attribute name via directives.interaction.attribute", async () => {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<custom-attr-island data-lazy></custom-attr-island>";
+        revive(
+          { "/islands/custom-attr-island.ts": loader },
+          { directives: { interaction: { attribute: "data-lazy" } } },
+        );
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+        document.querySelector("custom-attr-island")!.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("debug log names all matched directives when multiple are present", async () => {

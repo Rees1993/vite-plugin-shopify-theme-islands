@@ -197,6 +197,20 @@ describe("plugin", () => {
       expect(output).not.toContain("@islands");
     });
 
+    it("resolves more-specific string alias before shorter overlapping prefix", async () => {
+      const plugin = makePlugin({ directories: ["@islands/"] });
+      plugin.configResolved(
+        makeConfig([
+          { find: "@", replacement: "/project/src" },
+          { find: "@islands", replacement: "/project/frontend/js/islands" },
+        ]),
+      );
+      const output = await plugin.load(RESOLVED_ID);
+      // "@islands" must win over "@" — would produce "/project/src/islands/" if wrong
+      expect(output).toContain("/project/frontend/js/islands/");
+      expect(output).not.toContain("/project/src/islands");
+    });
+
     it("resolves Vite regex aliases in directory paths", async () => {
       const plugin = makePlugin({ directories: ["@islands/"] });
       plugin.configResolved(

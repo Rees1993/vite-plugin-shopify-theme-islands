@@ -4,10 +4,11 @@
  * Walks the DOM for custom elements that match island files, then loads them
  * lazily based on client directives:
  *
- *   client:visible  — load when the element scrolls into view
- *   client:media    — load when a CSS media query matches
- *   client:idle     — load when the browser has idle time
- *   client:defer    — load after a fixed delay (ms value on the attribute)
+ *   client:visible     — load when the element scrolls into view
+ *   client:media       — load when a CSS media query matches
+ *   client:idle        — load when the browser has idle time
+ *   client:defer       — load after a fixed delay (ms value on the attribute)
+ *   client:interaction — load on mouseenter / touchstart / focusin (or custom events)
  *
  * Directives can be combined; all conditions must be met before loading.
  * A MutationObserver re-runs the same logic for elements added dynamically.
@@ -59,6 +60,31 @@ function visible(
   });
 }
 
+// Resolves when any of the given DOM events fires on the element.
+// Registers a cancel function in `pending` so the outer MutationObserver can
+// abort this if the element is removed from the DOM before interacting.
+function interaction(
+  element: Element,
+  events: string[],
+  pending: Map<Element, () => void>,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      for (const name of events) element.removeEventListener(name, handler);
+      pending.delete(element);
+    };
+    const handler = () => {
+      cleanup();
+      resolve();
+    };
+    for (const name of events) element.addEventListener(name, handler);
+    pending.set(element, () => {
+      cleanup();
+      reject();
+    });
+  });
+}
+
 // Resolves after a fixed delay.
 function defer(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -73,6 +99,8 @@ function idle(timeout: number): Promise<void> {
   });
 }
 
+const noop = (..._: unknown[]) => {};
+
 export function revive(
   islands: Record<string, () => Promise<unknown>>,
   options?: ReviveOptions,
@@ -82,6 +110,12 @@ export function revive(
   const attrMedia = options?.directives?.media?.attribute ?? "client:media";
   const attrIdle = options?.directives?.idle?.attribute ?? "client:idle";
   const attrDefer = options?.directives?.defer?.attribute ?? "client:defer";
+  const attrInteraction = options?.directives?.interaction?.attribute ?? "client:interaction";
+  const interactionEvents = options?.directives?.interaction?.events ?? [
+    "mouseenter",
+    "touchstart",
+    "focusin",
+  ];
   const rootMargin = options?.directives?.visible?.rootMargin ?? "200px";
   const threshold = options?.directives?.visible?.threshold ?? 0;
   const idleTimeout = options?.directives?.idle?.timeout ?? 500;
@@ -114,9 +148,9 @@ export function revive(
   // Track successfully loaded tag names so child islands can activate after their parent loads
   const loaded = new Set<string>();
 
-  // Elements awaiting client:visible — maps element to its IO cancel function.
-  // Checked by the outer MutationObserver to abort loading if the element is removed.
-  const pendingVisible = new Map<Element, () => void>();
+  // Elements awaiting a cancellable directive (client:visible, client:interaction) — maps
+  // element to its cancel function. Checked by the MutationObserver to abort loading if removed.
+  const pendingCancellable = new Map<Element, () => void>();
 
   // Tracks auto-retry attempts per tag — cleared on success or exhaustion.
   const retryCount = new Map<string, number>();
@@ -148,15 +182,17 @@ export function revive(
     // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
     if (debug && !initDone) {
       const parts: string[] = [];
-      const visibleVal = el.getAttribute(attrVisible);
-      if (visibleVal !== null)
-        parts.push(visibleVal ? `${attrVisible}="${visibleVal}"` : attrVisible);
+      // Push `attr` or `attr="val"` when the element has the attribute; skip null (absent)
+      const pushAttr = (attr: string, val: string | null) => {
+        if (val !== null) parts.push(val ? `${attr}="${val}"` : attr);
+      };
+      pushAttr(attrVisible, el.getAttribute(attrVisible));
+      // client:media excluded when empty — it warns+skips, so the island fires immediately
       const mediaVal = el.getAttribute(attrMedia);
       if (mediaVal) parts.push(`${attrMedia}="${mediaVal}"`);
-      const idleVal = el.getAttribute(attrIdle);
-      if (idleVal !== null) parts.push(idleVal ? `${attrIdle}="${idleVal}"` : attrIdle);
-      const deferVal = el.getAttribute(attrDefer);
-      if (deferVal !== null) parts.push(deferVal ? `${attrDefer}="${deferVal}"` : attrDefer);
+      pushAttr(attrIdle, el.getAttribute(attrIdle));
+      pushAttr(attrDefer, el.getAttribute(attrDefer));
+      pushAttr(attrInteraction, el.getAttribute(attrInteraction));
       if (customDirectives?.size) {
         for (const a of customDirectives.keys()) {
           if (el.hasAttribute(a)) parts.push(a);
@@ -167,9 +203,9 @@ export function revive(
 
     // Buffer subsequent stages; flush as a collapsed group if there were any,
     // or as a flat log if the island triggered with no intermediate steps
-    const msgs: string[] = [];
-    const note = debug ? (msg: string) => msgs.push(msg) : () => {};
-    const flush = debug
+    const msgs = debug ? ([] as string[]) : null;
+    const note = msgs ? (msg: string) => msgs.push(msg) : noop;
+    const flush = msgs
       ? (final: string) => {
           if (msgs.length === 0) {
             console.log("[islands]", `<${tagName}> ${final}`);
@@ -179,17 +215,19 @@ export function revive(
             console.groupEnd();
           }
         }
-      : () => {};
+      : noop;
     try {
       const visibleAttr = el.getAttribute(attrVisible);
       if (visibleAttr !== null) {
         // Per-element value overrides global rootMargin (e.g. client:visible="0px")
         note(`waiting for ${attrVisible}`);
-        await visible(el, visibleAttr || rootMargin, threshold, pendingVisible);
+        await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable);
       }
       const query = el.getAttribute(attrMedia);
       if (query === "") {
-        console.warn(`[islands] <${tagName}> ${attrMedia} has no value — skipping media check`);
+        console.warn(
+          `[islands] <${tagName}> ${attrMedia} has no value — media check skipped, island will load immediately`,
+        );
       } else if (query) {
         note(`waiting for ${attrMedia}="${query}"`);
         await media(query);
@@ -205,15 +243,30 @@ export function revive(
       }
       const d = el.getAttribute(attrDefer);
       if (d !== null) {
-        const raw = parseInt(d, 10);
-        const ms = Number.isNaN(raw) ? deferDelay : raw;
-        if (d !== "" && Number.isNaN(raw)) {
+        const dMs = parseInt(d, 10);
+        if (d !== "" && Number.isNaN(dMs)) {
           console.warn(
             `[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`,
           );
         }
+        const ms = Number.isNaN(dMs) ? deferDelay : dMs;
         note(`waiting for ${attrDefer} (${ms}ms)`);
         await defer(ms);
+      }
+      const interactionAttr = el.getAttribute(attrInteraction);
+      if (interactionAttr !== null) {
+        // Per-element value overrides global events (space-separated MDN event names)
+        let events = interactionEvents;
+        if (interactionAttr) {
+          const tokens = interactionAttr.split(/\s+/).filter(Boolean);
+          if (tokens.length > 0) events = tokens;
+          else
+            console.warn(
+              `[islands] <${tagName}> ${attrInteraction} has no valid event tokens — using default events`,
+            );
+        }
+        note(`waiting for ${attrInteraction} (${events.join(", ")})`);
+        await interaction(el, events, pendingCancellable);
       }
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
@@ -223,17 +276,23 @@ export function revive(
 
     const run = (): Promise<void> => {
       if (disconnected) return Promise.resolve();
+      const t0 = performance.now();
       return loader()
         .then(() => {
+          const attempt = (retryCount.get(tagName) ?? 0) + 1;
           loaded.add(tagName);
           retryCount.delete(tagName);
-          dispatch("islands:load", { tag: tagName });
+          dispatch("islands:load", {
+            tag: tagName,
+            duration: performance.now() - t0,
+            attempt,
+          });
           if (el.children.length) walk(el); // pick up child islands now that parent has loaded
         })
         .catch((err) => {
           console.error(`[islands] Failed to load <${tagName}>:`, err);
-          dispatch("islands:error", { tag: tagName, error: err });
           const attempt = retryCount.get(tagName) ?? 0;
+          dispatch("islands:error", { tag: tagName, error: err, attempt: attempt + 1 });
           if (attempt < retries) {
             retryCount.set(tagName, attempt + 1);
             setTimeout(run, retryDelay * 2 ** attempt);
@@ -246,7 +305,7 @@ export function revive(
 
     const handleDirectiveError = (attrName: string, err: unknown) => {
       console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
-      dispatch("islands:error", { tag: tagName, error: err });
+      dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
       retryCount.delete(tagName);
       queued.delete(tagName);
     };
@@ -321,12 +380,12 @@ export function revive(
   }
 
   const observer = new MutationObserver((mutations) => {
-    // Cancel loading for any pending-visible elements that were removed from the DOM.
+    // Cancel loading for any pending-cancellable elements that were removed from the DOM.
     // Only scan if there are removals and there are pending elements to cancel.
-    if (pendingVisible.size > 0 && mutations.some((m) => m.removedNodes.length > 0)) {
-      for (const [el, cancel] of pendingVisible) {
+    if (pendingCancellable.size > 0 && mutations.some((m) => m.removedNodes.length > 0)) {
+      for (const [el, cancel] of pendingCancellable) {
         if (!el.isConnected) {
-          pendingVisible.delete(el);
+          pendingCancellable.delete(el);
           cancel();
         }
       }
