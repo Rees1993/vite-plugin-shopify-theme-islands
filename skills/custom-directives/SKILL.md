@@ -5,9 +5,10 @@ description: >
   ClientDirective function signature (load, options, el). AND-latch: when
   multiple custom directives match the same element, all must call load() before
   the island activates. Error handling — thrown errors fire islands:error.
+  Custom directives run after all built-in conditions resolve.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.2"
+library_version: "1.1.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -16,14 +17,18 @@ sources:
 ## Setup
 
 ```ts
-// src/directives/hover.ts
+// src/directives/hash.ts
 import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
 
-const hoverDirective: ClientDirective = (load, _opts, el) => {
-  el.addEventListener("mouseenter", load, { once: true });
+const hashDirective: ClientDirective = (load, opts) => {
+  const target = opts.value;
+  if (location.hash === target) { load(); return; }
+  window.addEventListener("hashchange", () => {
+    if (location.hash === target) load();
+  });
 };
 
-export default hoverDirective;
+export default hashDirective;
 ```
 
 ```ts
@@ -36,8 +41,8 @@ export default defineConfig({
       directives: {
         custom: [
           {
-            name: "client:hover",
-            entrypoint: "./src/directives/hover.ts",
+            name: "client:hash",
+            entrypoint: "./src/directives/hash.ts",
           },
         ],
       },
@@ -47,7 +52,7 @@ export default defineConfig({
 ```
 
 ```html
-<quick-add client:hover></quick-add>
+<product-reviews client:hash="#reviews"></product-reviews>
 ```
 
 ## Core Patterns
@@ -96,10 +101,10 @@ The directive function can be async. Unhandled rejections fire `islands:error` o
 ### AND-latch with multiple matching directives
 
 ```html
-<product-form client:hover client:visible></product-form>
+<product-form client:hash="#details" client:auth-check></product-form>
 ```
 
-If both `client:hover` and `client:visible` are registered as custom directives and both match, **both** must call `load()` before the island activates. The runtime tracks a `remaining` counter; it reaches 0 only when every matched directive has called `load()`.
+If both `client:hash` and `client:auth-check` are registered as custom directives and both match, **both** must call `load()` before the island activates. The runtime tracks a `remaining` counter; it reaches 0 only when every matched directive has called `load()`.
 
 ## Common Mistakes
 
@@ -108,9 +113,9 @@ If both `client:hover` and `client:visible` are registered as custom directives 
 Wrong:
 
 ```ts
-const hoverDirective: ClientDirective = (load, _opts, el) => {
-  el.addEventListener("mouseenter", () => {
-    console.log("hovered"); // forgot to call load
+const myDirective: ClientDirective = (load, _opts, el) => {
+  el.addEventListener("click", () => {
+    console.log("clicked"); // forgot to call load
   });
 };
 ```
@@ -118,8 +123,8 @@ const hoverDirective: ClientDirective = (load, _opts, el) => {
 Correct:
 
 ```ts
-const hoverDirective: ClientDirective = (load, _opts, el) => {
-  el.addEventListener("mouseenter", load, { once: true });
+const myDirective: ClientDirective = (load, _opts, el) => {
+  el.addEventListener("click", load, { once: true });
 };
 ```
 
@@ -127,22 +132,47 @@ No error is thrown and no timeout fires — the island is silently never loaded.
 
 Source: src/runtime.ts — directive owns the `run()` call path
 
+### HIGH Writing a custom directive for mouseenter/touchstart/focusin — use `client:interaction` instead
+
+Wrong:
+
+```ts
+// Reimplementing what the built-in already does
+const hoverDirective: ClientDirective = (load, _opts, el) => {
+  el.addEventListener("mouseenter", load, { once: true });
+};
+```
+
+Correct:
+
+```html
+<!-- Use the built-in client:interaction directive -->
+<cart-flyout client:interaction></cart-flyout>
+
+<!-- Or with a specific event -->
+<cart-flyout client:interaction="mouseenter"></cart-flyout>
+```
+
+`client:interaction` is a built-in directive that handles `mouseenter`, `touchstart`, and `focusin`. Custom directives are for conditions the built-ins cannot express (e.g. URL hash matching, network conditions, feature flags).
+
+Source: src/runtime.ts — `interaction()` built-in handles the hover/touch/focus pattern
+
 ### HIGH AND-latch: both matched directives must call `load()`
 
 Wrong assumption:
 
 ```html
-<product-form client:hover client:auth-check></product-form>
+<product-form client:hash="#details" client:auth-check></product-form>
 ```
 
 ```ts
-// Expecting: loads as soon as either hover or auth-check calls load()
+// Expecting: loads as soon as either hash or auth-check calls load()
 ```
 
 Correct:
 
 ```ts
-// Both client:hover AND client:auth-check must call load() before activation.
+// Both client:hash AND client:auth-check must call load() before activation.
 // remaining starts at 2; island fires when it reaches 0.
 ```
 
@@ -156,8 +186,8 @@ Wrong:
 
 ```ts
 {
-  name: "client:hover",
-  entrypoint: "src/directives/hover.ts", // ← no ./
+  name: "client:hash",
+  entrypoint: "src/directives/hash.ts", // ← no ./
 }
 ```
 
@@ -165,8 +195,8 @@ Correct:
 
 ```ts
 {
-  name: "client:hover",
-  entrypoint: "./src/directives/hover.ts",
+  name: "client:hash",
+  entrypoint: "./src/directives/hash.ts",
 }
 ```
 
@@ -174,7 +204,7 @@ Vite's resolver may fail to locate the file without the `./` relative prefix. Th
 
 Source: src/index.ts — `this.resolve(def.entrypoint)` throws on null
 
-### MEDIUM Custom directives run after built-in directive awaits
+### MEDIUM Custom directives run after all built-in directive awaits
 
 Wrong expectation:
 
@@ -183,7 +213,7 @@ Wrong expectation:
 <cart-drawer client:visible client:auth></cart-drawer>
 ```
 
-The runtime awaits `client:visible` first, then passes control to the `client:auth` custom directive. Custom directives cannot short-circuit or replace built-in awaits.
+The runtime awaits built-ins in order (`visible → media → idle → defer → interaction`) first, then passes control to matched custom directives. Custom directives cannot short-circuit or replace built-in awaits.
 
 Source: src/runtime.ts — built-in awaits precede `if (customDirectives?.size)` block
 

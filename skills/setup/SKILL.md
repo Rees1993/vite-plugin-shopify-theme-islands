@@ -3,12 +3,13 @@ name: setup
 description: >
   Getting-started journey and plugin configuration. Covers the full path from
   install to first working island. shopifyThemeIslands() options: directories
-  (string | string[]), debug, directives deep-merge, and retry (retries, delay
-  with exponential backoff). Load when setting up the plugin, configuring
-  island scan directories, or enabling retry.
+  (string | string[]), debug, directives deep-merge (visible, idle, media,
+  defer, interaction, custom), and retry (retries, delay with exponential
+  backoff). Load when setting up the plugin, configuring island scan
+  directories, or enabling retry.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.0.2"
+library_version: "1.1.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
 ---
@@ -72,6 +73,7 @@ shopifyThemeIslands({
     visible: { rootMargin: "0px", threshold: 0.5 },
     idle: { timeout: 2000 },
     defer: { delay: 5000 },
+    interaction: { events: ["mouseenter"] },
   },
 });
 ```
@@ -131,6 +133,7 @@ shopifyThemeIslands({
     idle: { attribute: "client:idle", timeout: 500 },
     media: { attribute: "client:media" },
     defer: { attribute: "client:defer", delay: 3000 },
+    interaction: { attribute: "client:interaction", events: ["mouseenter", "touchstart", "focusin"] },
   },
 });
 ```
@@ -190,7 +193,7 @@ shopifyThemeIslands({
 });
 ```
 
-`directives` accepts only `visible`, `idle`, `media`, `defer`, and `custom`. `retry` at `directives.retry` is silently ignored.
+`directives` accepts only `visible`, `idle`, `media`, `defer`, `interaction`, and `custom`. `retry` at `directives.retry` is silently ignored.
 
 Source: src/index.ts:ShopifyThemeIslandsOptions
 
