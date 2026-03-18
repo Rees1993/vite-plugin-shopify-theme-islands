@@ -27,7 +27,9 @@ export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): 
     customDirectives?.map(
       ({ entrypoint }, index) => `import _directive${index} from ${JSON.stringify(entrypoint)};`,
     ) ?? [];
-  const globEntries = [`{ ${directoryGlobs.map((glob) => `...import.meta.glob(${JSON.stringify(glob)})`).join(", ")} }`];
+  const globEntries = [
+    `{ ${directoryGlobs.map((glob) => `...import.meta.glob(${JSON.stringify(glob)})`).join(", ")} }`,
+  ];
   if (islandPaths?.length) globEntries.push(`import.meta.glob(${JSON.stringify(islandPaths)})`);
 
   const lines = [

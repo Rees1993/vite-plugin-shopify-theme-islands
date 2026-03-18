@@ -21,7 +21,9 @@ describe("discovery", () => {
 
     it("does not treat sibling paths with the same prefix as inside the directory", () => {
       const absDirs = ["/project/root/frontend/js/islands"];
-      expect(inDirectory("/project/root/frontend/js/islands-legacy/widget.ts", absDirs)).toBe(false);
+      expect(inDirectory("/project/root/frontend/js/islands-legacy/widget.ts", absDirs)).toBe(
+        false,
+      );
     });
   });
 
