@@ -110,7 +110,6 @@ const noop = (..._: unknown[]) => {};
 // from the DOM before the directive condition is met. instanceof check is reliable
 // across async boundaries; bare reject() was fragile (err === undefined heuristic).
 class DirectiveCancelledError extends Error {
-  readonly cancelled = true as const;
   constructor() {
     super("[islands] directive cancelled: element removed from DOM");
     this.name = "DirectiveCancelledError";
@@ -477,7 +476,11 @@ export function revive(
       await applyBuiltInDirectives(tagName, el, note);
     } catch (err) {
       handleOutcome({ kind: "builtin-catch", err });
-      flushLog("aborted (element removed)");
+      flushLog(
+        err instanceof DirectiveCancelledError
+          ? "aborted (element removed)"
+          : "aborted (directive error)",
+      );
       return;
     }
 
