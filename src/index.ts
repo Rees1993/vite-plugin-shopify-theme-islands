@@ -299,7 +299,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       } else {
         try {
           const content = readFileSync(id, "utf-8");
-            if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id, absDirs)) {
+          if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id, absDirs)) {
             islandFiles.add(id);
             log("Detected island (watchChange):", relative(root, id));
           } else {
@@ -325,8 +325,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
       // Use import.meta.glob for island files so Vite handles base URL rewriting
       // (hand-crafted import() calls resolve against the page origin, not the dev server)
-      const islandPaths =
-        islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
+      const islandPaths = islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
 
       // globs always has at least one entry (rawDirs is never empty)
       const islandsEntries = [`{ ${globs.join(", ")} }`];

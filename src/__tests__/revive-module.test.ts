@@ -38,7 +38,7 @@ describe("revive-module", () => {
         reviveOptions: {},
       });
       expect(out).toContain('import _d0 from "/dir/hash.js";');
-      expect(out).toContain('const customDirectives = new Map([');
+      expect(out).toContain("const customDirectives = new Map([");
       expect(out).toContain('  ["client:hash", _d0]');
       expect(out).toContain("const payload = { islands, options, customDirectives };");
     });

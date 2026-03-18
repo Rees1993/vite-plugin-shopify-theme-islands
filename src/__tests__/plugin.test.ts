@@ -242,9 +242,7 @@ describe("plugin", () => {
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
-      expect(output).toContain(
-        "export const { disconnect } = _islands(payload)",
-      );
+      expect(output).toContain("export const { disconnect } = _islands(payload)");
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {

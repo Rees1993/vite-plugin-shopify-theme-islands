@@ -19,6 +19,8 @@ import {
   normalizeReviveOptions,
   resolveStrategies,
   type ClientDirective,
+  type IslandLoader,
+  type ReviveOptions,
   type RevivePayload,
 } from "./contract.js";
 
@@ -107,10 +109,28 @@ function idle(timeout: number): Promise<void> {
 
 const noop = (..._: unknown[]) => {};
 
-export function revive(payload: RevivePayload): { disconnect: () => void } {
+function isRevivePayload(v: unknown): v is RevivePayload {
+  return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
+}
+
+export function revive(payload: RevivePayload): { disconnect: () => void };
+/** @deprecated Pass a RevivePayload object instead. Will be removed in v2.0. */
+export function revive(
+  islands: Record<string, IslandLoader>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+): { disconnect: () => void };
+export function revive(
+  islandsOrPayload: RevivePayload | Record<string, IslandLoader>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+): { disconnect: () => void } {
+  const payload: RevivePayload = isRevivePayload(islandsOrPayload)
+    ? islandsOrPayload
+    : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };
   const opts = normalizeReviveOptions(payload.options);
   const islandMap = buildIslandMap(payload, resolveStrategies());
-  const customDirectives = payload.customDirectives;
+  const resolvedDirectives = payload.customDirectives;
 
   const attrVisible = opts.directives.visible.attribute;
   const attrMedia = opts.directives.media.attribute;
@@ -181,8 +201,8 @@ export function revive(payload: RevivePayload): { disconnect: () => void } {
       pushAttr(attrIdle, el.getAttribute(attrIdle));
       pushAttr(attrDefer, el.getAttribute(attrDefer));
       pushAttr(attrInteraction, el.getAttribute(attrInteraction));
-      if (customDirectives?.size) {
-        for (const a of customDirectives.keys()) {
+      if (resolvedDirectives?.size) {
+        for (const a of resolvedDirectives.keys()) {
           if (el.hasAttribute(a)) parts.push(a);
         }
       }
@@ -299,9 +319,9 @@ export function revive(payload: RevivePayload): { disconnect: () => void } {
     };
 
     // Custom directives run after built-ins — the directive owns the load() call
-    if (customDirectives?.size) {
+    if (resolvedDirectives?.size) {
       const matched: Array<[string, ClientDirective, string]> = [];
-      for (const [attrName, directiveFn] of customDirectives) {
+      for (const [attrName, directiveFn] of resolvedDirectives) {
         const value = el.getAttribute(attrName);
         if (value !== null) matched.push([attrName, directiveFn, value]);
       }

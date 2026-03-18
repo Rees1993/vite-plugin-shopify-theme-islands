@@ -233,10 +233,7 @@ export interface ReviveResult {
  * Runtime entrypoint type. Implementations (e.g. default DOM runtime, or a
  * custom/headless runtime) accept the same payload and optional strategies.
  */
-export type ReviveFn = (
-  payload: RevivePayload,
-  strategies?: ReviveStrategies,
-) => ReviveResult;
+export type ReviveFn = (payload: RevivePayload, strategies?: ReviveStrategies) => ReviveResult;
 
 // ---------------------------------------------------------------------------
 // 8. Serialization helpers (optional; for different runtimes / SSR)
