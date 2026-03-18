@@ -61,7 +61,7 @@ function visible(
     io.observe(element);
     watch(element, () => {
       io.disconnect();
-      reject();
+      reject(new DirectiveCancelledError());
     });
   });
 }
@@ -85,7 +85,7 @@ function interaction(
     for (const name of events) element.addEventListener(name, handler);
     watch(element, () => {
       cleanup();
-      reject();
+      reject(new DirectiveCancelledError());
     });
   });
 }
@@ -105,6 +105,20 @@ function idle(timeout: number): Promise<void> {
 }
 
 const noop = (..._: unknown[]) => {};
+
+// Thrown by visible() and interaction() cancel paths when the element is removed
+// from the DOM before the directive condition is met. instanceof check is reliable
+// across async boundaries; bare reject() was fragile (err === undefined heuristic).
+class DirectiveCancelledError extends Error {
+  constructor() {
+    super("[islands] directive cancelled: element removed from DOM");
+    this.name = "DirectiveCancelledError";
+  }
+}
+
+type DirectiveOutcome =
+  | { kind: "builtin-catch"; err: unknown }
+  | { kind: "directive-error"; attrName: string; err: unknown };
 
 function isRevivePayload(v: unknown): v is RevivePayload {
   return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
@@ -273,6 +287,28 @@ export function revive(
     },
   };
 
+  // Unified directive failure handler. Both built-in catch and custom directive errors route here.
+  // Cancellation (element removed) is silent and leaves queued intact. Everything else fires islands:error.
+  function makeDirectiveOutcomeHandler(tagName: string): (outcome: DirectiveOutcome) => void {
+    return (outcome) => {
+      if (outcome.kind === "builtin-catch" && outcome.err instanceof DirectiveCancelledError) {
+        // Expected DOM removal — silent, queued intentionally preserved
+        return;
+      }
+      const err = outcome.err;
+      if (outcome.kind === "directive-error") {
+        console.error(
+          `[islands] Custom directive ${outcome.attrName} failed for <${tagName}>:`,
+          err,
+        );
+      } else {
+        console.error(`[islands] Built-in directive failed for <${tagName}>:`, err);
+      }
+      dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
+      registry.evict(tagName);
+    };
+  }
+
   // Stage 1: await all built-in directives in order. Throws if element is removed (cancellable reject).
   async function applyBuiltInDirectives(
     tagName: string,
@@ -433,12 +469,18 @@ export function revive(
         }
       : noop;
 
+    const handleOutcome = makeDirectiveOutcomeHandler(tagName);
+
     // Stage 1: built-in directives
     try {
       await applyBuiltInDirectives(tagName, el, note);
-    } catch {
-      // element was removed from the DOM before all conditions were met — skip loading
-      flushLog("aborted (element removed)");
+    } catch (err) {
+      handleOutcome({ kind: "builtin-catch", err });
+      flushLog(
+        err instanceof DirectiveCancelledError
+          ? "aborted (element removed)"
+          : "aborted (directive error)",
+      );
       return;
     }
 
@@ -466,11 +508,8 @@ export function revive(
         });
     };
 
-    const handleDirectiveError = (attrName: string, err: unknown) => {
-      console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
-      dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
-      registry.evict(tagName);
-    };
+    const handleDirectiveError = (attrName: string, err: unknown) =>
+      handleOutcome({ kind: "directive-error", attrName, err });
 
     // Stage 3: custom directives (run after built-ins — the directive owns the load() call)
     if (resolvedDirectives?.size) {
