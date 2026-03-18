@@ -276,40 +276,30 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const globs = resolvedDirs.map(
-        (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`,
-      );
+      const directoryGlobs = resolvedDirs.map((dir) => dir + "**/*.{ts,js}");
 
       // Use import.meta.glob for island files so Vite handles base URL rewriting
       // (hand-crafted import() calls resolve against the page origin, not the dev server)
       const islandPaths = islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
 
-      // globs always has at least one entry (rawDirs is never empty)
-      const islandsEntries = [`{ ${globs.join(", ")} }`];
-      if (islandPaths) islandsEntries.push(`import.meta.glob(${JSON.stringify(islandPaths)})`);
-
       // Resolve custom directive entrypoints via Vite's resolver (handles aliases, registers deps)
-      const directiveImportLines: string[] = [];
-      const customDirectivesMapLines: string[] = [];
-      for (const [i, def] of clientDirectiveDefinitions.entries()) {
+      const customDirectives: Array<{ name: string; entrypoint: string }> = [];
+      for (const def of clientDirectiveDefinitions) {
         const resolved = await this.resolve(def.entrypoint);
         if (!resolved) {
           throw new Error(
             `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`,
           );
         }
-        directiveImportLines.push(`import _directive${i} from ${JSON.stringify(resolved.id)};`);
-        customDirectivesMapLines.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
+        customDirectives.push({ name: def.name, entrypoint: resolved.id });
       }
 
-      const reviveOptions = { directives, debug, retry: options.retry };
-      const islandsObjectExpr = `Object.assign({}, ${islandsEntries.join(", ")})`;
       return buildReviveModuleSource({
         runtimePath,
-        directiveImportLines,
-        islandsObjectExpr,
-        customDirectivesMapLines: customDirectivesMapLines.length ? customDirectivesMapLines : null,
-        reviveOptions,
+        directoryGlobs,
+        islandPaths,
+        customDirectives,
+        reviveOptions: { directives, debug, retry: options.retry },
       });
     },
   };

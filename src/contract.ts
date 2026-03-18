@@ -1,8 +1,8 @@
 /**
  * Plugin ↔ Runtime contract (deep module).
  *
- * Single source of truth for the payload shape, key→tag derivation, validation,
- * and optional serialization. Plugin and runtime both depend on this module in-process.
+ * Single source of truth for the payload shape, key→tag derivation, and defaults.
+ * Plugin and runtime both depend on this module in-process.
  */
 
 // ---------------------------------------------------------------------------
@@ -167,103 +167,19 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Optional validation
-// ---------------------------------------------------------------------------
-
-export type ValidateTagFn = (tag: string, key: string) => void | never;
-
-/** No-op validator (no throw). */
-export const noValidateTag: ValidateTagFn = () => {};
-
-/** Optional strict validator: throws if tag has no hyphen (keyToTag skip already handles warn+skip). */
-export function defaultValidateTag(tag: string, key: string): void {
-  if (tag.includes("-")) return;
-  const filename = basename(key);
-  throw new Error(
-    `[islands] Invalid tag from "${filename}" — filename must contain a hyphen for a valid custom element tag (e.g. rename to "${tag}-island.ts")`,
-  );
-}
-
-// ---------------------------------------------------------------------------
-// 5. Strategies bundle (optional extension point)
-// ---------------------------------------------------------------------------
-
-export interface ReviveStrategies {
-  keyToTag?: KeyToTagFn;
-  validateTag?: ValidateTagFn;
-}
-
-const DEFAULT_STRATEGIES: Required<ReviveStrategies> = {
-  keyToTag: defaultKeyToTag,
-  validateTag: noValidateTag,
-};
-
-export function resolveStrategies(overrides?: ReviveStrategies): Required<ReviveStrategies> {
-  return {
-    keyToTag: overrides?.keyToTag ?? DEFAULT_STRATEGIES.keyToTag,
-    validateTag: overrides?.validateTag ?? DEFAULT_STRATEGIES.validateTag,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// 6. Build island map (internal complexity hidden by contract consumer)
+// 4. Build island map (internal complexity hidden by contract consumer)
 // ---------------------------------------------------------------------------
 
 /**
- * Builds tag → loader map from payload using the given strategies.
- * Handles keyToTag (and skip) and validateTag; deduplicates by tag (first wins).
+ * Builds tag → loader map from payload.
+ * Applies the default key→tag derivation and deduplicates by tag (first wins).
  */
-export function buildIslandMap(
-  payload: RevivePayload,
-  strategies: Required<ReviveStrategies> = DEFAULT_STRATEGIES,
-): Map<string, IslandLoader> {
+export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
   for (const [key, loader] of Object.entries(payload.islands)) {
-    const { tag, skip } = strategies.keyToTag(key);
+    const { tag, skip } = defaultKeyToTag(key);
     if (skip) continue;
-    try {
-      strategies.validateTag(tag, key);
-    } catch {
-      continue;
-    }
     if (!map.has(tag)) map.set(tag, loader);
   }
   return map;
-}
-
-// ---------------------------------------------------------------------------
-// 7. Runtime entrypoint signature (contract surface)
-// ---------------------------------------------------------------------------
-
-export interface ReviveResult {
-  disconnect: () => void;
-}
-
-/**
- * Runtime entrypoint type. Implementations (e.g. default DOM runtime, or a
- * custom/headless runtime) accept the same payload and optional strategies.
- */
-export type ReviveFn = (payload: RevivePayload, strategies?: ReviveStrategies) => ReviveResult;
-
-// ---------------------------------------------------------------------------
-// 8. Serialization helpers (optional; for different runtimes / SSR)
-// ---------------------------------------------------------------------------
-
-/** Serializable subset of RevivePayload (e.g. for worker or SSR runtime). */
-export interface SerializableRevivePayload {
-  tagToUrl: Record<string, string>;
-  options: ReviveOptions;
-  customDirectiveNames?: string[];
-}
-
-/**
- * Build a serializable payload from tag→url (e.g. from manifest).
- * Runtime that consumes this would fetch(url) and eval/import to get the loader.
- */
-export function makeSerializablePayload(
-  tagToUrl: Record<string, string>,
-  options: ReviveOptions,
-  customDirectiveNames?: string[],
-): SerializableRevivePayload {
-  return { tagToUrl, options, customDirectiveNames };
 }

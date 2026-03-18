@@ -3,7 +3,7 @@
  * Single place for "what is an island?" and "paths for the virtual module".
  */
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 /** Matches .ts or .js extension. Exported for plugin transform/watch filters. */
 export const TS_JS_RE = /\.(ts|js)$/;
@@ -13,7 +13,11 @@ export const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/i
 
 /** True if file is under any of the given absolute directory paths. */
 export function inDirectory(file: string, absDirs: string[]): boolean {
-  return absDirs.some((dir) => file.startsWith(dir));
+  const resolvedFile = resolve(file);
+  return absDirs.some((dir) => {
+    const rel = relative(resolve(dir), resolvedFile);
+    return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+  });
 }
 
 /** Paths for load() virtual module: "/relative/to/root" form, forward slashes. */

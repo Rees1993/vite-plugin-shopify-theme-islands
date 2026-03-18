@@ -18,6 +18,11 @@ describe("discovery", () => {
       expect(inDirectory("/project/root/src/components/bar.ts", absDirs)).toBe(false);
       expect(inDirectory("/other/project/root/frontend/js/islands/x.ts", absDirs)).toBe(false);
     });
+
+    it("does not treat sibling paths with the same prefix as inside the directory", () => {
+      const absDirs = ["/project/root/frontend/js/islands"];
+      expect(inDirectory("/project/root/frontend/js/islands-legacy/widget.ts", absDirs)).toBe(false);
+    });
   });
 
   describe("getIslandPathsForLoad", () => {

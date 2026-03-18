@@ -321,6 +321,18 @@ describe("plugin", () => {
       expect(globCount).toBe(1);
     });
 
+    it("does not exclude sibling directories that only share the same prefix", async () => {
+      const legacyDir = join(tmp, "islands-legacy");
+      mkdirSync(legacyDir);
+      writeFileSync(join(legacyDir, "legacy-widget.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/islands/"] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).toContain("/islands-legacy/legacy-widget.ts");
+    });
+
     it("skips unreadable files silently", () => {
       const plugin = makePlugin({ directories: ["/nonexistent/"] });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);

@@ -8,7 +8,6 @@
 import { describe, it, expect } from "bun:test";
 import {
   defaultKeyToTag,
-  resolveStrategies,
   buildIslandMap,
   normalizeReviveOptions,
   DEFAULT_DIRECTIVES,
@@ -71,7 +70,7 @@ describe("contract", () => {
         },
         options: {},
       };
-      const map = buildIslandMap(payload, resolveStrategies());
+      const map = buildIslandMap(payload);
       expect(map.size).toBe(2);
       expect(map.get("product-form")).toBe(loader);
       expect(map.get("cart-drawer")).toBe(loader);
@@ -86,7 +85,7 @@ describe("contract", () => {
         },
         options: {},
       };
-      const map = buildIslandMap(payload, resolveStrategies());
+      const map = buildIslandMap(payload);
       expect(map.size).toBe(1);
       expect(map.has("valid-island")).toBe(true);
       expect(map.has("invalid")).toBe(false);
@@ -102,7 +101,7 @@ describe("contract", () => {
         },
         options: {},
       };
-      const map = buildIslandMap(payload, resolveStrategies());
+      const map = buildIslandMap(payload);
       expect(map.get("my-island")).toBe(first);
     });
   });
