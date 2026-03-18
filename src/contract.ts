@@ -34,10 +34,18 @@ export interface ReviveOptions {
   retry?: RetryConfig;
 }
 
+/** Options passed to a custom client directive function. */
+export interface ClientDirectiveOptions {
+  /** The matched attribute name, e.g. `'client:on-click'` */
+  name: string;
+  /** The attribute value; empty string if no value was set */
+  value: string;
+}
+
 /** Custom directive function at runtime (load, opts, element). */
 export type ClientDirective = (
   load: () => Promise<void>,
-  options: { name: string; value: string },
+  options: ClientDirectiveOptions,
   el: HTMLElement,
 ) => void | Promise<void>;
 
@@ -144,9 +152,11 @@ export type KeyToTagResult = { tag: string; skip?: boolean };
  */
 export type KeyToTagFn = (key: string) => KeyToTagResult;
 
+const basename = (key: string) => key.split("/").pop() ?? key;
+
 /** Default: last path segment, extension stripped; skip (and warn) when tag has no hyphen. */
 export function defaultKeyToTag(key: string): KeyToTagResult {
-  const filename = key.split("/").pop() ?? key;
+  const filename = basename(key);
   const tag = filename.replace(/\.(ts|js)$/, "");
   const skip = !tag.includes("-");
   if (skip && tag)
@@ -168,7 +178,7 @@ export const noValidateTag: ValidateTagFn = () => {};
 /** Optional strict validator: throws if tag has no hyphen (keyToTag skip already handles warn+skip). */
 export function defaultValidateTag(tag: string, key: string): void {
   if (tag.includes("-")) return;
-  const filename = key.split("/").pop() ?? key;
+  const filename = basename(key);
   throw new Error(
     `[islands] Invalid tag from "${filename}" — filename must contain a hyphen for a valid custom element tag (e.g. rename to "${tag}-island.ts")`,
   );
@@ -205,7 +215,7 @@ export function resolveStrategies(overrides?: ReviveStrategies): Required<Revive
  */
 export function buildIslandMap(
   payload: RevivePayload,
-  strategies: Required<ReviveStrategies>,
+  strategies: Required<ReviveStrategies> = DEFAULT_STRATEGIES,
 ): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
   for (const [key, loader] of Object.entries(payload.islands)) {

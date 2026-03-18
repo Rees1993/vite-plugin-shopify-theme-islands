@@ -21,50 +21,7 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 /** A function that triggers the load of an island module. */
 export type ClientDirectiveLoader = () => Promise<void>;
 
-/** Options passed to a custom client directive function. */
-export interface ClientDirectiveOptions {
-  /** The matched attribute name, e.g. `'client:on-click'` */
-  name: string;
-  /** The attribute value; empty string if no value was set */
-  value: string;
-}
-
-/**
- * A custom client directive function.
- *
- * Called by the runtime when a matching attribute is found on an island element.
- * The function is responsible for calling `load()` when the desired condition is met.
- *
- * @example
- * ```ts
- * // src/directives/hash.ts
- * import type { ClientDirective } from 'vite-plugin-shopify-theme-islands';
- *
- * const hashDirective: ClientDirective = (load, opts) => {
- *   const target = opts.value;
- *   if (location.hash === target) { load(); return; }
- *   window.addEventListener('hashchange', () => {
- *     if (location.hash === target) load();
- *   });
- * };
- *
- * export default hashDirective;
- * ```
- *
- * Register it in `vite.config.ts`:
- * ```ts
- * shopifyThemeIslands({
- *   directives: {
- *     custom: [{ name: 'client:hash', entrypoint: './src/directives/hash.ts' }],
- *   },
- * })
- * ```
- */
-export type ClientDirective = (
-  load: ClientDirectiveLoader,
-  options: ClientDirectiveOptions,
-  el: HTMLElement,
-) => void | Promise<void>;
+export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -332,8 +289,8 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (islandPaths) islandsEntries.push(`import.meta.glob(${JSON.stringify(islandPaths)})`);
 
       // Resolve custom directive entrypoints via Vite's resolver (handles aliases, registers deps)
-      const directiveImports: string[] = [];
-      const mapEntries: string[] = [];
+      const directiveImportLines: string[] = [];
+      const customDirectivesMapLines: string[] = [];
       for (const [i, def] of clientDirectiveDefinitions.entries()) {
         const resolved = await this.resolve(def.entrypoint);
         if (!resolved) {
@@ -341,17 +298,17 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
             `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`,
           );
         }
-        directiveImports.push(`import _directive${i} from ${JSON.stringify(resolved.id)};`);
-        mapEntries.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
+        directiveImportLines.push(`import _directive${i} from ${JSON.stringify(resolved.id)};`);
+        customDirectivesMapLines.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
       }
 
       const reviveOptions = { directives, debug, retry: options.retry };
       const islandsObjectExpr = `Object.assign({}, ${islandsEntries.join(", ")})`;
       return buildReviveModuleSource({
         runtimePath,
-        directiveImportLines: directiveImports,
+        directiveImportLines,
         islandsObjectExpr,
-        customDirectivesMapLines: mapEntries.length ? mapEntries : null,
+        customDirectivesMapLines: customDirectivesMapLines.length ? customDirectivesMapLines : null,
         reviveOptions,
       });
     },

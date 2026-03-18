@@ -17,7 +17,6 @@
 import {
   buildIslandMap,
   normalizeReviveOptions,
-  resolveStrategies,
   type ClientDirective,
   type IslandLoader,
   type ReviveOptions,
@@ -129,7 +128,7 @@ export function revive(
     ? islandsOrPayload
     : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };
   const opts = normalizeReviveOptions(payload.options);
-  const islandMap = buildIslandMap(payload, resolveStrategies());
+  const islandMap = buildIslandMap(payload);
   const resolvedDirectives = payload.customDirectives;
 
   const attrVisible = opts.directives.visible.attribute;
