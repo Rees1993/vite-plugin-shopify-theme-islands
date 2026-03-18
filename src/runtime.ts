@@ -110,8 +110,8 @@ interface IslandLogger {
 }
 
 const NOOP_LOGGER: IslandLogger = {
-  note(_msg: string) {},
-  flush(_summary: string) {},
+  note(_) {},
+  flush(_) {},
 };
 
 function createIslandLogger(tagName: string, debug: boolean): IslandLogger {
@@ -122,11 +122,10 @@ function createIslandLogger(tagName: string, debug: boolean): IslandLogger {
       msgs.push(msg);
     },
     flush(summary) {
-      const label = `[islands] <${tagName}> ${summary}`;
       if (msgs.length === 0) {
         console.log("[islands]", `<${tagName}> ${summary}`);
       } else {
-        console.groupCollapsed(label);
+        console.groupCollapsed(`[islands] <${tagName}> ${summary}`);
         for (const m of msgs) console.log(m);
         console.groupEnd();
       }
