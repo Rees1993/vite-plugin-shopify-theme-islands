@@ -32,6 +32,12 @@ export interface ReviveOptions {
   directives?: RuntimeDirectivesConfig;
   debug?: boolean;
   retry?: RetryConfig;
+  /**
+   * Milliseconds before a custom directive that never calls `load()` is considered timed out.
+   * When exceeded, `islands:error` is dispatched and the island is abandoned.
+   * Default: `0` (disabled).
+   */
+  directiveTimeout?: number;
 }
 
 /** Options passed to a custom client directive function. */
@@ -103,6 +109,7 @@ export interface NormalizedReviveOptions {
   };
   debug: boolean;
   retry: { retries: number; delay: number };
+  directiveTimeout: number;
 }
 
 /** Default directive config. Single source of truth for plugin merge and runtime normalization. */
@@ -137,6 +144,7 @@ export function normalizeReviveOptions(options?: ReviveOptions): NormalizedReviv
     },
     debug: options?.debug ?? false,
     retry: { ...r, ...options?.retry },
+    directiveTimeout: options?.directiveTimeout ?? 0,
   };
 }
 

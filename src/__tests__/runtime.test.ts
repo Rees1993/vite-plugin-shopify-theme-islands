@@ -487,6 +487,41 @@ describe("revive", () => {
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("cancels a pending-visible island and activates a newly added island in the same tick", async () => {
+      const originalIO = mockIntersectionObserver(
+        class {
+          constructor(_cb: IntersectionObserverCallback) {}
+          observe() {}
+          disconnect() {}
+        },
+      );
+
+      const pendingLoader = mock(async () => {});
+      const newLoader = mock(async () => {});
+
+      const pendingEl = document.createElement("pending-conc");
+      pendingEl.setAttribute("client:visible", "");
+      document.body.appendChild(pendingEl);
+      const newEl = document.createElement("new-conc");
+
+      // r() sets up the MO synchronously — DOM mutations must happen before any await
+      r({
+        "/islands/pending-conc.ts": pendingLoader,
+        "/islands/new-conc.ts": newLoader,
+      });
+
+      // Remove + add in the same synchronous tick as r() so MO fires as a microtask
+      document.body.removeChild(pendingEl);
+      document.body.appendChild(newEl);
+
+      await flush();
+
+      expect(pendingLoader).not.toHaveBeenCalled();
+      expect(newLoader).toHaveBeenCalledTimes(1);
+
+      globalThis.IntersectionObserver = originalIO;
+    });
   });
 
   describe("child island cascade", () => {
@@ -1517,6 +1552,68 @@ describe("revive", () => {
       logSpy.mockRestore();
       groupCollapsed.mockRestore();
       groupEnd.mockRestore();
+    });
+  });
+
+  describe("directiveTimeout", () => {
+    it("fires islands:error when a custom directive never calls load() past the timeout", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      document.body.innerHTML = "<timeout-island client:never></timeout-island>";
+      const neverCallsLoad: ClientDirective = () => {
+        /* intentionally never calls load */
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:never", neverCallsLoad]]);
+      r(
+        { "/islands/timeout-island.ts": mock(async () => {}) },
+        { directiveTimeout: 20 },
+        customDirectives,
+      );
+
+      await flush(100);
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail.tag).toBe("timeout-island");
+
+      document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
+    it("does not fire islands:error when directive calls load() before the timeout", async () => {
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<fast-island client:fast></fast-island>";
+      const callsLoad: ClientDirective = (load) => {
+        void load();
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:fast", callsLoad]]);
+      r({ "/islands/fast-island.ts": loader }, { directiveTimeout: 50 }, customDirectives);
+
+      await flush(100);
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(handler).not.toHaveBeenCalled();
+
+      document.removeEventListener("islands:error", handler);
+    });
+
+    it("is disabled by default — no error when directiveTimeout is not set", async () => {
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      document.body.innerHTML = "<hang-island client:hang></hang-island>";
+      const neverCallsLoad: ClientDirective = () => {
+        /* never calls load */
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:hang", neverCallsLoad]]);
+      r({ "/islands/hang-island.ts": mock(async () => {}) }, {}, customDirectives);
+
+      await flush(100);
+      expect(handler).not.toHaveBeenCalled();
+
+      document.removeEventListener("islands:error", handler);
     });
   });
 });

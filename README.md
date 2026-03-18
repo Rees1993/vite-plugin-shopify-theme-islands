@@ -316,14 +316,27 @@ Multiple custom directives on the same element use AND semantics — the island 
 </product-reviews>
 ```
 
+#### Timeout guard
+
+By default, a custom directive that never calls `load()` silently keeps the island unloaded forever. Set `directiveTimeout` to fire `islands:error` and abandon the island if the directive hasn't resolved within the given window:
+
+```ts
+shopifyThemeIslands({
+  directiveTimeout: 5000, // abandon after 5 seconds
+});
+```
+
+This is useful during development to surface directives that hang due to bugs, or in production to ensure broken directives don't silently degrade the experience.
+
 ## Configuration
 
-| Option        | Type                 | Default                     | Description                                                                        |
-| ------------- | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
-| `directories` | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
-| `directives`  | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
-| `retry`       | `object`             | —                           | Automatic retry behaviour for failed island loads. See [Retries](#retries).        |
-| `debug`       | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
+| Option             | Type                 | Default                     | Description                                                                        |
+| ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
+| `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
+| `retry`            | `object`             | —                           | Automatic retry behaviour for failed island loads. See [Retries](#retries).        |
+| `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
+| `directiveTimeout` | `number`             | `0` (disabled)              | Milliseconds before a custom directive that never calls `load()` is considered timed out. Fires `islands:error` and abandons the island. |
 
 ### Directive defaults
 
@@ -441,7 +454,7 @@ document.addEventListener("islands:load", (e) => {
 | Event           | Detail properties              | When it fires                                              |
 | --------------- | ------------------------------ | ---------------------------------------------------------- |
 | `islands:load`  | `tag`, `duration`, `attempt`   | Island module resolves successfully                        |
-| `islands:error` | `tag`, `error`, `attempt`      | Load or custom directive fails (alongside `console.error`) |
+| `islands:error` | `tag`, `error`, `attempt`      | Load fails, custom directive throws or rejects, or `directiveTimeout` expires (alongside `console.error`) |
 
 `islands:error` fires on each retry attempt, not just the final failure. Multiple independent listeners are supported — each receives its own event.
 

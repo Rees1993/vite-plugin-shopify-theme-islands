@@ -144,6 +144,7 @@ export function revive(
   const debug = opts.debug;
   const retries = opts.retry.retries;
   const retryDelay = opts.retry.delay;
+  const directiveTimeout = opts.directiveTimeout;
 
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
@@ -179,6 +180,121 @@ export function revive(
     },
   };
 
+  // Stage 1: await all built-in directives in order. Throws if element is removed (cancellable reject).
+  async function applyBuiltInDirectives(
+    tagName: string,
+    el: HTMLElement,
+    note: (msg: string) => void,
+  ): Promise<void> {
+    const visibleAttr = el.getAttribute(attrVisible);
+    if (visibleAttr !== null) {
+      // Per-element value overrides global rootMargin (e.g. client:visible="0px")
+      note(`waiting for ${attrVisible}`);
+      await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable);
+    }
+    const query = el.getAttribute(attrMedia);
+    if (query === "") {
+      console.warn(
+        `[islands] <${tagName}> ${attrMedia} has no value — media check skipped, island will load immediately`,
+      );
+    } else if (query) {
+      note(`waiting for ${attrMedia}="${query}"`);
+      await media(query);
+    }
+    const idleAttr = el.getAttribute(attrIdle);
+    if (idleAttr !== null) {
+      // Per-element value overrides global timeout (e.g. client:idle="1000")
+      // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
+      const raw = parseInt(idleAttr, 10);
+      const elTimeout = Number.isNaN(raw) ? idleTimeout : raw;
+      note(`waiting for ${attrIdle} (${elTimeout}ms)`);
+      await idle(elTimeout);
+    }
+    const d = el.getAttribute(attrDefer);
+    if (d !== null) {
+      const dMs = parseInt(d, 10);
+      if (d !== "" && Number.isNaN(dMs)) {
+        console.warn(
+          `[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`,
+        );
+      }
+      const ms = Number.isNaN(dMs) ? deferDelay : dMs;
+      note(`waiting for ${attrDefer} (${ms}ms)`);
+      await defer(ms);
+    }
+    const interactionAttr = el.getAttribute(attrInteraction);
+    if (interactionAttr !== null) {
+      // Per-element value overrides global events (space-separated MDN event names)
+      let events = interactionEvents;
+      if (interactionAttr) {
+        const tokens = interactionAttr.split(/\s+/).filter(Boolean);
+        if (tokens.length > 0) events = tokens;
+        else
+          console.warn(
+            `[islands] <${tagName}> ${attrInteraction} has no valid event tokens — using default events`,
+          );
+      }
+      note(`waiting for ${attrInteraction} (${events.join(", ")})`);
+      await interaction(el, events, pendingCancellable);
+    }
+  }
+
+  // Stage 2: AND latch — all matched custom directives must call load() before the island activates.
+  // Returns true if a directive matched (directive owns the load call); false if no match.
+  function applyCustomDirectives(
+    tagName: string,
+    el: HTMLElement,
+    matched: Array<[string, ClientDirective, string]>,
+    run: () => Promise<void>,
+    handleDirectiveError: (attrName: string, err: unknown) => void,
+    flush: (msg: string) => void,
+  ): boolean {
+    if (matched.length === 0) return false;
+
+    const attrNames = matched.map(([a]) => a).join(", ");
+    // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
+    flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${attrNames}`);
+    let remaining = matched.length;
+    let fired = false;
+    let aborted = false;
+    const loadOnce = () => {
+      if (fired || aborted) return Promise.resolve();
+      if (--remaining === 0) {
+        clearTimeout(timer);
+        fired = true;
+        return run();
+      }
+      return Promise.resolve();
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (directiveTimeout > 0) {
+      timer = setTimeout(() => {
+        if (fired || aborted) return;
+        aborted = true;
+        handleDirectiveError(
+          attrNames,
+          new Error(
+            `[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`,
+          ),
+        );
+      }, directiveTimeout);
+    }
+    for (const [attrName, directiveFn, value] of matched) {
+      try {
+        Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, el)).catch((err) => {
+          clearTimeout(timer);
+          aborted = true;
+          handleDirectiveError(attrName, err);
+        });
+      } catch (err) {
+        clearTimeout(timer);
+        aborted = true;
+        handleDirectiveError(attrName, err);
+      }
+    }
+    return true; // directive owns the load call
+  }
+
   async function loadIsland(
     tagName: string,
     el: HTMLElement,
@@ -212,7 +328,7 @@ export function revive(
     // or as a flat log if the island triggered with no intermediate steps
     const msgs = debug ? ([] as string[]) : null;
     const note = msgs ? (msg: string) => msgs.push(msg) : noop;
-    const flush = msgs
+    const flushLog = msgs
       ? (final: string) => {
           if (msgs.length === 0) {
             console.log("[islands]", `<${tagName}> ${final}`);
@@ -223,64 +339,17 @@ export function revive(
           }
         }
       : noop;
+
+    // Stage 1: built-in directives
     try {
-      const visibleAttr = el.getAttribute(attrVisible);
-      if (visibleAttr !== null) {
-        // Per-element value overrides global rootMargin (e.g. client:visible="0px")
-        note(`waiting for ${attrVisible}`);
-        await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable);
-      }
-      const query = el.getAttribute(attrMedia);
-      if (query === "") {
-        console.warn(
-          `[islands] <${tagName}> ${attrMedia} has no value — media check skipped, island will load immediately`,
-        );
-      } else if (query) {
-        note(`waiting for ${attrMedia}="${query}"`);
-        await media(query);
-      }
-      const idleAttr = el.getAttribute(attrIdle);
-      if (idleAttr !== null) {
-        // Per-element value overrides global timeout (e.g. client:idle="1000")
-        // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
-        const raw = parseInt(idleAttr, 10);
-        const elTimeout = Number.isNaN(raw) ? idleTimeout : raw;
-        note(`waiting for ${attrIdle} (${elTimeout}ms)`);
-        await idle(elTimeout);
-      }
-      const d = el.getAttribute(attrDefer);
-      if (d !== null) {
-        const dMs = parseInt(d, 10);
-        if (d !== "" && Number.isNaN(dMs)) {
-          console.warn(
-            `[islands] <${tagName}> invalid ${attrDefer} value "${d}" — using default ${deferDelay}ms`,
-          );
-        }
-        const ms = Number.isNaN(dMs) ? deferDelay : dMs;
-        note(`waiting for ${attrDefer} (${ms}ms)`);
-        await defer(ms);
-      }
-      const interactionAttr = el.getAttribute(attrInteraction);
-      if (interactionAttr !== null) {
-        // Per-element value overrides global events (space-separated MDN event names)
-        let events = interactionEvents;
-        if (interactionAttr) {
-          const tokens = interactionAttr.split(/\s+/).filter(Boolean);
-          if (tokens.length > 0) events = tokens;
-          else
-            console.warn(
-              `[islands] <${tagName}> ${attrInteraction} has no valid event tokens — using default events`,
-            );
-        }
-        note(`waiting for ${attrInteraction} (${events.join(", ")})`);
-        await interaction(el, events, pendingCancellable);
-      }
+      await applyBuiltInDirectives(tagName, el, note);
     } catch {
       // element was removed from the DOM before all conditions were met — skip loading
-      flush("aborted (element removed)");
+      flushLog("aborted (element removed)");
       return;
     }
 
+    // Stage 2: retry-aware loader
     const run = (): Promise<void> => {
       if (disconnected) return Promise.resolve();
       const t0 = performance.now();
@@ -317,46 +386,17 @@ export function revive(
       queued.delete(tagName);
     };
 
-    // Custom directives run after built-ins — the directive owns the load() call
+    // Stage 3: custom directives (run after built-ins — the directive owns the load() call)
     if (resolvedDirectives?.size) {
       const matched: Array<[string, ClientDirective, string]> = [];
       for (const [attrName, directiveFn] of resolvedDirectives) {
         const value = el.getAttribute(attrName);
         if (value !== null) matched.push([attrName, directiveFn, value]);
       }
-      if (matched.length > 0) {
-        // AND latch: all matched directives must call load() before the island loads.
-        // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
-        flush(
-          `dispatching to custom directive${matched.length === 1 ? "" : "s"} ${matched.map(([a]) => a).join(", ")}`,
-        );
-        let remaining = matched.length;
-        let fired = false;
-        let aborted = false;
-        const loadOnce = () => {
-          if (fired || aborted) return Promise.resolve();
-          if (--remaining === 0) {
-            fired = true;
-            return run();
-          }
-          return Promise.resolve();
-        };
-        for (const [attrName, directiveFn, value] of matched) {
-          try {
-            Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, el)).catch((err) => {
-              aborted = true;
-              handleDirectiveError(attrName, err);
-            });
-          } catch (err) {
-            aborted = true;
-            handleDirectiveError(attrName, err);
-          }
-        }
-        return; // directive owns the load call
-      }
+      if (applyCustomDirectives(tagName, el, matched, run, handleDirectiveError, flushLog)) return;
     }
 
-    flush("triggered");
+    flushLog("triggered");
     run();
   }
 
@@ -386,23 +426,29 @@ export function revive(
     while ((node = walker.nextNode())) activate(node as HTMLElement);
   }
 
-  const observer = new MutationObserver((mutations) => {
-    // Cancel loading for any pending-cancellable elements that were removed from the DOM.
-    // Only scan if there are removals and there are pending elements to cancel.
-    if (pendingCancellable.size > 0 && mutations.some((m) => m.removedNodes.length > 0)) {
-      for (const [el, cancel] of pendingCancellable) {
-        if (!el.isConnected) {
-          pendingCancellable.delete(el);
-          cancel();
-        }
+  // Cancel loading for any pending-cancellable elements that were removed from the DOM.
+  function handleRemovals(): void {
+    if (pendingCancellable.size === 0) return;
+    for (const [el, cancel] of pendingCancellable) {
+      if (!el.isConnected) {
+        pendingCancellable.delete(el);
+        cancel();
       }
     }
-    // Activate islands added dynamically
+  }
+
+  // Activate islands added dynamically.
+  function handleAdditions(mutations: MutationRecord[]): void {
     for (const { addedNodes } of mutations) {
       for (const node of addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) walk(node as HTMLElement);
       }
     }
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    handleRemovals();
+    handleAdditions(mutations);
   });
 
   function init(): void {
