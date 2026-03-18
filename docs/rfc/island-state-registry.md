@@ -1,5 +1,14 @@
 # RFC: Island Loading State Registry
 
+## Semver impact: **patch**
+
+Pure internal refactor — no public API surface changes. `createIslandRegistry` lives
+entirely inside `revive()`'s closure and is never exported. The public contract of
+`revive(payload)` and `{ disconnect }` is unchanged. Consumers see identical behaviour:
+same events, same timing, same options interface. The only observable difference is the
+latent `queued` state bug being fixed (retry exhaustion and success now clean up
+correctly), but that was always the intended behaviour — fixing a bug is a patch.
+
 ## Problem
 
 `src/runtime.ts` — `revive()` closure contains five mutable collections tracking island
