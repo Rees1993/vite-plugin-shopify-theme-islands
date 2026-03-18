@@ -109,13 +109,13 @@ interface IslandLogger {
   flush(summary: string): void;
 }
 
-const NOOP_LOGGER: IslandLogger = {
-  note(_) {},
-  flush(_) {},
+const SILENT_LOGGER: IslandLogger = {
+  note() {},
+  flush() {},
 };
 
 function createIslandLogger(tagName: string, debug: boolean): IslandLogger {
-  if (!debug) return NOOP_LOGGER;
+  if (!debug) return SILENT_LOGGER;
   const msgs: string[] = [];
   return {
     note(msg) {
@@ -178,13 +178,13 @@ interface IslandRegistry {
    * Used by customElementFilter (NodeFilter.FILTER_REJECT) and the ancestor walk
    * in activate() to defer child islands until the parent resolves.
    */
-  isBlockedBy(tag: string): boolean;
+  isCurrentlyLoading(tag: string): boolean;
 
   /** True once the initial DOM walk has completed (suppresses "waiting · ..." logs). */
-  readonly initDone: boolean;
+  readonly initialWalkComplete: boolean;
 
   /** Called exactly once at the end of init(). */
-  markInitDone(): void;
+  markInitialWalkComplete(): void;
 
   /** Register a cancel callback for an element awaiting a cancellable directive. */
   watchCancellable(el: Element, cancel: () => void): void;
@@ -200,8 +200,8 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
   const queued = new Set<string>();
   const loaded = new Set<string>();
   const retryCount = new Map<string, number>();
-  const pendingCancellable = new Map<Element, () => void>();
-  let initDone = false;
+  const cancellableElements = new Map<Element, () => void>();
+  let initialWalkComplete = false;
 
   return {
     queue(tag: string): boolean {
@@ -235,27 +235,27 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
       queued.delete(tag);
     },
 
-    isBlockedBy(tag: string): boolean {
+    isCurrentlyLoading(tag: string): boolean {
       return queued.has(tag);
     },
 
-    get initDone(): boolean {
-      return initDone;
+    get initialWalkComplete(): boolean {
+      return initialWalkComplete;
     },
 
-    markInitDone(): void {
-      initDone = true;
+    markInitialWalkComplete(): void {
+      initialWalkComplete = true;
     },
 
     watchCancellable(el: Element, cancel: () => void): void {
-      pendingCancellable.set(el, cancel);
+      cancellableElements.set(el, cancel);
     },
 
     cancelDetached(): void {
-      if (pendingCancellable.size === 0) return;
-      for (const [el, cancel] of pendingCancellable) {
+      if (cancellableElements.size === 0) return;
+      for (const [el, cancel] of cancellableElements) {
         if (!el.isConnected) {
-          pendingCancellable.delete(el);
+          cancellableElements.delete(el);
           cancel();
         }
       }
@@ -310,7 +310,7 @@ export function revive(
       const tag = (node as Element).tagName;
       if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
       const lowerTag = tag.toLowerCase();
-      if (registry.isBlockedBy(lowerTag)) return NodeFilter.FILTER_REJECT;
+      if (registry.isCurrentlyLoading(lowerTag)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   };
@@ -460,7 +460,7 @@ export function revive(
     // Show which directives the island is waiting on inside the init group. Skipped for
     // dynamic (post-init) activations — the completion group is sufficient there.
     // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
-    if (debug && !registry.initDone) {
+    if (debug && !registry.initialWalkComplete) {
       const parts: string[] = [];
       // Push `attr` or `attr="val"` when the element has the attribute; skip null (absent)
       const pushAttr = (attr: string, val: string | null) => {
@@ -547,7 +547,7 @@ export function revive(
     // Don't activate if this element is inside a queued-but-not-yet-loaded parent island
     let ancestor = el.parentElement;
     while (ancestor) {
-      if (registry.isBlockedBy(ancestor.tagName.toLowerCase())) return;
+      if (registry.isCurrentlyLoading(ancestor.tagName.toLowerCase())) return;
       ancestor = ancestor.parentElement;
     }
 
@@ -581,7 +581,7 @@ export function revive(
   function init(): void {
     if (debug) console.groupCollapsed(`[islands] ready — ${islandMap.size} island(s)`);
     walk(document.body);
-    registry.markInitDone();
+    registry.markInitialWalkComplete();
     if (debug) console.groupEnd();
     observer.observe(document.body, { childList: true, subtree: true });
   }
