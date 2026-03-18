@@ -9,7 +9,7 @@ description: >
   client:interaction values warn and fall back to default events.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.1"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts

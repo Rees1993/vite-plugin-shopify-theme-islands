@@ -4,12 +4,13 @@ description: >
   Getting-started journey and plugin configuration. Covers the full path from
   install to first working island. shopifyThemeIslands() options: directories
   (string | string[]), debug, directives deep-merge (visible, idle, media,
-  defer, interaction, custom), and retry (retries, delay with exponential
-  backoff). Load when setting up the plugin, configuring island scan
-  directories, or enabling retry.
+  defer, interaction, custom), retry (retries, delay with exponential backoff),
+  and directiveTimeout (ms before a silent custom directive hang fires
+  islands:error). Load when setting up the plugin, configuring island scan
+  directories, enabling retry, or enabling directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.1"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
@@ -90,6 +91,16 @@ shopifyThemeIslands({
 ```
 
 `retries` is the number of attempts after the first failure. `delay` is the base ms — each subsequent retry doubles it (1000ms → 2000ms → 4000ms).
+
+### Enable custom directive timeout
+
+```ts
+shopifyThemeIslands({ directiveTimeout: 5000 });
+```
+
+If a custom directive never calls `load()`, the island silently hangs forever by default. Setting `directiveTimeout` starts a timer when entering the AND latch. If the latch hasn't resolved when it fires, `islands:error` is dispatched and the island is abandoned.
+
+Default: `0` (disabled — no timeout, existing behaviour preserved).
 
 ### Enable console debug output
 
@@ -216,3 +227,27 @@ shopifyThemeIslands({ retry: { retries: 3 } });
 Unknown keys are silently ignored. The correct field is `retries`.
 
 Source: src/contract.ts — RetryConfig
+
+### HIGH `directiveTimeout` nested inside `directives` or `retry` — timeout never applies
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    directiveTimeout: 5000, // ← wrong nesting
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directiveTimeout: 5000, // ← top-level option
+});
+```
+
+`directiveTimeout` is a top-level option on `ShopifyThemeIslandsOptions`. Nesting it anywhere else is silently ignored.
+
+Source: src/index.ts — ShopifyThemeIslandsOptions
