@@ -144,6 +144,7 @@ export function revive(
   const debug = opts.debug;
   const retries = opts.retry.retries;
   const retryDelay = opts.retry.delay;
+  const directiveTimeout = opts.directiveTimeout;
 
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
@@ -336,18 +337,35 @@ export function revive(
         const loadOnce = () => {
           if (fired || aborted) return Promise.resolve();
           if (--remaining === 0) {
+            if (timer !== undefined) clearTimeout(timer);
             fired = true;
             return run();
           }
           return Promise.resolve();
         };
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        if (directiveTimeout > 0) {
+          timer = setTimeout(() => {
+            if (fired || aborted) return;
+            aborted = true;
+            const err = new Error(
+              `[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`,
+            );
+            console.error(err.message);
+            dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
+            retryCount.delete(tagName);
+            queued.delete(tagName);
+          }, directiveTimeout);
+        }
         for (const [attrName, directiveFn, value] of matched) {
           try {
             Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, el)).catch((err) => {
+              if (timer !== undefined) clearTimeout(timer);
               aborted = true;
               handleDirectiveError(attrName, err);
             });
           } catch (err) {
+            if (timer !== undefined) clearTimeout(timer);
             aborted = true;
             handleDirectiveError(attrName, err);
           }

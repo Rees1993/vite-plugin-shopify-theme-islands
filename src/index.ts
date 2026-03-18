@@ -98,6 +98,12 @@ export interface ShopifyThemeIslandsOptions {
   directives?: DirectivesConfig;
   /** Automatic retry behaviour for failed island loads. */
   retry?: RetryConfig;
+  /**
+   * Milliseconds before a custom directive that never calls `load()` is considered timed out.
+   * When exceeded, `islands:error` is dispatched and the island is abandoned.
+   * Default: `0` (disabled).
+   */
+  directiveTimeout?: number;
 }
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
@@ -299,7 +305,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         directoryGlobs,
         islandPaths,
         customDirectives,
-        reviveOptions: { directives, debug, retry: options.retry },
+        reviveOptions: { directives, debug, retry: options.retry, directiveTimeout: options.directiveTimeout },
       });
     },
   };

@@ -1519,4 +1519,66 @@ describe("revive", () => {
       groupEnd.mockRestore();
     });
   });
+
+  describe("directiveTimeout", () => {
+    it("fires islands:error when a custom directive never calls load() past the timeout", async () => {
+      const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      document.body.innerHTML = "<timeout-island client:never></timeout-island>";
+      const neverCallsLoad: ClientDirective = () => {
+        /* intentionally never calls load */
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:never", neverCallsLoad]]);
+      r(
+        { "/islands/timeout-island.ts": mock(async () => {}) },
+        { directiveTimeout: 20 },
+        customDirectives,
+      );
+
+      await flush(100);
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail.tag).toBe("timeout-island");
+
+      document.removeEventListener("islands:error", handler);
+      consoleSpy.mockRestore();
+    });
+
+    it("does not fire islands:error when directive calls load() before the timeout", async () => {
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<fast-island client:fast></fast-island>";
+      const callsLoad: ClientDirective = (load) => {
+        void load();
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:fast", callsLoad]]);
+      r({ "/islands/fast-island.ts": loader }, { directiveTimeout: 50 }, customDirectives);
+
+      await flush(100);
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(handler).not.toHaveBeenCalled();
+
+      document.removeEventListener("islands:error", handler);
+    });
+
+    it("is disabled by default — no error when directiveTimeout is not set", async () => {
+      const handler = mock((e: CustomEvent<{ tag: string }>) => e);
+      document.addEventListener("islands:error", handler);
+
+      document.body.innerHTML = "<hang-island client:hang></hang-island>";
+      const neverCallsLoad: ClientDirective = () => {
+        /* never calls load */
+      };
+      const customDirectives = new Map<string, ClientDirective>([["client:hang", neverCallsLoad]]);
+      r({ "/islands/hang-island.ts": mock(async () => {}) }, {}, customDirectives);
+
+      await flush(100);
+      expect(handler).not.toHaveBeenCalled();
+
+      document.removeEventListener("islands:error", handler);
+    });
+  });
 });
