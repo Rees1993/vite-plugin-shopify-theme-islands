@@ -272,13 +272,10 @@ export function revive(
       timer = setTimeout(() => {
         if (fired || aborted) return;
         aborted = true;
-        const err = new Error(
-          `[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`,
+        handleDirectiveError(
+          matched.map(([a]) => a).join(", "),
+          new Error(`[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`),
         );
-        console.error(err.message);
-        dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
-        retryCount.delete(tagName);
-        queued.delete(tagName);
       }, directiveTimeout);
     }
     for (const [attrName, directiveFn, value] of matched) {
@@ -430,7 +427,7 @@ export function revive(
 
   // Cancel loading for any pending-cancellable elements that were removed from the DOM.
   function handleRemovals(mutations: MutationRecord[]): void {
-    if (pendingCancellable.size === 0 || !mutations.some((m) => m.removedNodes.length > 0)) return;
+    if (pendingCancellable.size === 0) return;
     for (const [el, cancel] of pendingCancellable) {
       if (!el.isConnected) {
         pendingCancellable.delete(el);
