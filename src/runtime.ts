@@ -104,7 +104,36 @@ function idle(timeout: number): Promise<void> {
   });
 }
 
-const noop = (..._: unknown[]) => {};
+interface IslandLogger {
+  note(msg: string): void;
+  flush(summary: string): void;
+}
+
+const NOOP_LOGGER: IslandLogger = {
+  note(_msg: string) {},
+  flush(_summary: string) {},
+};
+
+function createIslandLogger(tagName: string, debug: boolean): IslandLogger {
+  if (!debug) return NOOP_LOGGER;
+  const msgs: string[] = [];
+  return {
+    note(msg) {
+      msgs.push(msg);
+    },
+    flush(summary) {
+      const label = `[islands] <${tagName}> ${summary}`;
+      if (msgs.length === 0) {
+        console.log("[islands]", `<${tagName}> ${summary}`);
+      } else {
+        console.groupCollapsed(label);
+        for (const m of msgs) console.log(m);
+        console.groupEnd();
+      }
+      msgs.length = 0;
+    },
+  };
+}
 
 // Thrown by visible() and interaction() cancel paths when the element is removed
 // from the DOM before the directive condition is met. instanceof check is reliable
@@ -313,12 +342,12 @@ export function revive(
   async function applyBuiltInDirectives(
     tagName: string,
     el: HTMLElement,
-    note: (msg: string) => void,
+    log: IslandLogger,
   ): Promise<void> {
     const visibleAttr = el.getAttribute(attrVisible);
     if (visibleAttr !== null) {
       // Per-element value overrides global rootMargin (e.g. client:visible="0px")
-      note(`waiting for ${attrVisible}`);
+      log.note(`waiting for ${attrVisible}`);
       await visible(el, visibleAttr || rootMargin, threshold, registry.watchCancellable);
     }
     const query = el.getAttribute(attrMedia);
@@ -327,7 +356,7 @@ export function revive(
         `[islands] <${tagName}> ${attrMedia} has no value — media check skipped, island will load immediately`,
       );
     } else if (query) {
-      note(`waiting for ${attrMedia}="${query}"`);
+      log.note(`waiting for ${attrMedia}="${query}"`);
       await media(query);
     }
     const idleAttr = el.getAttribute(attrIdle);
@@ -336,7 +365,7 @@ export function revive(
       // parseInt('', 10) === NaN, so the empty-string case is covered by the NaN check
       const raw = parseInt(idleAttr, 10);
       const elTimeout = Number.isNaN(raw) ? idleTimeout : raw;
-      note(`waiting for ${attrIdle} (${elTimeout}ms)`);
+      log.note(`waiting for ${attrIdle} (${elTimeout}ms)`);
       await idle(elTimeout);
     }
     const d = el.getAttribute(attrDefer);
@@ -348,7 +377,7 @@ export function revive(
         );
       }
       const ms = Number.isNaN(dMs) ? deferDelay : dMs;
-      note(`waiting for ${attrDefer} (${ms}ms)`);
+      log.note(`waiting for ${attrDefer} (${ms}ms)`);
       await defer(ms);
     }
     const interactionAttr = el.getAttribute(attrInteraction);
@@ -363,7 +392,7 @@ export function revive(
             `[islands] <${tagName}> ${attrInteraction} has no valid event tokens — using default events`,
           );
       }
-      note(`waiting for ${attrInteraction} (${events.join(", ")})`);
+      log.note(`waiting for ${attrInteraction} (${events.join(", ")})`);
       await interaction(el, events, registry.watchCancellable);
     }
   }
@@ -376,13 +405,13 @@ export function revive(
     matched: Array<[string, ClientDirective, string]>,
     run: () => Promise<void>,
     handleDirectiveError: (attrName: string, err: unknown) => void,
-    flush: (msg: string) => void,
+    log: IslandLogger,
   ): boolean {
     if (matched.length === 0) return false;
 
     const attrNames = matched.map(([a]) => a).join(", ");
     // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
-    flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${attrNames}`);
+    log.flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${attrNames}`);
     let remaining = matched.length;
     let fired = false;
     let aborted = false;
@@ -453,30 +482,16 @@ export function revive(
       if (parts.length > 0) console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
     }
 
-    // Buffer subsequent stages; flush as a collapsed group if there were any,
-    // or as a flat log if the island triggered with no intermediate steps
-    const msgs = debug ? ([] as string[]) : null;
-    const note = msgs ? (msg: string) => msgs.push(msg) : noop;
-    const flushLog = msgs
-      ? (final: string) => {
-          if (msgs.length === 0) {
-            console.log("[islands]", `<${tagName}> ${final}`);
-          } else {
-            console.groupCollapsed(`[islands] <${tagName}> ${final}`);
-            for (const m of msgs) console.log(m);
-            console.groupEnd();
-          }
-        }
-      : noop;
+    const log = createIslandLogger(tagName, debug);
 
     const handleOutcome = makeDirectiveOutcomeHandler(tagName);
 
     // Stage 1: built-in directives
     try {
-      await applyBuiltInDirectives(tagName, el, note);
+      await applyBuiltInDirectives(tagName, el, log);
     } catch (err) {
       handleOutcome({ kind: "builtin-catch", err });
-      flushLog(
+      log.flush(
         err instanceof DirectiveCancelledError
           ? "aborted (element removed)"
           : "aborted (directive error)",
@@ -518,10 +533,10 @@ export function revive(
         const value = el.getAttribute(attrName);
         if (value !== null) matched.push([attrName, directiveFn, value]);
       }
-      if (applyCustomDirectives(tagName, el, matched, run, handleDirectiveError, flushLog)) return;
+      if (applyCustomDirectives(tagName, el, matched, run, handleDirectiveError, log)) return;
     }
 
-    flushLog("triggered");
+    log.flush("triggered");
     run();
   }
 
