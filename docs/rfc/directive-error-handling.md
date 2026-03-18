@@ -1,5 +1,26 @@
 # RFC: Unified Directive Error Handling
 
+## Semver impact: **patch**
+
+All changes are bug fixes to existing behaviour — no new options, no new exports, no
+changes to event shapes or timing for the happy path.
+
+- **`islands:error` now fires for unexpected built-in directive throws.** Previously these
+  were silently swallowed by the bare `catch {}`. This is fixing incorrect behaviour —
+  errors that should have been observable weren't. Consumers with `onIslandError` listeners
+  will receive events they couldn't see before, but only for genuinely unexpected failures
+  (not element removal). That is the correct behaviour and classifies as a bug fix.
+- **`DirectiveCancelledError` is internal.** It is never exported from the package.
+  Consumers cannot `instanceof`-check it. The sentinel is purely a runtime implementation
+  detail.
+- **The `queued` cleanup fix** (missing `queued.delete` on built-in cancellation) corrects
+  a bug where a re-inserted element could fail to reactivate. Bug fix → patch.
+
+If the `islands:error` change is judged a behaviour-breaking change (i.e. a consumer's
+`onIslandError` handler now receives events it was not designed to handle), it could be
+argued as **minor**. The counter-argument is that consumers are expected to handle any
+`islands:error` — the event contract doesn't promise it only fires for loader failures.
+
 ## Problem
 
 `src/runtime.ts` — two directive failure paths produce inconsistent outcomes:
