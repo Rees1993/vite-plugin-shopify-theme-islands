@@ -1,5 +1,20 @@
 # RFC: Debug Logger as Injected Dependency
 
+## Semver impact: **patch**
+
+Pure internal refactor — `IslandLogger` and `createIslandLogger` are never exported from
+the package. The public API (`revive()`, `{ disconnect }`, all options, all events) is
+unchanged. The only consumer-visible output is `console.log` / `console.groupCollapsed`
+messages, which are a debug-only affordance and not part of the versioned contract.
+
+The log message content may change slightly (e.g. `tagName` is now formatted once inside
+`flush()` rather than at three call sites), but the semantic information is identical.
+No consumer should be parsing debug console output programmatically.
+
+If the **flexible design** (IslandLogSink) were adopted instead — exporting `IslandLogSink`
+from the package so consumers can register custom sinks via `ReviveOptions.logger` — that
+would be **minor** (new additive public API). The recommended minimal design avoids this.
+
 ## Problem
 
 `src/runtime.ts` — debug logging is constructed inline inside `loadIsland()` on every
