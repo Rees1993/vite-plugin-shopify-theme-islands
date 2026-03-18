@@ -45,24 +45,29 @@ function visible(
   element: Element,
   rootMargin: string,
   threshold: number,
-  watch: (el: Element, cancel: () => void) => void,
+  watch: (el: Element, cancel: () => void) => () => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let unwatch = () => {};
+    const finish = (done: () => void) => {
+      if (settled) return;
+      settled = true;
+      unwatch();
+      io.disconnect();
+      done();
+    };
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          io.disconnect();
-          resolve();
+          finish(resolve);
         }
       },
       { rootMargin, threshold },
     );
 
     io.observe(element);
-    watch(element, () => {
-      io.disconnect();
-      reject(new DirectiveCancelledError());
-    });
+    unwatch = watch(element, () => finish(() => reject(new DirectiveCancelledError())));
   });
 }
 
@@ -72,21 +77,26 @@ function visible(
 function interaction(
   element: Element,
   events: string[],
-  watch: (el: Element, cancel: () => void) => void,
+  watch: (el: Element, cancel: () => void) => () => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let unwatch = () => {};
     const cleanup = () => {
       for (const name of events) element.removeEventListener(name, handler);
     };
-    const handler = () => {
+    const finish = (done: () => void) => {
+      if (settled) return;
+      settled = true;
+      unwatch();
       cleanup();
-      resolve();
+      done();
+    };
+    const handler = () => {
+      finish(resolve);
     };
     for (const name of events) element.addEventListener(name, handler);
-    watch(element, () => {
-      cleanup();
-      reject(new DirectiveCancelledError());
-    });
+    unwatch = watch(element, () => finish(() => reject(new DirectiveCancelledError())));
   });
 }
 
@@ -178,7 +188,7 @@ interface IslandRegistry {
    * Used by customElementFilter (NodeFilter.FILTER_REJECT) and the ancestor walk
    * in activate() to defer child islands until the parent resolves.
    */
-  isCurrentlyLoading(tag: string): boolean;
+  isQueued(tag: string): boolean;
 
   /** True once the initial DOM walk has completed (suppresses "waiting · ..." logs). */
   readonly initialWalkComplete: boolean;
@@ -187,7 +197,7 @@ interface IslandRegistry {
   markInitialWalkComplete(): void;
 
   /** Register a cancel callback for an element awaiting a cancellable directive. */
-  watchCancellable(el: Element, cancel: () => void): void;
+  watchCancellable(el: Element, cancel: () => void): () => void;
 
   /**
    * Remove and invoke cancel callbacks for every element no longer connected to the DOM.
@@ -235,7 +245,7 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
       queued.delete(tag);
     },
 
-    isCurrentlyLoading(tag: string): boolean {
+    isQueued(tag: string): boolean {
       return queued.has(tag);
     },
 
@@ -247,8 +257,11 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
       initialWalkComplete = true;
     },
 
-    watchCancellable(el: Element, cancel: () => void): void {
+    watchCancellable(el: Element, cancel: () => void): () => void {
       cancellableElements.set(el, cancel);
+      return () => {
+        cancellableElements.delete(el);
+      };
     },
 
     cancelDetached(): void {
@@ -310,7 +323,7 @@ export function revive(
       const tag = (node as Element).tagName;
       if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
       const lowerTag = tag.toLowerCase();
-      if (registry.isCurrentlyLoading(lowerTag)) return NodeFilter.FILTER_REJECT;
+      if (registry.isQueued(lowerTag)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   };
@@ -547,7 +560,7 @@ export function revive(
     // Don't activate if this element is inside a queued-but-not-yet-loaded parent island
     let ancestor = el.parentElement;
     while (ancestor) {
-      if (registry.isCurrentlyLoading(ancestor.tagName.toLowerCase())) return;
+      if (registry.isQueued(ancestor.tagName.toLowerCase())) return;
       ancestor = ancestor.parentElement;
     }
 
