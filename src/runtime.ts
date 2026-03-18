@@ -251,10 +251,9 @@ export function revive(
   ): boolean {
     if (matched.length === 0) return false;
 
+    const attrNames = matched.map(([a]) => a).join(", ");
     // With a single directive, remaining hits 0 on the first call — identical to passing run directly.
-    flush(
-      `dispatching to custom directive${matched.length === 1 ? "" : "s"} ${matched.map(([a]) => a).join(", ")}`,
-    );
+    flush(`dispatching to custom directive${matched.length === 1 ? "" : "s"} ${attrNames}`);
     let remaining = matched.length;
     let fired = false;
     let aborted = false;
@@ -273,7 +272,7 @@ export function revive(
         if (fired || aborted) return;
         aborted = true;
         handleDirectiveError(
-          matched.map(([a]) => a).join(", "),
+          attrNames,
           new Error(`[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`),
         );
       }, directiveTimeout);
@@ -426,7 +425,7 @@ export function revive(
   }
 
   // Cancel loading for any pending-cancellable elements that were removed from the DOM.
-  function handleRemovals(mutations: MutationRecord[]): void {
+  function handleRemovals(): void {
     if (pendingCancellable.size === 0) return;
     for (const [el, cancel] of pendingCancellable) {
       if (!el.isConnected) {
@@ -446,7 +445,7 @@ export function revive(
   }
 
   const observer = new MutationObserver((mutations) => {
-    handleRemovals(mutations);
+    handleRemovals();
     handleAdditions(mutations);
   });
 
