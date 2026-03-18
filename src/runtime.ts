@@ -261,7 +261,7 @@ export function revive(
     const loadOnce = () => {
       if (fired || aborted) return Promise.resolve();
       if (--remaining === 0) {
-        if (timer !== undefined) clearTimeout(timer);
+        clearTimeout(timer);
         fired = true;
         return run();
       }
@@ -284,12 +284,12 @@ export function revive(
     for (const [attrName, directiveFn, value] of matched) {
       try {
         Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, el)).catch((err) => {
-          if (timer !== undefined) clearTimeout(timer);
+          clearTimeout(timer);
           aborted = true;
           handleDirectiveError(attrName, err);
         });
       } catch (err) {
-        if (timer !== undefined) clearTimeout(timer);
+        clearTimeout(timer);
         aborted = true;
         handleDirectiveError(attrName, err);
       }
