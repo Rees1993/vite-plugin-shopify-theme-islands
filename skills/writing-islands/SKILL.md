@@ -8,7 +8,7 @@ description: >
   base class, and child island cascade behaviour.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.0"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -119,7 +119,7 @@ customElements.define("search-bar", SearchBar);
 
 Without the `Island` import the plugin cannot detect the file. The element appears in the DOM but the module is never lazy-loaded.
 
-Source: src/index.ts — ISLAND_IMPORT_RE, scanForIslandFiles
+Source: src/discovery.ts — ISLAND_IMPORT_RE, discoverIslandFiles
 
 ### HIGH Missing `customElements.define` call
 

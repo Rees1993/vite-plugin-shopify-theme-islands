@@ -46,7 +46,7 @@ export function discoverIslandFiles(root: string, absDirs: string[]): Set<string
       // skip unreadable
     }
   });
-  for (const f of found) if (inDirectory(f, absDirs)) found.delete(f);
+  for (const f of [...found]) if (inDirectory(f, absDirs)) found.delete(f);
   return found;
 }
 

@@ -81,7 +81,7 @@ export interface RevivePayload {
 }
 
 // ---------------------------------------------------------------------------
-// 2b. Options normalization (single source of defaults)
+// 2. Options normalization (single source of defaults)
 // ---------------------------------------------------------------------------
 
 /** Fully resolved options; all directive and retry fields have defaults applied. */

@@ -37,7 +37,7 @@ export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): 
     `const options = ${JSON.stringify(reviveOptions)};`,
   ];
 
-  if (customDirectivesMapLines && customDirectivesMapLines.length > 0) {
+  if (customDirectivesMapLines?.length) {
     lines.push(`const customDirectives = new Map([\n${customDirectivesMapLines.join(",\n")}\n]);`);
     lines.push(`const payload = { islands, options, customDirectives };`);
   } else {
