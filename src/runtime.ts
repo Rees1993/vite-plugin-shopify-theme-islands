@@ -39,20 +39,19 @@ function media(query: string): Promise<void> {
 }
 
 // Resolves when the element enters the viewport.
-// Registers a cancel function in `pending` so the outer MutationObserver can
-// abort this if the element is removed from the DOM before becoming visible.
+// Calls watch(element, cancel) so the outer MutationObserver can abort this
+// if the element is removed from the DOM before becoming visible.
 function visible(
   element: Element,
   rootMargin: string,
   threshold: number,
-  pending: Map<Element, () => void>,
+  watch: (el: Element, cancel: () => void) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           io.disconnect();
-          pending.delete(element);
           resolve();
         }
       },
@@ -60,7 +59,7 @@ function visible(
     );
 
     io.observe(element);
-    pending.set(element, () => {
+    watch(element, () => {
       io.disconnect();
       reject();
     });
@@ -68,24 +67,23 @@ function visible(
 }
 
 // Resolves when any of the given DOM events fires on the element.
-// Registers a cancel function in `pending` so the outer MutationObserver can
-// abort this if the element is removed from the DOM before interacting.
+// Calls watch(element, cancel) so the outer MutationObserver can abort this
+// if the element is removed from the DOM before interacting.
 function interaction(
   element: Element,
   events: string[],
-  pending: Map<Element, () => void>,
+  watch: (el: Element, cancel: () => void) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
       for (const name of events) element.removeEventListener(name, handler);
-      pending.delete(element);
     };
     const handler = () => {
       cleanup();
       resolve();
     };
     for (const name of events) element.addEventListener(name, handler);
-    pending.set(element, () => {
+    watch(element, () => {
       cleanup();
       reject();
     });
@@ -111,6 +109,126 @@ const noop = (..._: unknown[]) => {};
 function isRevivePayload(v: unknown): v is RevivePayload {
   return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
 }
+
+// ─── Island Loading State Registry ───────────────────────────────────────────
+
+interface IslandRegistry {
+  /**
+   * Attempt to claim a tag name for loading.
+   * Returns false if already queued or loaded — lets activate() bail early without
+   * a separate read.
+   */
+  queue(tag: string): boolean;
+
+  /**
+   * Notify the registry of a load outcome.
+   * "success" → clears retry state, marks loaded. Returns the attempt number for
+   *   inclusion in the islands:load event detail.
+   * "failure" → increments retry count. Returns { retryDelayMs, attempt } where
+   *   retryDelayMs is the next retry delay in ms, or null if retries are exhausted
+   *   (tag evicted from queued — becomes claimable again).
+   */
+  /** Mark tag as loaded. Returns the 1-based attempt number for the islands:load event. */
+  settleSuccess(tag: string): number;
+  /** Record a load failure. Returns next retry delay in ms, or null if retries exhausted (tag evicted). */
+  settleFailure(tag: string): { retryDelayMs: number | null; attempt: number };
+
+  /**
+   * Immediately evict a tag from the registry — used by directive errors that
+   * should abandon the island without going through retry logic.
+   */
+  evict(tag: string): void;
+
+  /**
+   * Returns true if the tag is queued but not yet loaded.
+   * Used by customElementFilter (NodeFilter.FILTER_REJECT) and the ancestor walk
+   * in activate() to defer child islands until the parent resolves.
+   */
+  isBlockedBy(tag: string): boolean;
+
+  /** True once the initial DOM walk has completed (suppresses "waiting · ..." logs). */
+  readonly initDone: boolean;
+
+  /** Called exactly once at the end of init(). */
+  markInitDone(): void;
+
+  /** Register a cancel callback for an element awaiting a cancellable directive. */
+  watchCancellable(el: Element, cancel: () => void): void;
+
+  /**
+   * Remove and invoke cancel callbacks for every element no longer connected to the DOM.
+   * Called by handleRemovals() — owns the isConnected scan internally.
+   */
+  cancelDetached(): void;
+}
+
+function createIslandRegistry(opts: { retries: number; retryDelay: number }): IslandRegistry {
+  const queued = new Set<string>();
+  const loaded = new Set<string>();
+  const retryCount = new Map<string, number>();
+  const pendingCancellable = new Map<Element, () => void>();
+  let initDone = false;
+
+  return {
+    queue(tag: string): boolean {
+      if (queued.has(tag) || loaded.has(tag)) return false;
+      queued.add(tag);
+      return true;
+    },
+
+    settleSuccess(tag: string): number {
+      const attempt = (retryCount.get(tag) ?? 0) + 1;
+      loaded.add(tag);
+      retryCount.delete(tag);
+      return attempt;
+    },
+
+    settleFailure(tag: string): { retryDelayMs: number | null; attempt: number } {
+      const attempt = (retryCount.get(tag) ?? 0) + 1;
+      if (attempt <= opts.retries) {
+        retryCount.set(tag, attempt);
+        return { retryDelayMs: opts.retryDelay * 2 ** (attempt - 1), attempt };
+      } else {
+        retryCount.delete(tag);
+        queued.delete(tag);
+        return { retryDelayMs: null, attempt };
+      }
+    },
+
+    evict(tag: string): void {
+      retryCount.delete(tag);
+      queued.delete(tag);
+    },
+
+    isBlockedBy(tag: string): boolean {
+      return queued.has(tag) && !loaded.has(tag);
+    },
+
+    get initDone(): boolean {
+      return initDone;
+    },
+
+    markInitDone(): void {
+      initDone = true;
+    },
+
+    watchCancellable(el: Element, cancel: () => void): void {
+      pendingCancellable.set(el, cancel);
+    },
+
+    cancelDetached(): void {
+      if (pendingCancellable.size === 0) return;
+      for (const [el, cancel] of pendingCancellable) {
+        if (!el.isConnected) {
+          pendingCancellable.delete(el);
+          cancel();
+        }
+      }
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function revive(payload: RevivePayload): { disconnect: () => void };
 /** @deprecated Pass a RevivePayload object instead. Will be removed in v2.0. */
@@ -142,30 +260,12 @@ export function revive(
   const idleTimeout = opts.directives.idle.timeout;
   const deferDelay = opts.directives.defer.delay;
   const debug = opts.debug;
-  const retries = opts.retry.retries;
-  const retryDelay = opts.retry.delay;
   const directiveTimeout = opts.directiveTimeout;
 
-  // Track queued tag names to avoid duplicate customElements.define calls
-  const queued = new Set<string>();
-
-  // Set to true after the initial DOM walk — suppresses the upfront "waiting · ..." log for
-  // dynamically added islands, where the completion group alone is sufficient.
-  let initDone = false;
-
-  // Track successfully loaded tag names so child islands can activate after their parent loads
-  const loaded = new Set<string>();
-
-  // Elements awaiting a cancellable directive (client:visible, client:interaction) — maps
-  // element to its cancel function. Checked by the MutationObserver to abort loading if removed.
-  const pendingCancellable = new Map<Element, () => void>();
-
-  // Tracks auto-retry attempts per tag — cleared on success or exhaustion.
-  const retryCount = new Map<string, number>();
-
-  // Returns true if the tag is queued but not yet loaded.
-  // Only islands can enter `queued`, so the islandMap check is redundant here.
-  const isUnloadedIsland = (tag: string) => queued.has(tag) && !loaded.has(tag);
+  const registry = createIslandRegistry({
+    retries: opts.retry.retries,
+    retryDelay: opts.retry.delay,
+  });
 
   // NodeFilter that accepts custom elements (tag names containing a hyphen),
   // skips (but still descends into) non-custom elements, and rejects the subtree
@@ -175,7 +275,7 @@ export function revive(
       const tag = (node as Element).tagName;
       if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
       const lowerTag = tag.toLowerCase();
-      if (isUnloadedIsland(lowerTag)) return NodeFilter.FILTER_REJECT;
+      if (registry.isBlockedBy(lowerTag)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   };
@@ -190,7 +290,12 @@ export function revive(
     if (visibleAttr !== null) {
       // Per-element value overrides global rootMargin (e.g. client:visible="0px")
       note(`waiting for ${attrVisible}`);
-      await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable);
+      await visible(
+        el,
+        visibleAttr || rootMargin,
+        threshold,
+        registry.watchCancellable.bind(registry),
+      );
     }
     const query = el.getAttribute(attrMedia);
     if (query === "") {
@@ -235,7 +340,7 @@ export function revive(
           );
       }
       note(`waiting for ${attrInteraction} (${events.join(", ")})`);
-      await interaction(el, events, pendingCancellable);
+      await interaction(el, events, registry.watchCancellable.bind(registry));
     }
   }
 
@@ -303,7 +408,7 @@ export function revive(
     // Show which directives the island is waiting on inside the init group. Skipped for
     // dynamic (post-init) activations — the completion group is sufficient there.
     // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
-    if (debug && !initDone) {
+    if (debug && !registry.initDone) {
       const parts: string[] = [];
       // Push `attr` or `attr="val"` when the element has the attribute; skip null (absent)
       const pushAttr = (attr: string, val: string | null) => {
@@ -355,9 +460,7 @@ export function revive(
       const t0 = performance.now();
       return loader()
         .then(() => {
-          const attempt = (retryCount.get(tagName) ?? 0) + 1;
-          loaded.add(tagName);
-          retryCount.delete(tagName);
+          const attempt = registry.settleSuccess(tagName);
           dispatch("islands:load", {
             tag: tagName,
             duration: performance.now() - t0,
@@ -367,14 +470,10 @@ export function revive(
         })
         .catch((err) => {
           console.error(`[islands] Failed to load <${tagName}>:`, err);
-          const attempt = retryCount.get(tagName) ?? 0;
-          dispatch("islands:error", { tag: tagName, error: err, attempt: attempt + 1 });
-          if (attempt < retries) {
-            retryCount.set(tagName, attempt + 1);
-            setTimeout(run, retryDelay * 2 ** attempt);
-          } else {
-            retryCount.delete(tagName);
-            queued.delete(tagName);
+          const { retryDelayMs, attempt } = registry.settleFailure(tagName);
+          dispatch("islands:error", { tag: tagName, error: err, attempt });
+          if (retryDelayMs !== null) {
+            setTimeout(run, retryDelayMs);
           }
         });
     };
@@ -382,8 +481,7 @@ export function revive(
     const handleDirectiveError = (attrName: string, err: unknown) => {
       console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
       dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
-      retryCount.delete(tagName);
-      queued.delete(tagName);
+      registry.evict(tagName);
     };
 
     // Stage 3: custom directives (run after built-ins — the directive owns the load() call)
@@ -402,18 +500,17 @@ export function revive(
 
   function activate(el: HTMLElement): void {
     const tagName = el.tagName.toLowerCase();
-    if (queued.has(tagName)) return;
     const loader = islandMap.get(tagName);
     if (!loader) return;
 
     // Don't activate if this element is inside a queued-but-not-yet-loaded parent island
     let ancestor = el.parentElement;
     while (ancestor) {
-      if (isUnloadedIsland(ancestor.tagName.toLowerCase())) return;
+      if (registry.isBlockedBy(ancestor.tagName.toLowerCase())) return;
       ancestor = ancestor.parentElement;
     }
 
-    queued.add(tagName);
+    if (!registry.queue(tagName)) return; // false = already queued or loaded
     loadIsland(tagName, el, loader);
   }
 
@@ -428,13 +525,7 @@ export function revive(
 
   // Cancel loading for any pending-cancellable elements that were removed from the DOM.
   function handleRemovals(): void {
-    if (pendingCancellable.size === 0) return;
-    for (const [el, cancel] of pendingCancellable) {
-      if (!el.isConnected) {
-        pendingCancellable.delete(el);
-        cancel();
-      }
-    }
+    registry.cancelDetached();
   }
 
   // Activate islands added dynamically.
@@ -454,7 +545,7 @@ export function revive(
   function init(): void {
     if (debug) console.groupCollapsed(`[islands] ready — ${islandMap.size} island(s)`);
     walk(document.body);
-    initDone = true;
+    registry.markInitDone();
     if (debug) console.groupEnd();
     observer.observe(document.body, { childList: true, subtree: true });
   }
