@@ -120,14 +120,6 @@ interface IslandRegistry {
    */
   queue(tag: string): boolean;
 
-  /**
-   * Notify the registry of a load outcome.
-   * "success" → clears retry state, marks loaded. Returns the attempt number for
-   *   inclusion in the islands:load event detail.
-   * "failure" → increments retry count. Returns { retryDelayMs, attempt } where
-   *   retryDelayMs is the next retry delay in ms, or null if retries are exhausted
-   *   (tag evicted from queued — becomes claimable again).
-   */
   /** Mark tag as loaded. Returns the 1-based attempt number for the islands:load event. */
   settleSuccess(tag: string): number;
   /** Record a load failure. Returns next retry delay in ms, or null if retries exhausted (tag evicted). */
@@ -178,6 +170,7 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
 
     settleSuccess(tag: string): number {
       const attempt = (retryCount.get(tag) ?? 0) + 1;
+      queued.delete(tag);
       loaded.add(tag);
       retryCount.delete(tag);
       return attempt;
@@ -201,7 +194,7 @@ function createIslandRegistry(opts: { retries: number; retryDelay: number }): Is
     },
 
     isBlockedBy(tag: string): boolean {
-      return queued.has(tag) && !loaded.has(tag);
+      return queued.has(tag);
     },
 
     get initDone(): boolean {
@@ -290,12 +283,7 @@ export function revive(
     if (visibleAttr !== null) {
       // Per-element value overrides global rootMargin (e.g. client:visible="0px")
       note(`waiting for ${attrVisible}`);
-      await visible(
-        el,
-        visibleAttr || rootMargin,
-        threshold,
-        registry.watchCancellable.bind(registry),
-      );
+      await visible(el, visibleAttr || rootMargin, threshold, registry.watchCancellable);
     }
     const query = el.getAttribute(attrMedia);
     if (query === "") {
@@ -340,7 +328,7 @@ export function revive(
           );
       }
       note(`waiting for ${attrInteraction} (${events.join(", ")})`);
-      await interaction(el, events, registry.watchCancellable.bind(registry));
+      await interaction(el, events, registry.watchCancellable);
     }
   }
 
@@ -523,11 +511,6 @@ export function revive(
     while ((node = walker.nextNode())) activate(node as HTMLElement);
   }
 
-  // Cancel loading for any pending-cancellable elements that were removed from the DOM.
-  function handleRemovals(): void {
-    registry.cancelDetached();
-  }
-
   // Activate islands added dynamically.
   function handleAdditions(mutations: MutationRecord[]): void {
     for (const { addedNodes } of mutations) {
@@ -538,7 +521,7 @@ export function revive(
   }
 
   const observer = new MutationObserver((mutations) => {
-    handleRemovals();
+    registry.cancelDetached();
     handleAdditions(mutations);
   });
 
