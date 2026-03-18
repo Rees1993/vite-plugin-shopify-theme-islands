@@ -11,6 +11,8 @@ library: vite-plugin-shopify-theme-islands
 library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
 
@@ -147,6 +149,31 @@ if (!customElements.get("mini-cart")) {
 The plugin loads the module but the custom element never upgrades without `customElements.define`.
 
 Source: src/runtime.ts — loader() is called but registration is the file's responsibility
+
+### HIGH Filename without a hyphen is skipped as an invalid custom element tag
+
+Wrong:
+
+```ts
+// frontend/js/islands/cartdrawer.ts
+class CartDrawer extends HTMLElement {}
+customElements.define("cartdrawer", CartDrawer);
+```
+
+Correct:
+
+```ts
+// frontend/js/islands/cart-drawer.ts
+class CartDrawer extends HTMLElement {}
+
+if (!customElements.get("cart-drawer")) {
+  customElements.define("cart-drawer", CartDrawer);
+}
+```
+
+The runtime derives the tag name from the filename and skips non-hyphenated names with a warning. Use valid custom element tag names in filenames.
+
+Source: src/contract.ts — defaultKeyToTag()
 
 ### MEDIUM Child island activates before parent is ready
 
