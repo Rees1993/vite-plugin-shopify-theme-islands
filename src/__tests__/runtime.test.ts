@@ -350,6 +350,53 @@ describe("revive", () => {
       expect(loader).not.toHaveBeenCalled();
     });
 
+    it("removes the visible cancellation watcher after visibility resolves", async () => {
+      let moCallback: MutationCallback | undefined;
+      let triggerVisible: IntersectionObserverCallback | undefined;
+      const disconnect = mock(() => {});
+      const OriginalMO = globalThis.MutationObserver;
+      const originalIO = mockIntersectionObserver(
+        class {
+          observe = (): void => {};
+          disconnect = disconnect;
+          constructor(cb: IntersectionObserverCallback) {
+            triggerVisible = cb;
+          }
+        },
+      );
+      globalThis.MutationObserver = class {
+        constructor(cb: MutationCallback) {
+          moCallback = cb;
+        }
+        observe() {}
+        disconnect() {}
+      } as unknown as typeof MutationObserver;
+
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<cleanup-visible client:visible></cleanup-visible>";
+      r({ "/islands/cleanup-visible.ts": loader });
+
+      const el = document.querySelector("cleanup-visible")!;
+      triggerVisible!(
+        [{ isIntersecting: true, target: el } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      await flush();
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(disconnect).toHaveBeenCalledTimes(1);
+
+      document.body.removeChild(el);
+      moCallback!(
+        [{ addedNodes: [], removedNodes: [el] } as unknown as MutationRecord],
+        {} as MutationObserver,
+      );
+      await flush();
+      expect(disconnect).toHaveBeenCalledTimes(1);
+
+      globalThis.IntersectionObserver = originalIO;
+      globalThis.MutationObserver = OriginalMO;
+    });
+
     it("attribute value overrides global rootMargin per element", () => {
       document.body.innerHTML = '<vis-override client:visible="0px"></vis-override>';
       r(
@@ -1432,6 +1479,42 @@ describe("revive", () => {
         el.dispatchEvent(new Event("mouseenter"));
         await flush();
         expect(loader).toHaveBeenCalledTimes(1);
+      });
+
+      it("removes the interaction cancellation watcher after interaction fires", async () => {
+        let moCallback: MutationCallback | undefined;
+        const OriginalMO = globalThis.MutationObserver;
+        globalThis.MutationObserver = class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver;
+
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<cleanup-cancel client:interaction></cleanup-cancel>";
+        r({ "/islands/cleanup-cancel.ts": loader });
+        await flush();
+
+        const el = document.querySelector("cleanup-cancel")!;
+        const removeSpy = spyOn(el, "removeEventListener");
+
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+        const cleanupCalls = removeSpy.mock.calls.length;
+
+        document.body.removeChild(el);
+        moCallback!(
+          [{ addedNodes: [], removedNodes: [el] } as unknown as MutationRecord],
+          {} as MutationObserver,
+        );
+        await flush();
+        expect(removeSpy).toHaveBeenCalledTimes(cleanupCalls);
+
+        removeSpy.mockRestore();
+        globalThis.MutationObserver = OriginalMO;
       });
 
       it("does not load when element removed before interaction fires", async () => {
