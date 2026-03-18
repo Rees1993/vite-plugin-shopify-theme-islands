@@ -306,6 +306,7 @@ Built-in directives always run first. A custom directive is only invoked after a
 ```
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
+If a custom directive throws or returns a rejected promise, the runtime dispatches `islands:error` and abandons that island activation attempt.
 
 Multiple custom directives on the same element use AND semantics — the island loads only once all matched directives have called `load()`. For example, given two registered custom directives `client:hash` and `client:network`:
 

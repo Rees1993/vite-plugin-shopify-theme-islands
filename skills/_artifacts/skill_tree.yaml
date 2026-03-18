@@ -1,6 +1,6 @@
 library:
   name: vite-plugin-shopify-theme-islands
-  version: "1.0.2"
+  version: "1.2.0"
   repository: https://github.com/Rees1993/vite-plugin-shopify-theme-islands
   description: Vite plugin for island architecture in Shopify themes
 generated_from:
@@ -17,7 +17,7 @@ skills:
     description: >
       Plugin install and vite.config.ts configuration. Covers
       shopifyThemeIslands() options: directories, debug, directives deep-merge,
-      and retry (retries + delay with exponential backoff).
+      retry (retries + delay with exponential backoff), and directiveTimeout.
     sources:
       - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
 
@@ -40,8 +40,8 @@ skills:
     path: skills/directives/SKILL.md
     description: >
       Built-in client directives: client:visible, client:media, client:idle,
-      client:defer. Combining directives (AND semantics), per-element value
-      overrides, empty client:media warning.
+      client:defer, client:interaction. Combining directives (AND semantics),
+      per-element value overrides, empty client:media warning.
     sources:
       - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
       - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -54,7 +54,7 @@ skills:
     description: >
       Custom client directives registered via directives.custom.
       ClientDirective signature (load, options, el), AND-latch when multiple
-      directives match an element, error handling.
+      directives match an element, error handling, and directiveTimeout.
     sources:
       - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
       - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -67,7 +67,8 @@ skills:
     description: >
       Island lifecycle events. onIslandLoad and onIslandError from /events
       entry point. Raw DOM events islands:load, islands:error. disconnect()
-      from virtual module for SPA navigation teardown.
+      from virtual module for SPA navigation teardown. Includes directiveTimeout
+      and custom directive failures in islands:error semantics.
     sources:
       - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
       - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts

@@ -6,11 +6,12 @@ description: >
   raw document.addEventListener for guaranteed type safety. Raw DOM events
   islands:load and islands:error on document. islands:load detail includes tag,
   duration (ms), and attempt (1-based). islands:error detail includes tag,
-  error, and attempt. disconnect() from the virtual module revive for SPA
-  navigation teardown.
+  error, and attempt, including custom directive failures and directiveTimeout
+  expiry. disconnect() from the virtual module revive for SPA navigation
+  teardown.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.1"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
@@ -73,7 +74,7 @@ onIslandError(({ tag, error, attempt }) => {
 });
 ```
 
-`onIslandError` fires on each retry attempt and on custom directive failures. `attempt` tells you which attempt failed — 1 is the initial load, 2 is the first retry, etc.
+`onIslandError` fires on each retry attempt, on custom directive failures, and when `directiveTimeout` expires. `attempt` tells you which attempt failed — 1 is the initial load, 2 is the first retry, etc.
 
 ### Teardown for SPA navigation
 
@@ -182,6 +183,10 @@ onIslandError(({ tag, error }) => {
 });
 ```
 
-`islands:error` fires when any custom directive throws or rejects, not only when the island module's `import()` fails. The `error` value may be a directive error rather than a network or chunk error.
+`islands:error` fires when any custom directive throws, rejects, or times out, not only when the island module's `import()` fails. The `error` value may be a directive error rather than a network or chunk error.
 
 Source: src/runtime.ts — handleDirectiveError dispatches `islands:error`
+
+### LOW Removed elements waiting on `client:visible` / `client:interaction` do not emit `islands:error`
+
+If an element is removed from the DOM before a cancellable built-in directive resolves, the runtime treats that as expected teardown and aborts silently. Use `onIslandError` for real failures, not DOM-removal cancellations.

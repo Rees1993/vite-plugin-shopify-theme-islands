@@ -4,11 +4,12 @@ description: >
   Custom client directives registered via directives.custom in vite.config.ts.
   ClientDirective function signature (load, options, el). AND-latch: when
   multiple custom directives match the same element, all must call load() before
-  the island activates. Error handling — thrown errors fire islands:error.
-  Custom directives run after all built-in conditions resolve.
+  the island activates. Error handling — thrown errors, rejected promises, and
+  directiveTimeout expiry fire islands:error. Custom directives run after all
+  built-in conditions resolve.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.1"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -99,6 +100,16 @@ const networkDirective: ClientDirective = async (load, _opts, el) => {
 
 The directive function can be async. Unhandled rejections fire the document-level `islands:error` event, so `onIslandError()` observers still see directive failures.
 
+### Timeout guard for hung directives
+
+```ts
+shopifyThemeIslands({
+  directiveTimeout: 5000,
+});
+```
+
+If a matched custom directive never calls `load()`, the runtime normally waits forever. Setting `directiveTimeout` turns that hang into an `islands:error` event and abandons the activation attempt after the configured delay.
+
 ### AND-latch with multiple matching directives
 
 ```html
@@ -129,7 +140,7 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 };
 ```
 
-No error is thrown and no timeout fires — the island is silently never loaded.
+No immediate error is thrown by default, so the island is silently never loaded unless you configure `directiveTimeout`.
 
 Source: src/runtime.ts — directive owns the `run()` call path
 

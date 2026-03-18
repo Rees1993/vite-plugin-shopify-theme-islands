@@ -1,19 +1,21 @@
 library:
   name: vite-plugin-shopify-theme-islands
-  version: "1.0.2"
+  version: "1.2.0"
   repository: https://github.com/Rees1993/vite-plugin-shopify-theme-islands
   description: >
     Vite plugin for island architecture in Shopify themes. Lazily loads custom
-    element modules based on client directives (visible, media, idle, defer) and
-    handles DOM lifecycle events, retry, and SPA teardown.
+    element modules based on client directives (visible, media, idle, defer,
+    interaction) and handles DOM lifecycle events, retry, directiveTimeout,
+    and SPA teardown.
 
 domains:
   - slug: setup
     name: Plugin Setup
     description: >
       Full getting-started journey — installing the plugin, configuring
-      vite.config.ts, setting directories, debug mode, and retry behaviour.
-      vite-plugin-shopify is a common companion for Shopify projects.
+      vite.config.ts, setting directories, debug mode, retry behaviour, and
+      directiveTimeout. vite-plugin-shopify is a common companion for Shopify
+      projects.
     failure_modes:
       - id: retry-wrong-nesting
         description: >
@@ -30,6 +32,11 @@ domains:
         description: >
           Agent writes retry.count or retry.attempts instead of retry.retries.
           Field is silently ignored; no retries happen.
+        priority: HIGH
+      - id: directive-timeout-wrong-nesting
+        description: >
+          Agent nests directiveTimeout inside directives instead of at plugin
+          root. The timeout guard is silently ignored.
         priority: HIGH
       - id: hardcoding-defaults
         description: >
@@ -70,9 +77,9 @@ domains:
   - slug: directives
     name: Built-in Directives
     description: >
-      client:visible, client:media, client:idle, client:defer — how they work,
-      how to combine them, per-element value overrides, and the client:media
-      empty-value warning.
+      client:visible, client:media, client:idle, client:defer,
+      client:interaction — how they work, how to combine them, per-element
+      value overrides, and the client:media empty-value warning.
     failure_modes:
       - id: media-empty-value
         description: >
@@ -119,7 +126,8 @@ domains:
       - id: forgetting-to-call-load
         description: >
           Agent's custom directive function never calls load(). Island never
-          activates — no error is thrown, no timeout fires.
+          activates by default; if directiveTimeout is configured, it later
+          becomes an islands:error timeout.
         priority: CRITICAL
       - id: calling-load-multiple-times
         description: >
@@ -171,5 +179,5 @@ domains:
       - id: error-fires-for-custom-directive-failures
         description: >
           Agent expects islands:error to fire only for import() failures.
-          It also fires when a custom directive throws or rejects.
+          It also fires when a custom directive throws, rejects, or times out.
         priority: MEDIUM

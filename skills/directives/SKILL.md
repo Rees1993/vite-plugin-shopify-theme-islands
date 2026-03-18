@@ -9,7 +9,7 @@ description: >
   client:interaction values warn and fall back to default events.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.1"
+library_version: "1.2.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -114,6 +114,15 @@ shopifyThemeIslands({
 });
 ```
 
+### Removed elements abort waiting directives silently
+
+```html
+<hero-banner client:visible></hero-banner>
+<cart-flyout client:interaction></cart-flyout>
+```
+
+If either element is removed from the DOM before its directive resolves, the runtime cancels that activation attempt and does not dispatch `islands:error`. This is expected teardown behavior, not a load failure.
+
 ## Common Mistakes
 
 ### HIGH `client:media=""` skips the media check entirely
@@ -214,7 +223,7 @@ Correct:
 
 The attribute value is passed directly to `IntersectionObserver` as `rootMargin`, fully replacing the global default.
 
-Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, pendingCancellable)`
+Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, registry.watchCancellable)`
 
 ### HIGH Directive attribute typo — island loads without condition
 
