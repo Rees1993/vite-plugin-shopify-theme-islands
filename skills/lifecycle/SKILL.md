@@ -182,6 +182,6 @@ onIslandError(({ tag, error }) => {
 });
 ```
 
-`islands:error` fires when any custom directive throws or rejects, not only when the island module's `import()` fails. The `error` value may be a directive error rather than a network or chunk error.
+`islands:error` fires in three cases beyond a failed `import()`: a custom directive throws synchronously, a custom directive's returned Promise rejects, or `directiveTimeout` expires before all matched custom directives have called `load()`. The `error` value may be a directive error or a timeout error rather than a network or chunk error.
 
-Source: src/runtime.ts — handleDirectiveError dispatches `islands:error`
+Source: src/runtime.ts — `handleDirectiveError` dispatches `islands:error`; `directiveTimeout` timer calls `handleDirectiveError` on expiry
