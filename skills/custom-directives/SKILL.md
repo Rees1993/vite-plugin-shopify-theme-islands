@@ -10,6 +10,7 @@ type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.1.1"
 sources:
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
