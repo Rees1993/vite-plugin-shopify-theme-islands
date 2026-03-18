@@ -487,6 +487,41 @@ describe("revive", () => {
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("cancels a pending-visible island and activates a newly added island in the same tick", async () => {
+      const originalIO = mockIntersectionObserver(
+        class {
+          constructor(_cb: IntersectionObserverCallback) {}
+          observe() {}
+          disconnect() {}
+        },
+      );
+
+      const pendingLoader = mock(async () => {});
+      const newLoader = mock(async () => {});
+
+      const pendingEl = document.createElement("pending-conc");
+      pendingEl.setAttribute("client:visible", "");
+      document.body.appendChild(pendingEl);
+      const newEl = document.createElement("new-conc");
+
+      // r() sets up the MO synchronously — DOM mutations must happen before any await
+      r({
+        "/islands/pending-conc.ts": pendingLoader,
+        "/islands/new-conc.ts": newLoader,
+      });
+
+      // Remove + add in the same synchronous tick as r() so MO fires as a microtask
+      document.body.removeChild(pendingEl);
+      document.body.appendChild(newEl);
+
+      await flush();
+
+      expect(pendingLoader).not.toHaveBeenCalled();
+      expect(newLoader).toHaveBeenCalledTimes(1);
+
+      globalThis.IntersectionObserver = originalIO;
+    });
   });
 
   describe("child island cascade", () => {
