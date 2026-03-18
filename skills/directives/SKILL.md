@@ -5,10 +5,11 @@ description: >
   client:media (matchMedia query), client:idle (requestIdleCallback),
   client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
   Directives resolve sequentially — visible → media → idle → defer → interaction → custom.
-  Per-element value overrides. Empty client:media warning.
+  Per-element value overrides. Empty client:media warning. Whitespace-only
+  client:interaction values warn and fall back to default events.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.0"
+library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -96,7 +97,9 @@ An empty `client:defer` attribute is NOT zero — it falls back to the configure
 <cart-flyout client:interaction="mouseenter"></cart-flyout>
 ```
 
-An empty `client:interaction` attribute silently uses the configured default events — no warning is emitted (unlike `client:media`).
+An empty `client:interaction` attribute uses the configured default events with no warning. A whitespace-only value such as `client:interaction="   "` emits a warning and still falls back to the default events.
+
+Source: src/runtime.ts — interaction token parsing and fallback warning
 
 ### Changing built-in directive defaults globally
 
@@ -130,6 +133,28 @@ Correct:
 An empty `client:media` value emits a console warning and skips the media check — the island loads immediately. Provide a valid media query string.
 
 Source: src/runtime.ts — `if (query === "")` branch
+
+### MEDIUM Whitespace-only `client:interaction` value warns and falls back
+
+Wrong:
+
+```html
+<cart-flyout client:interaction="   "></cart-flyout>
+```
+
+Correct:
+
+```html
+<!-- Either omit the value entirely for defaults... -->
+<cart-flyout client:interaction></cart-flyout>
+
+<!-- ...or provide explicit event names -->
+<cart-flyout client:interaction="mouseenter focusin"></cart-flyout>
+```
+
+Whitespace-only values are not treated the same as an empty attribute. The runtime warns and falls back to the configured default events.
+
+Source: src/runtime.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
 
 ### HIGH Multiple directives are AND, not OR
 

@@ -14,7 +14,14 @@
  * A MutationObserver re-runs the same logic for elements added dynamically.
  */
 
-import type { ClientDirective, ReviveOptions } from "./index.js";
+import {
+  buildIslandMap,
+  normalizeReviveOptions,
+  type ClientDirective,
+  type IslandLoader,
+  type ReviveOptions,
+  type RevivePayload,
+} from "./contract.js";
 
 // Typed helper — event name and detail shape are checked against DocumentEventMap
 const dispatch = <K extends "islands:load" | "islands:error">(
@@ -101,42 +108,42 @@ function idle(timeout: number): Promise<void> {
 
 const noop = (..._: unknown[]) => {};
 
+function isRevivePayload(v: unknown): v is RevivePayload {
+  return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
+}
+
+export function revive(payload: RevivePayload): { disconnect: () => void };
+/** @deprecated Pass a RevivePayload object instead. Will be removed in v2.0. */
 export function revive(
-  islands: Record<string, () => Promise<unknown>>,
+  islands: Record<string, IslandLoader>,
+  options?: ReviveOptions,
+  customDirectives?: Map<string, ClientDirective>,
+): { disconnect: () => void };
+export function revive(
+  islandsOrPayload: RevivePayload | Record<string, IslandLoader>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ): { disconnect: () => void } {
-  const attrVisible = options?.directives?.visible?.attribute ?? "client:visible";
-  const attrMedia = options?.directives?.media?.attribute ?? "client:media";
-  const attrIdle = options?.directives?.idle?.attribute ?? "client:idle";
-  const attrDefer = options?.directives?.defer?.attribute ?? "client:defer";
-  const attrInteraction = options?.directives?.interaction?.attribute ?? "client:interaction";
-  const interactionEvents = options?.directives?.interaction?.events ?? [
-    "mouseenter",
-    "touchstart",
-    "focusin",
-  ];
-  const rootMargin = options?.directives?.visible?.rootMargin ?? "200px";
-  const threshold = options?.directives?.visible?.threshold ?? 0;
-  const idleTimeout = options?.directives?.idle?.timeout ?? 500;
-  const deferDelay = options?.directives?.defer?.delay ?? 3000;
-  const debug = options?.debug ?? false;
-  const retries = options?.retry?.retries ?? 0;
-  const retryDelay = options?.retry?.delay ?? 1000;
+  const payload: RevivePayload = isRevivePayload(islandsOrPayload)
+    ? islandsOrPayload
+    : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };
+  const opts = normalizeReviveOptions(payload.options);
+  const islandMap = buildIslandMap(payload);
+  const resolvedDirectives = payload.customDirectives;
 
-  // Precompute tag name → loader map from glob keys (filename without extension = tag name)
-  const islandMap = new Map<string, () => Promise<unknown>>();
-  for (const [key, loader] of Object.entries(islands)) {
-    const filename = key.split("/").pop()!;
-    const tagName = filename.replace(/\.(ts|js)$/, "");
-    if (!tagName.includes("-")) {
-      console.warn(
-        `[islands] Skipping "${filename}" — filename must contain a hyphen to match a valid custom element tag name (e.g. rename to "${tagName}-island.ts")`,
-      );
-      continue;
-    }
-    if (!islandMap.has(tagName)) islandMap.set(tagName, loader);
-  }
+  const attrVisible = opts.directives.visible.attribute;
+  const attrMedia = opts.directives.media.attribute;
+  const attrIdle = opts.directives.idle.attribute;
+  const attrDefer = opts.directives.defer.attribute;
+  const attrInteraction = opts.directives.interaction.attribute;
+  const interactionEvents = opts.directives.interaction.events;
+  const rootMargin = opts.directives.visible.rootMargin;
+  const threshold = opts.directives.visible.threshold;
+  const idleTimeout = opts.directives.idle.timeout;
+  const deferDelay = opts.directives.defer.delay;
+  const debug = opts.debug;
+  const retries = opts.retry.retries;
+  const retryDelay = opts.retry.delay;
 
   // Track queued tag names to avoid duplicate customElements.define calls
   const queued = new Set<string>();
@@ -193,8 +200,8 @@ export function revive(
       pushAttr(attrIdle, el.getAttribute(attrIdle));
       pushAttr(attrDefer, el.getAttribute(attrDefer));
       pushAttr(attrInteraction, el.getAttribute(attrInteraction));
-      if (customDirectives?.size) {
-        for (const a of customDirectives.keys()) {
+      if (resolvedDirectives?.size) {
+        for (const a of resolvedDirectives.keys()) {
           if (el.hasAttribute(a)) parts.push(a);
         }
       }
@@ -311,9 +318,9 @@ export function revive(
     };
 
     // Custom directives run after built-ins — the directive owns the load() call
-    if (customDirectives?.size) {
+    if (resolvedDirectives?.size) {
       const matched: Array<[string, ClientDirective, string]> = [];
-      for (const [attrName, directiveFn] of customDirectives) {
+      for (const [attrName, directiveFn] of resolvedDirectives) {
         const value = el.getAttribute(attrName);
         if (value !== null) matched.push([attrName, directiveFn, value]);
       }

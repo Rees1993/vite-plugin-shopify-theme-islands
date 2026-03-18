@@ -1,5 +1,14 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import {
+  inDirectory,
+  getIslandPathsForLoad,
+  discoverIslandFiles,
+  collectTagNames,
+  ISLAND_IMPORT_RE,
+  TS_JS_RE,
+} from "./discovery.js";
+import { buildReviveModuleSource } from "./revive-module.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -12,50 +21,7 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 /** A function that triggers the load of an island module. */
 export type ClientDirectiveLoader = () => Promise<void>;
 
-/** Options passed to a custom client directive function. */
-export interface ClientDirectiveOptions {
-  /** The matched attribute name, e.g. `'client:on-click'` */
-  name: string;
-  /** The attribute value; empty string if no value was set */
-  value: string;
-}
-
-/**
- * A custom client directive function.
- *
- * Called by the runtime when a matching attribute is found on an island element.
- * The function is responsible for calling `load()` when the desired condition is met.
- *
- * @example
- * ```ts
- * // src/directives/hash.ts
- * import type { ClientDirective } from 'vite-plugin-shopify-theme-islands';
- *
- * const hashDirective: ClientDirective = (load, opts) => {
- *   const target = opts.value;
- *   if (location.hash === target) { load(); return; }
- *   window.addEventListener('hashchange', () => {
- *     if (location.hash === target) load();
- *   });
- * };
- *
- * export default hashDirective;
- * ```
- *
- * Register it in `vite.config.ts`:
- * ```ts
- * shopifyThemeIslands({
- *   directives: {
- *     custom: [{ name: 'client:hash', entrypoint: './src/directives/hash.ts' }],
- *   },
- * })
- * ```
- */
-export type ClientDirective = (
-  load: ClientDirectiveLoader,
-  options: ClientDirectiveOptions,
-  el: HTMLElement,
-) => void | Promise<void>;
+export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -64,10 +30,6 @@ export interface ClientDirectiveDefinition {
   /** Path to the directive module (supports Vite aliases) */
   entrypoint: string;
 }
-
-const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
-const TS_JS_RE = /\.(ts|js)$/;
-const SKIP_DIRS = new Set(["node_modules", "dist", "build", "public", "assets", ".cache"]);
 
 /** Shared directive configuration shape used by both the plugin and the runtime. */
 export interface DirectivesConfig {
@@ -110,45 +72,22 @@ export interface DirectivesConfig {
   custom?: ClientDirectiveDefinition[];
 }
 
-/** Runtime-facing directive configuration — omits plugin-only `custom` directives. */
-export type RuntimeDirectivesConfig = Omit<DirectivesConfig, "custom">;
-
-/** Retry configuration for failed island loads. */
-export interface RetryConfig {
-  /** Number of times to retry after the initial failure. Default: `0` (no auto-retry) */
-  retries?: number;
-  /** Base delay in ms between retries; doubles each attempt. Default: `1000` */
-  delay?: number;
-}
-
-/** Event detail for the `islands:load` DOM event. */
-export interface IslandLoadDetail {
-  /** The custom element tag name, e.g. `'product-form'` */
-  tag: string;
-  /** Milliseconds from directive resolution to successful module load (chunk fetch time). */
-  duration: number;
-  /** Which attempt succeeded. 1 = first try, 2 = first retry, etc. */
-  attempt: number;
-}
-
-/** Event detail for the `islands:error` DOM event. */
-export interface IslandErrorDetail {
-  /** The custom element tag name, e.g. `'product-form'` */
-  tag: string;
-  /** The error thrown by the loader or custom directive */
-  error: unknown;
-  /** Which attempt failed. 1 = initial attempt, 2 = first retry, etc. */
-  attempt: number;
-}
-
-declare global {
-  interface DocumentEventMap {
-    /** Fired after an island module resolves successfully. */
-    "islands:load": CustomEvent<IslandLoadDetail>;
-    /** Fired when an island load or custom directive fails. Fired on each retry attempt. */
-    "islands:error": CustomEvent<IslandErrorDetail>;
-  }
-}
+/** Event detail and runtime options (single source of truth in contract). */
+import type {
+  IslandLoadDetail,
+  IslandErrorDetail,
+  ReviveOptions,
+  RetryConfig,
+  RuntimeDirectivesConfig,
+} from "./contract.js";
+export type {
+  IslandLoadDetail,
+  IslandErrorDetail,
+  ReviveOptions,
+  RetryConfig,
+  RuntimeDirectivesConfig,
+} from "./contract.js";
+import { DEFAULT_DIRECTIVES } from "./contract.js";
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -157,14 +96,6 @@ export interface ShopifyThemeIslandsOptions {
   debug?: boolean;
   /** Per-directive configuration. */
   directives?: DirectivesConfig;
-  /** Automatic retry behaviour for failed island loads. */
-  retry?: RetryConfig;
-}
-
-export interface ReviveOptions {
-  directives?: RuntimeDirectivesConfig;
-  /** Log island activation and directive events to the console. Default: `false` */
-  debug?: boolean;
   /** Automatic retry behaviour for failed island loads. */
   retry?: RetryConfig;
 }
@@ -215,19 +146,7 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
   }
 }
 
-const defaults = {
-  directories: ["/frontend/js/islands/"],
-  directives: {
-    visible: { attribute: "client:visible", rootMargin: "200px", threshold: 0 },
-    idle: { attribute: "client:idle", timeout: 500 },
-    media: { attribute: "client:media" },
-    defer: { attribute: "client:defer", delay: 3000 },
-    interaction: {
-      attribute: "client:interaction",
-      events: ["mouseenter", "touchstart", "focusin"],
-    },
-  },
-};
+const defaultDirectories = ["/frontend/js/islands/"];
 
 function normalizeDir(dir: string): string {
   return dir.endsWith("/") ? dir : dir + "/";
@@ -250,52 +169,20 @@ function resolveAliases(dirs: string[], config: ResolvedConfig): string[] {
   });
 }
 
-// Recursively walk a directory, calling visitor(name, fullPath) for each TS/JS file
-function walkDir(dir: string, visitor: (name: string, full: string) => void): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) walkDir(full, visitor);
-    else if (TS_JS_RE.test(entry.name)) visitor(entry.name, full);
-  }
-}
-
-// Collect tag names (filename without extension) from a directory
-function collectTagNames(dir: string, names: string[]): void {
-  walkDir(dir, (name) => names.push(name.replace(TS_JS_RE, "")));
-}
-
-// Scan a directory for files containing the Island import
-function scanForIslandFiles(dir: string, found: Set<string>): void {
-  walkDir(dir, (_, full) => {
-    try {
-      if (ISLAND_IMPORT_RE.test(readFileSync(full, "utf-8"))) found.add(full);
-    } catch {
-      // skip unreadable files
-    }
-  });
-}
-
 export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions = {}): Plugin {
   const rawDirs = (
     Array.isArray(options.directories)
       ? options.directories
-      : [options.directories ?? defaults.directories[0]]
+      : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  // Deep merge directives — per-directive defaults are preserved when only some keys are overridden
+  // Deep merge directives — contract is single source of truth for defaults
   const directives: DirectivesConfig = {
-    visible: { ...defaults.directives.visible, ...options.directives?.visible },
-    idle: { ...defaults.directives.idle, ...options.directives?.idle },
-    media: { ...defaults.directives.media, ...options.directives?.media },
-    defer: { ...defaults.directives.defer, ...options.directives?.defer },
-    interaction: { ...defaults.directives.interaction, ...options.directives?.interaction },
+    visible: { ...DEFAULT_DIRECTIVES.visible, ...options.directives?.visible },
+    idle: { ...DEFAULT_DIRECTIVES.idle, ...options.directives?.idle },
+    media: { ...DEFAULT_DIRECTIVES.media, ...options.directives?.media },
+    defer: { ...DEFAULT_DIRECTIVES.defer, ...options.directives?.defer },
+    interaction: { ...DEFAULT_DIRECTIVES.interaction, ...options.directives?.interaction },
   };
 
   const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
@@ -313,9 +200,6 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const islandFiles = new Set<string>();
   let scanned = false;
 
-  // Returns true if the file is already covered by a scanned directory glob.
-  const inDirectory = (file: string) => absDirs.some((dir) => file.startsWith(dir));
-
   return {
     name: "vite-plugin-shopify-theme-islands",
     enforce: "pre",
@@ -332,14 +216,14 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (scanned) return;
       scanned = true;
       const t0 = performance.now();
-      scanForIslandFiles(root, islandFiles);
-      const scanMs = (performance.now() - t0).toFixed(1);
-      for (const f of islandFiles) if (inDirectory(f)) islandFiles.delete(f);
+      const initial = discoverIslandFiles(root, absDirs);
+      islandFiles.clear();
+      initial.forEach((f) => islandFiles.add(f));
       if (debug) {
+        const scanMs = (performance.now() - t0).toFixed(1);
         log(`Scanned in ${scanMs}ms`);
         log("Scanning directories:", resolvedDirs.map((d) => d + "**/*.{ts,js}").join(", "));
-        const dirNames: string[] = [];
-        for (const dir of absDirs) collectTagNames(dir, dirNames);
+        const dirNames = absDirs.flatMap((dir) => collectTagNames(dir));
         if (dirNames.length)
           log(`Found ${dirNames.length} directory island(s): [${dirNames.join(", ")}]`);
         if (islandFiles.size) {
@@ -356,7 +240,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       if (
         code.includes("shopify-theme-islands/island") &&
         ISLAND_IMPORT_RE.test(code) &&
-        !inDirectory(id)
+        !inDirectory(id, absDirs)
       ) {
         islandFiles.add(id);
         log("Detected island:", relative(root, id));
@@ -372,7 +256,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       } else {
         try {
           const content = readFileSync(id, "utf-8");
-          if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id)) {
+          if (ISLAND_IMPORT_RE.test(content) && !inDirectory(id, absDirs)) {
             islandFiles.add(id);
             log("Detected island (watchChange):", relative(root, id));
           } else {
@@ -392,49 +276,31 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const globs = resolvedDirs.map(
-        (dir) => `...import.meta.glob(${JSON.stringify(dir + "**/*.{ts,js}")})`,
-      );
+      const directoryGlobs = resolvedDirs.map((dir) => dir + "**/*.{ts,js}");
 
       // Use import.meta.glob for island files so Vite handles base URL rewriting
       // (hand-crafted import() calls resolve against the page origin, not the dev server)
-      const islandPaths = islandFiles.size
-        ? [...islandFiles].map((file) => "/" + relative(root, file).replace(/\\/g, "/"))
-        : null;
-
-      // globs always has at least one entry (rawDirs is never empty)
-      const islandsEntries = [`{ ${globs.join(", ")} }`];
-      if (islandPaths) islandsEntries.push(`import.meta.glob(${JSON.stringify(islandPaths)})`);
+      const islandPaths = islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
 
       // Resolve custom directive entrypoints via Vite's resolver (handles aliases, registers deps)
-      const directiveImports: string[] = [];
-      const mapEntries: string[] = [];
-      for (const [i, def] of clientDirectiveDefinitions.entries()) {
+      const customDirectives: Array<{ name: string; entrypoint: string }> = [];
+      for (const def of clientDirectiveDefinitions) {
         const resolved = await this.resolve(def.entrypoint);
         if (!resolved) {
           throw new Error(
             `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`,
           );
         }
-        directiveImports.push(`import _directive${i} from ${JSON.stringify(resolved.id)};`);
-        mapEntries.push(`  [${JSON.stringify(def.name)}, _directive${i}]`);
+        customDirectives.push({ name: def.name, entrypoint: resolved.id });
       }
 
-      const lines = [
-        ...directiveImports,
-        `import { revive as _islands } from ${JSON.stringify(runtimePath)};`,
-        `const islands = Object.assign({}, ${islandsEntries.join(", ")});`,
-        `const options = ${JSON.stringify({ directives, debug, retry: options.retry })};`,
-      ];
-
-      if (mapEntries.length) {
-        lines.push(`const customDirectives = new Map([\n${mapEntries.join(",\n")}\n]);`);
-        lines.push(`export const { disconnect } = _islands(islands, options, customDirectives);`);
-      } else {
-        lines.push(`export const { disconnect } = _islands(islands, options);`);
-      }
-
-      return lines.join("\n");
+      return buildReviveModuleSource({
+        runtimePath,
+        directoryGlobs,
+        islandPaths,
+        customDirectives,
+        reviveOptions: { directives, debug, retry: options.retry },
+      });
     },
   };
 }

@@ -10,10 +10,10 @@ description: >
   navigation teardown.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.0"
+library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
 
@@ -97,7 +97,7 @@ document.addEventListener("islands:load", (e) => {
 });
 ```
 
-The `DocumentEventMap` augmentation is declared in the main package's `index.ts`. It is only in scope when the import is present in the same tsconfig compilation.
+The `DocumentEventMap` augmentation is declared in `contract.ts` and re-exported via the main package entry. It is only in scope when the import is present in the same tsconfig compilation.
 
 ## Common Mistakes
 

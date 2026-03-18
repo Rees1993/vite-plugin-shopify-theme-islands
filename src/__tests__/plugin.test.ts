@@ -119,7 +119,7 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
       expect(output).toContain("import { revive as _islands }");
-      expect(output).toContain("export const { disconnect } = _islands(islands, options)");
+      expect(output).toContain("export const { disconnect } = _islands(payload)");
     });
 
     it("generates import.meta.glob for multiple directories", async () => {
@@ -242,16 +242,14 @@ describe("plugin", () => {
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
-      expect(output).toContain(
-        "export const { disconnect } = _islands(islands, options, customDirectives)",
-      );
+      expect(output).toContain("export const { disconnect } = _islands(payload)");
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
-      expect(output).toContain("export const { disconnect } = _islands(islands, options)");
+      expect(output).toContain("export const { disconnect } = _islands(payload)");
       expect(output).not.toContain("customDirectives");
     });
 
@@ -321,6 +319,18 @@ describe("plugin", () => {
       // Only the directory glob should appear — no separate mixin glob
       const globCount = (output?.match(/import\.meta\.glob/g) ?? []).length;
       expect(globCount).toBe(1);
+    });
+
+    it("does not exclude sibling directories that only share the same prefix", async () => {
+      const legacyDir = join(tmp, "islands-legacy");
+      mkdirSync(legacyDir);
+      writeFileSync(join(legacyDir, "legacy-widget.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/islands/"] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).toContain("/islands-legacy/legacy-widget.ts");
     });
 
     it("skips unreadable files silently", () => {

@@ -8,8 +8,9 @@ description: >
   Custom directives run after all built-in conditions resolve.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.0"
+library_version: "1.1.1"
 sources:
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
@@ -96,7 +97,7 @@ const networkDirective: ClientDirective = async (load, _opts, el) => {
 };
 ```
 
-The directive function can be async. Unhandled rejections fire `islands:error` on the element.
+The directive function can be async. Unhandled rejections fire the document-level `islands:error` event, so `onIslandError()` observers still see directive failures.
 
 ### AND-latch with multiple matching directives
 
@@ -180,6 +181,38 @@ With two matching custom directives, `remaining = 2`. Each `load()` call decreme
 
 Source: src/runtime.ts — `let remaining = matched.length`
 
+### HIGH Duplicate custom directive names or collisions with built-ins fail plugin setup
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { attribute: "data:visible" },
+    custom: [
+      { name: "client:hash", entrypoint: "./src/directives/hash.ts" },
+      { name: "data:visible", entrypoint: "./src/directives/other.ts" },
+      { name: "client:hash", entrypoint: "./src/directives/duplicate.ts" },
+    ],
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { attribute: "data:visible" },
+    custom: [{ name: "client:hash", entrypoint: "./src/directives/hash.ts" }],
+  },
+});
+```
+
+Custom directive names must be unique and must not collide with any built-in directive name, including renamed built-ins.
+
+Source: src/index.ts — validateOptions duplicate and built-in conflict checks
+
 ### HIGH Entrypoint path missing `./` prefix
 
 Wrong:
@@ -200,7 +233,7 @@ Correct:
 }
 ```
 
-Vite's resolver may fail to locate the file without the `./` relative prefix. The plugin throws a build error if the entrypoint cannot be resolved.
+Custom directive entrypoints are resolved through Vite. Relative local files should usually use `./...`; unresolved entrypoints fail the build.
 
 Source: src/index.ts — `this.resolve(def.entrypoint)` throws on null
 

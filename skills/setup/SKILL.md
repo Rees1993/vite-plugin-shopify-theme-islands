@@ -9,9 +9,10 @@ description: >
   directories, or enabling retry.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.1.0"
+library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
 ---
 
 ## Setup
@@ -195,7 +196,7 @@ shopifyThemeIslands({
 
 `directives` accepts only `visible`, `idle`, `media`, `defer`, `interaction`, and `custom`. `retry` at `directives.retry` is silently ignored.
 
-Source: src/index.ts:ShopifyThemeIslandsOptions
+Source: src/index.ts — ShopifyThemeIslandsOptions
 
 ### HIGH Wrong key name for retry count
 
@@ -214,4 +215,4 @@ shopifyThemeIslands({ retry: { retries: 3 } });
 
 Unknown keys are silently ignored. The correct field is `retries`.
 
-Source: src/index.ts:RetryConfig
+Source: src/contract.ts — RetryConfig
