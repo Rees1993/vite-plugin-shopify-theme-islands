@@ -305,7 +305,12 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         directoryGlobs,
         islandPaths,
         customDirectives,
-        reviveOptions: { directives, debug, retry: options.retry, directiveTimeout: options.directiveTimeout },
+        reviveOptions: {
+          directives,
+          debug,
+          retry: options.retry,
+          directiveTimeout: options.directiveTimeout,
+        },
       });
     },
   };

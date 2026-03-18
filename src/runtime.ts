@@ -273,7 +273,9 @@ export function revive(
         aborted = true;
         handleDirectiveError(
           attrNames,
-          new Error(`[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`),
+          new Error(
+            `[islands] Custom directive timed out after ${directiveTimeout}ms for <${tagName}>`,
+          ),
         );
       }, directiveTimeout);
     }
