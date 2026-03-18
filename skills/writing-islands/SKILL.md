@@ -8,7 +8,7 @@ description: >
   base class, and child island cascade behaviour.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts

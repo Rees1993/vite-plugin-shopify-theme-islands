@@ -4,12 +4,11 @@ description: >
   Custom client directives registered via directives.custom in vite.config.ts.
   ClientDirective function signature (load, options, el). AND-latch: when
   multiple custom directives match the same element, all must call load() before
-  the island activates. Error handling — thrown errors, rejected Promises, and
-  directiveTimeout expiry fire islands:error. Custom directives run after all
-  built-in conditions resolve.
+  the island activates. Error handling — thrown errors fire islands:error.
+  Custom directives run after all built-in conditions resolve.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.1.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -130,9 +129,9 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 };
 ```
 
-By default, no error is thrown and no timeout fires — the island is silently never loaded. If `directiveTimeout` is configured, `islands:error` fires after the configured milliseconds if the AND latch still has not resolved, and the island is abandoned.
+No error is thrown and no timeout fires — the island is silently never loaded.
 
-Source: src/runtime.ts — `applyCustomDirectives` AND latch; `directiveTimeout` timer in same function
+Source: src/runtime.ts — directive owns the `run()` call path
 
 ### HIGH Writing a custom directive for mouseenter/touchstart/focusin — use `client:interaction` instead
 
