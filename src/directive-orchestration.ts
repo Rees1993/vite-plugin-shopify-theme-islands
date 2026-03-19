@@ -1,9 +1,5 @@
 import type { ClientDirective, NormalizedReviveOptions } from "./contract.js";
-
-export interface DirectiveLogger {
-  note(msg: string): void;
-  flush(summary: string): void;
-}
+import type { RuntimeLogger } from "./runtime-surface.js";
 
 export interface DirectiveWaiters {
   waitVisible(
@@ -29,39 +25,13 @@ export interface DirectiveRunContext {
   customDirectives?: Map<string, ClientDirective>;
   directiveTimeout: number;
   watchCancellable: (el: Element, cancel: () => void) => () => void;
-  log: DirectiveLogger;
+  log: RuntimeLogger;
   run: () => Promise<void>;
   onError(attrName: string, err: unknown): void;
 }
 
 export interface DirectiveOrchestrator {
   run(ctx: DirectiveRunContext): Promise<boolean>;
-}
-
-function createDirectiveLogger(tagName: string, debug: boolean): DirectiveLogger {
-  if (!debug) {
-    return {
-      note() {},
-      flush() {},
-    };
-  }
-
-  const msgs: string[] = [];
-  return {
-    note(msg) {
-      msgs.push(msg);
-    },
-    flush(summary) {
-      if (msgs.length === 0) {
-        console.log("[islands]", `<${tagName}> ${summary}`);
-      } else {
-        console.groupCollapsed(`[islands] <${tagName}> ${summary}`);
-        for (const msg of msgs) console.log(msg);
-        console.groupEnd();
-      }
-      msgs.length = 0;
-    },
-  };
 }
 
 export class DirectiveCancelledError extends Error {
@@ -284,5 +254,3 @@ export function createDirectiveOrchestrator(
     },
   };
 }
-
-export { createDirectiveLogger };

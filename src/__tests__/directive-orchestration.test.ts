@@ -1,8 +1,9 @@
 import { describe, expect, it, mock } from "bun:test";
 import { DEFAULT_DIRECTIVES } from "../contract";
-import { createDirectiveLogger, createDirectiveOrchestrator } from "../directive-orchestration";
+import { createDirectiveOrchestrator } from "../directive-orchestration";
 
 const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const SILENT_LOGGER = { note() {}, flush() {} };
 
 describe("directive-orchestration", () => {
   it("runs built-ins in order and falls through when no custom directives match", async () => {
@@ -39,7 +40,7 @@ describe("directive-orchestration", () => {
       directives: DEFAULT_DIRECTIVES,
       directiveTimeout: 0,
       watchCancellable: mock(() => () => {}),
-      log: createDirectiveLogger("x-orchestrated", false),
+      log: SILENT_LOGGER,
       run,
       onError,
     });
@@ -81,7 +82,7 @@ describe("directive-orchestration", () => {
       customDirectives,
       directiveTimeout: 0,
       watchCancellable: mock(() => () => {}),
-      log: createDirectiveLogger("x-and-latch", false),
+      log: SILENT_LOGGER,
       run,
       onError,
     });
@@ -121,7 +122,7 @@ describe("directive-orchestration", () => {
       customDirectives,
       directiveTimeout: 1,
       watchCancellable: mock(() => () => {}),
-      log: createDirectiveLogger("x-timeout", false),
+      log: SILENT_LOGGER,
       run,
       onError,
     });
