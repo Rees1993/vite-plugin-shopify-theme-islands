@@ -1,4 +1,4 @@
-import type { IslandLoadDetail, IslandErrorDetail } from "./index.js";
+import type { IslandLoadDetail, IslandErrorDetail } from "./contract.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
 
 /**
