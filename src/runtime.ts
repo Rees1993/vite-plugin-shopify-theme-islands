@@ -22,12 +22,7 @@ import {
   type ReviveOptions,
   type RevivePayload,
 } from "./contract.js";
-
-// Typed helper — event name and detail shape are checked against DocumentEventMap
-const dispatch = <K extends "islands:load" | "islands:error">(
-  name: K,
-  detail: DocumentEventMap[K] extends CustomEvent<infer D> ? D : never,
-) => document.dispatchEvent(new CustomEvent(name, { detail }));
+import { getRuntimeSurface, type RuntimeLogger } from "./runtime-surface.js";
 
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
@@ -112,36 +107,6 @@ function idle(timeout: number): Promise<void> {
     if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout });
     else setTimeout(resolve, timeout);
   });
-}
-
-interface IslandLogger {
-  note(msg: string): void;
-  flush(summary: string): void;
-}
-
-const SILENT_LOGGER: IslandLogger = {
-  note() {},
-  flush() {},
-};
-
-function createIslandLogger(tagName: string, debug: boolean): IslandLogger {
-  if (!debug) return SILENT_LOGGER;
-  const msgs: string[] = [];
-  return {
-    note(msg) {
-      msgs.push(msg);
-    },
-    flush(summary) {
-      if (msgs.length === 0) {
-        console.log("[islands]", `<${tagName}> ${summary}`);
-      } else {
-        console.groupCollapsed(`[islands] <${tagName}> ${summary}`);
-        for (const m of msgs) console.log(m);
-        console.groupEnd();
-      }
-      msgs.length = 0;
-    },
-  };
 }
 
 // Thrown by visible() and interaction() cancel paths when the element is removed
@@ -290,6 +255,7 @@ export function revive(
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ): { disconnect: () => void } {
+  const runtimeSurface = getRuntimeSurface();
   const payload: RevivePayload = isRevivePayload(islandsOrPayload)
     ? islandsOrPayload
     : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };
@@ -345,7 +311,7 @@ export function revive(
       } else {
         console.error(`[islands] Built-in directive failed for <${tagName}>:`, err);
       }
-      dispatch("islands:error", { tag: tagName, error: err, attempt: 1 });
+      runtimeSurface.dispatchError({ tag: tagName, error: err, attempt: 1 });
       registry.evict(tagName);
     };
   }
@@ -354,7 +320,7 @@ export function revive(
   async function applyBuiltInDirectives(
     tagName: string,
     el: HTMLElement,
-    log: IslandLogger,
+    log: RuntimeLogger,
   ): Promise<void> {
     const visibleAttr = el.getAttribute(attrVisible);
     if (visibleAttr !== null) {
@@ -417,7 +383,7 @@ export function revive(
     matched: Array<[string, ClientDirective, string]>,
     run: () => Promise<void>,
     handleDirectiveError: (attrName: string, err: unknown) => void,
-    log: IslandLogger,
+    log: RuntimeLogger,
   ): boolean {
     if (matched.length === 0) return false;
 
@@ -494,7 +460,7 @@ export function revive(
       if (parts.length > 0) console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
     }
 
-    const log = createIslandLogger(tagName, debug);
+    const log = runtimeSurface.createLogger(tagName, debug);
 
     const handleOutcome = makeDirectiveOutcomeHandler(tagName);
 
@@ -518,7 +484,7 @@ export function revive(
       return loader()
         .then(() => {
           const attempt = registry.settleSuccess(tagName);
-          dispatch("islands:load", {
+          runtimeSurface.dispatchLoad({
             tag: tagName,
             duration: performance.now() - t0,
             attempt,
@@ -528,7 +494,7 @@ export function revive(
         .catch((err) => {
           console.error(`[islands] Failed to load <${tagName}>:`, err);
           const { retryDelayMs, attempt } = registry.settleFailure(tagName);
-          dispatch("islands:error", { tag: tagName, error: err, attempt });
+          runtimeSurface.dispatchError({ tag: tagName, error: err, attempt });
           if (retryDelayMs !== null) {
             setTimeout(run, retryDelayMs);
           }
@@ -592,10 +558,10 @@ export function revive(
   });
 
   function init(): void {
-    if (debug) console.groupCollapsed(`[islands] ready — ${islandMap.size} island(s)`);
+    const endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);
     walk(document.body);
     registry.markInitialWalkComplete();
-    if (debug) console.groupEnd();
+    endReadyLog();
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
