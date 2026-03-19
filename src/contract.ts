@@ -134,10 +134,6 @@ export function normalizeReviveOptions(options?: ReviveOptions): NormalizedReviv
   const d = DEFAULT_DIRECTIVES;
   const r = DEFAULT_RETRY;
   const dir = options?.directives;
-  const interactionEvents = dir?.interaction?.events;
-  if (interactionEvents !== undefined && interactionEvents.length === 0) {
-    throw new Error('[islands] "directives.interaction.events" must not be empty');
-  }
   return {
     directives: {
       visible: { ...d.visible, ...dir?.visible },
