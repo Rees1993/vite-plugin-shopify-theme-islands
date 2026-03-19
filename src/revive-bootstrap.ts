@@ -38,16 +38,16 @@ export function createReviveBootstrapCompiler(
 ): ReviveBootstrapCompiler {
   return {
     async plan(input) {
-      const islandPaths = input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
-      const customDirectives =
-        input.customDirectives?.length
-          ? await Promise.all(
-              input.customDirectives.map(async ({ name, entrypoint }) => ({
-                name,
-                entrypoint: await ports.resolveEntrypoint(entrypoint),
-              })),
-            )
-          : null;
+      const islandPaths =
+        input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
+      const customDirectives = input.customDirectives?.length
+        ? await Promise.all(
+            input.customDirectives.map(async ({ name, entrypoint }) => ({
+              name,
+              entrypoint: await ports.resolveEntrypoint(entrypoint),
+            })),
+          )
+        : null;
 
       return {
         runtimePath,

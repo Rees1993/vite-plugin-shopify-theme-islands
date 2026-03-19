@@ -15,10 +15,7 @@ describe("revive-bootstrap", () => {
     const plan = await compiler.plan({
       root: "/project",
       directories: ["/islands/", "/components/"],
-      islandFiles: new Set([
-        "/project/src/widget.ts",
-        "/project/src/other.js",
-      ]),
+      islandFiles: new Set(["/project/src/widget.ts", "/project/src/other.js"]),
       customDirectives: [
         { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
         { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
@@ -59,13 +56,15 @@ describe("revive-bootstrap", () => {
       runtimePath: "/runtime.js",
       directoryGlobs: ["/islands/**/*.{ts,js}"],
       islandPaths: ["/src/widget.ts"],
-      customDirectives: [{ name: "client:on-click", entrypoint: "/resolved/./src/directives/on-click.ts" }],
+      customDirectives: [
+        { name: "client:on-click", entrypoint: "/resolved/./src/directives/on-click.ts" },
+      ],
       reviveOptions: { debug: false },
     });
 
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
-    expect(source).toContain('const payload = { islands, options, customDirectives };');
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
     expect(source).toContain("export const { disconnect } = _islands(payload);");
   });
 });
