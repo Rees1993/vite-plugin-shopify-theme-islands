@@ -22,7 +22,7 @@ import {
   type ReviveOptions,
   type RevivePayload,
 } from "./contract.js";
-import { runtimeSurface, type RuntimeLogger } from "./runtime-surface.js";
+import { getRuntimeSurface, type RuntimeLogger } from "./runtime-surface.js";
 
 // Resolves when the given media query matches
 function media(query: string): Promise<void> {
@@ -255,6 +255,7 @@ export function revive(
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ): { disconnect: () => void } {
+  const runtimeSurface = getRuntimeSurface();
   const payload: RevivePayload = isRevivePayload(islandsOrPayload)
     ? islandsOrPayload
     : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };

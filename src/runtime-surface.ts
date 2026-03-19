@@ -93,7 +93,12 @@ export function createRuntimeSurface(deps: RuntimeSurfaceDeps): RuntimeSurface {
   };
 }
 
-export const runtimeSurface = createRuntimeSurface({
-  target: document,
-  console,
-});
+let runtimeSurface: RuntimeSurface | undefined;
+
+export function getRuntimeSurface(): RuntimeSurface {
+  runtimeSurface ??= createRuntimeSurface({
+    target: document,
+    console,
+  });
+  return runtimeSurface;
+}

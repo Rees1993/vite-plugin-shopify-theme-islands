@@ -1,5 +1,5 @@
 import type { IslandLoadDetail, IslandErrorDetail } from "./index.js";
-import { runtimeSurface } from "./runtime-surface.js";
+import { getRuntimeSurface } from "./runtime-surface.js";
 
 /**
  * Listen for successful island module loads.
@@ -16,7 +16,7 @@ import { runtimeSurface } from "./runtime-surface.js";
  * ```
  */
 export function onIslandLoad(handler: (detail: IslandLoadDetail) => void): () => void {
-  return runtimeSurface.onLoad(handler);
+  return getRuntimeSurface().onLoad(handler);
 }
 
 /**
@@ -35,5 +35,5 @@ export function onIslandLoad(handler: (detail: IslandLoadDetail) => void): () =>
  * ```
  */
 export function onIslandError(handler: (detail: IslandErrorDetail) => void): () => void {
-  return runtimeSurface.onError(handler);
+  return getRuntimeSurface().onError(handler);
 }
