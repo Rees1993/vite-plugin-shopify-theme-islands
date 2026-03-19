@@ -22,10 +22,7 @@ import {
   type ReviveOptions,
   type RevivePayload,
 } from "./contract.js";
-import {
-  createDirectiveOrchestrator,
-  DirectiveCancelledError,
-} from "./directive-orchestration.js";
+import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
 
 function isRevivePayload(v: unknown): v is RevivePayload {
