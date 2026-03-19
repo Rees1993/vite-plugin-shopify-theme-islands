@@ -323,15 +323,18 @@ export function revive(
     handleAdditions(mutations);
   });
 
+  let disconnected = false;
+  let initialized = false;
+
   function init(): void {
+    if (disconnected || initialized) return;
+    initialized = true;
     const endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);
     walk(document.body);
     registry.markInitialWalkComplete();
     endReadyLog();
     observer.observe(document.body, { childList: true, subtree: true });
   }
-
-  let disconnected = false;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
@@ -341,6 +344,7 @@ export function revive(
 
   const disconnect = () => {
     disconnected = true;
+    document.removeEventListener("DOMContentLoaded", init);
     observer.disconnect();
   };
   return { disconnect };

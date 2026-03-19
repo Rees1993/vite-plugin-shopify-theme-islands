@@ -693,6 +693,27 @@ describe("revive", () => {
       expect(callCount).toBe(1); // no retries executed after disconnect
       spy.mockRestore();
     });
+
+    it("disconnect() before DOMContentLoaded prevents init from ever running", async () => {
+      Object.defineProperty(document, "readyState", {
+        configurable: true,
+        value: "loading",
+      });
+
+      try {
+        const loader = mock(async () => {});
+        document.body.innerHTML = "<pre-init-disconnect></pre-init-disconnect>";
+        const { disconnect } = r({ "/islands/pre-init-disconnect.ts": loader });
+
+        disconnect();
+        document.dispatchEvent(new Event("DOMContentLoaded"));
+        await flush();
+
+        expect(loader).not.toHaveBeenCalled();
+      } finally {
+        delete (document as { readyState?: string }).readyState;
+      }
+    });
   });
 
   describe("client:media empty value", () => {
