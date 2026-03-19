@@ -1,9 +1,9 @@
-import { DEFAULT_DIRECTIVES, type ReviveOptions, type RuntimeDirectivesConfig } from "./contract.js";
+import { DEFAULT_DIRECTIVES, type ReviveOptions } from "./contract.js";
 import type {
   ClientDirectiveDefinition,
   DirectivesConfig,
   ShopifyThemeIslandsOptions,
-} from "./index.js";
+} from "./options.js";
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
@@ -70,16 +70,6 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
   }
 }
 
-function buildRuntimeDirectives(directives: DirectivesConfig): RuntimeDirectivesConfig {
-  return {
-    visible: directives.visible,
-    idle: directives.idle,
-    media: directives.media,
-    defer: directives.defer,
-    interaction: directives.interaction,
-  };
-}
-
 export function resolveThemeIslandsPolicy(
   options: ShopifyThemeIslandsOptions = {},
 ): ResolvedThemeIslandsPolicy {
@@ -87,9 +77,10 @@ export function resolveThemeIslandsPolicy(
   validateOptions(options, directives);
 
   const customDirectives = options.directives?.custom ?? [];
+  const debug = options.debug ?? false;
   const runtime: ReviveOptions = {
-    directives: buildRuntimeDirectives(directives),
-    debug: options.debug ?? false,
+    directives,
+    debug,
     ...(options.retry !== undefined ? { retry: options.retry } : {}),
     ...(options.directiveTimeout !== undefined ? { directiveTimeout: options.directiveTimeout } : {}),
   };
@@ -98,7 +89,7 @@ export function resolveThemeIslandsPolicy(
     plugin: {
       directives,
       customDirectives,
-      debug: options.debug ?? false,
+      debug,
     },
     runtime,
   };
