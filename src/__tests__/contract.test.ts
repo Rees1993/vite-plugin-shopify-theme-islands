@@ -58,6 +58,16 @@ describe("contract", () => {
       const fromUndefined = normalizeReviveOptions(undefined);
       expect(fromPlugin.directives).toEqual(fromUndefined.directives);
     });
+
+    it("rejects an empty interaction event list so runtime does not hang waiting forever", () => {
+      expect(() =>
+        normalizeReviveOptions({
+          directives: {
+            interaction: { events: [] },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" must not be empty');
+    });
   });
 
   describe("payload → island map (buildIslandMap)", () => {

@@ -217,12 +217,13 @@ export function createDirectiveOrchestrator(
   }
 
   function runCustomDirectives(ctx: DirectiveRunContext): boolean {
-    const matched = ctx.customDirectives
-      ? Array.from(ctx.customDirectives).flatMap(([attrName, directiveFn]) => {
-          const value = ctx.element.getAttribute(attrName);
-          return value !== null ? [[attrName, directiveFn, value] as const] : [];
-        })
-      : [];
+    const matched: [string, ClientDirective, string][] = [];
+    if (ctx.customDirectives) {
+      for (const [attrName, directiveFn] of ctx.customDirectives) {
+        const value = ctx.element.getAttribute(attrName);
+        if (value !== null) matched.push([attrName, directiveFn, value] as const);
+      }
+    }
 
     if (matched.length === 0) return false;
 
