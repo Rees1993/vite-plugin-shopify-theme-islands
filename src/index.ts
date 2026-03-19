@@ -9,6 +9,7 @@ import {
   TS_JS_RE,
 } from "./discovery.js";
 import { buildReviveModuleSource } from "./revive-module.js";
+import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -72,7 +73,6 @@ export interface DirectivesConfig {
   custom?: ClientDirectiveDefinition[];
 }
 
-/** Event detail and runtime options (single source of truth in contract). */
 import type {
   IslandLoadDetail,
   IslandErrorDetail,
@@ -87,7 +87,6 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
-import { DEFAULT_DIRECTIVES } from "./contract.js";
 
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
@@ -104,52 +103,6 @@ export interface ShopifyThemeIslandsOptions {
    * Default: `0` (disabled).
    */
   directiveTimeout?: number;
-}
-
-const PREFIX = "[vite-plugin-shopify-theme-islands]";
-
-function validateOptions(options: ShopifyThemeIslandsOptions, directives: DirectivesConfig): void {
-  const customDefs = options.directives?.custom ?? [];
-  if (Array.isArray(options.directories) && options.directories.length === 0) {
-    throw new Error(`${PREFIX} "directories" must not be empty`);
-  }
-
-  const threshold = options.directives?.visible?.threshold;
-  if (threshold !== undefined && (threshold < 0 || threshold > 1)) {
-    throw new Error(
-      `${PREFIX} "directives.visible.threshold" must be between 0 and 1, got ${threshold}`,
-    );
-  }
-
-  if (options.retry !== undefined) {
-    const { retries, delay } = options.retry;
-    if (retries !== undefined && retries < 0) {
-      throw new Error(`${PREFIX} "retry.retries" must be >= 0, got ${retries}`);
-    }
-    if (delay !== undefined && delay < 0) {
-      throw new Error(`${PREFIX} "retry.delay" must be >= 0, got ${delay}`);
-    }
-  }
-
-  const builtinAttributes = new Set([
-    directives.visible!.attribute!,
-    directives.idle!.attribute!,
-    directives.media!.attribute!,
-    directives.defer!.attribute!,
-    directives.interaction!.attribute!,
-  ]);
-  const seen = new Set<string>();
-  for (const def of customDefs) {
-    if (seen.has(def.name)) {
-      throw new Error(`${PREFIX} Duplicate custom directive name: "${def.name}"`);
-    }
-    if (builtinAttributes.has(def.name)) {
-      throw new Error(
-        `${PREFIX} Custom directive "${def.name}" conflicts with a built-in directive`,
-      );
-    }
-    seen.add(def.name);
-  }
 }
 
 const defaultDirectories = ["/frontend/js/islands/"];
@@ -182,20 +135,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  // Deep merge directives — contract is single source of truth for defaults
-  const directives: DirectivesConfig = {
-    visible: { ...DEFAULT_DIRECTIVES.visible, ...options.directives?.visible },
-    idle: { ...DEFAULT_DIRECTIVES.idle, ...options.directives?.idle },
-    media: { ...DEFAULT_DIRECTIVES.media, ...options.directives?.media },
-    defer: { ...DEFAULT_DIRECTIVES.defer, ...options.directives?.defer },
-    interaction: { ...DEFAULT_DIRECTIVES.interaction, ...options.directives?.interaction },
-  };
-
-  const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
-
-  validateOptions(options, directives);
-
-  const debug = options.debug ?? false;
+  const policy = resolveThemeIslandsPolicy(options);
+  const { directives, customDirectives: clientDirectiveDefinitions, debug } = policy.plugin;
+  const { runtime: reviveOptions } = policy;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
 
   let resolvedDirs = rawDirs;
@@ -305,12 +247,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         directoryGlobs,
         islandPaths,
         customDirectives,
-        reviveOptions: {
-          directives,
-          debug,
-          retry: options.retry,
-          directiveTimeout: options.directiveTimeout,
-        },
+        reviveOptions,
       });
     },
   };
