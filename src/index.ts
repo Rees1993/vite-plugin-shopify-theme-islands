@@ -8,9 +8,9 @@ import {
   ISLAND_IMPORT_RE,
   TS_JS_RE,
 } from "./discovery.js";
-import { buildReviveModuleSource } from "./revive-module.js";
 import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
+import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -157,31 +157,31 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const directoryGlobs = resolvedDirs.map((dir) => dir + "**/*.{ts,js}");
-
-      // Use import.meta.glob for island files so Vite handles base URL rewriting
-      // (hand-crafted import() calls resolve against the page origin, not the dev server)
-      const islandPaths = islandFiles.size > 0 ? getIslandPathsForLoad(islandFiles, root) : null;
-
-      // Resolve custom directive entrypoints via Vite's resolver (handles aliases, registers deps)
-      const customDirectives: Array<{ name: string; entrypoint: string }> = [];
-      for (const def of clientDirectiveDefinitions) {
-        const resolved = await this.resolve(def.entrypoint);
-        if (!resolved) {
-          throw new Error(
-            `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${def.entrypoint}"`,
-          );
-        }
-        customDirectives.push({ name: def.name, entrypoint: resolved.id });
-      }
-
-      return buildReviveModuleSource({
+      const compiler = createReviveBootstrapCompiler(
+        {
+          resolveEntrypoint: async (entrypoint: string) => {
+            const resolved = await this.resolve(entrypoint);
+            if (!resolved) {
+              throw new Error(
+                `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
+              );
+            }
+            return resolved.id;
+          },
+          toLoadPaths: getIslandPathsForLoad,
+        },
         runtimePath,
-        directoryGlobs,
-        islandPaths,
-        customDirectives,
+      );
+
+      const plan = await compiler.plan({
+        root,
+        directories: resolvedDirs,
+        islandFiles,
+        customDirectives: clientDirectiveDefinitions,
         reviveOptions,
       });
+
+      return compiler.emit(plan);
     },
   };
 }
