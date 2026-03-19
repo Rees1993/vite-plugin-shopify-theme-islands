@@ -9,6 +9,8 @@ import {
   TS_JS_RE,
 } from "./discovery.js";
 import { buildReviveModuleSource } from "./revive-module.js";
+import { resolveThemeIslandsPolicy } from "./config-policy.js";
+import type { ShopifyThemeIslandsOptions } from "./options.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ResolvedConfig } from "vite";
 
@@ -23,63 +25,11 @@ export type ClientDirectiveLoader = () => Promise<void>;
 
 export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
 
-/** Plugin option entry for registering a custom client directive. */
-export interface ClientDirectiveDefinition {
-  /** HTML attribute name, e.g. `'client:on-click'` */
-  name: string;
-  /** Path to the directive module (supports Vite aliases) */
-  entrypoint: string;
-}
-
-/** Shared directive configuration shape used by both the plugin and the runtime. */
-export interface DirectivesConfig {
-  /** Configuration for the `client:visible` directive (IntersectionObserver). */
-  visible?: {
-    /** HTML attribute name. Default: `'client:visible'` */
-    attribute?: string;
-    /** Passed to IntersectionObserver — loads islands before they scroll into view. Default: `'200px'` */
-    rootMargin?: string;
-    /** Passed to IntersectionObserver — ratio of element that must be visible. Default: `0` */
-    threshold?: number;
-  };
-  /** Configuration for the `client:idle` directive (requestIdleCallback). */
-  idle?: {
-    /** HTML attribute name. Default: `'client:idle'` */
-    attribute?: string;
-    /** Deadline (ms) passed to requestIdleCallback; also used as the setTimeout fallback delay. Default: `500` */
-    timeout?: number;
-  };
-  /** Configuration for the `client:media` directive (matchMedia). */
-  media?: {
-    /** HTML attribute name. Default: `'client:media'` */
-    attribute?: string;
-  };
-  /** Configuration for the `client:defer` directive (fixed setTimeout delay). */
-  defer?: {
-    /** HTML attribute name. Default: `'client:defer'` */
-    attribute?: string;
-    /** Fallback delay (ms) when the attribute has no value. Default: `3000` */
-    delay?: number;
-  };
-  /** Configuration for the `client:interaction` directive (mouseenter/touchstart/focusin). */
-  interaction?: {
-    /** HTML attribute name. Default: `'client:interaction'` */
-    attribute?: string;
-    /** DOM event names to listen for. Default: `['mouseenter', 'touchstart', 'focusin']` */
-    events?: string[];
-  };
-  /** Custom client directives to register. Each entry maps an attribute name to a module entrypoint. */
-  custom?: ClientDirectiveDefinition[];
-}
-
-/** Event detail and runtime options (single source of truth in contract). */
-import type {
-  IslandLoadDetail,
-  IslandErrorDetail,
-  ReviveOptions,
-  RetryConfig,
-  RuntimeDirectivesConfig,
-} from "./contract.js";
+export type {
+  ClientDirectiveDefinition,
+  DirectivesConfig,
+  ShopifyThemeIslandsOptions,
+} from "./options.js";
 export type {
   IslandLoadDetail,
   IslandErrorDetail,
@@ -87,70 +37,6 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
-import { DEFAULT_DIRECTIVES } from "./contract.js";
-
-export interface ShopifyThemeIslandsOptions {
-  /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
-  directories?: string | string[];
-  /** Log discovered islands and generated virtual module. Default: `false` */
-  debug?: boolean;
-  /** Per-directive configuration. */
-  directives?: DirectivesConfig;
-  /** Automatic retry behaviour for failed island loads. */
-  retry?: RetryConfig;
-  /**
-   * Milliseconds before a custom directive that never calls `load()` is considered timed out.
-   * When exceeded, `islands:error` is dispatched and the island is abandoned.
-   * Default: `0` (disabled).
-   */
-  directiveTimeout?: number;
-}
-
-const PREFIX = "[vite-plugin-shopify-theme-islands]";
-
-function validateOptions(options: ShopifyThemeIslandsOptions, directives: DirectivesConfig): void {
-  const customDefs = options.directives?.custom ?? [];
-  if (Array.isArray(options.directories) && options.directories.length === 0) {
-    throw new Error(`${PREFIX} "directories" must not be empty`);
-  }
-
-  const threshold = options.directives?.visible?.threshold;
-  if (threshold !== undefined && (threshold < 0 || threshold > 1)) {
-    throw new Error(
-      `${PREFIX} "directives.visible.threshold" must be between 0 and 1, got ${threshold}`,
-    );
-  }
-
-  if (options.retry !== undefined) {
-    const { retries, delay } = options.retry;
-    if (retries !== undefined && retries < 0) {
-      throw new Error(`${PREFIX} "retry.retries" must be >= 0, got ${retries}`);
-    }
-    if (delay !== undefined && delay < 0) {
-      throw new Error(`${PREFIX} "retry.delay" must be >= 0, got ${delay}`);
-    }
-  }
-
-  const builtinAttributes = new Set([
-    directives.visible!.attribute!,
-    directives.idle!.attribute!,
-    directives.media!.attribute!,
-    directives.defer!.attribute!,
-    directives.interaction!.attribute!,
-  ]);
-  const seen = new Set<string>();
-  for (const def of customDefs) {
-    if (seen.has(def.name)) {
-      throw new Error(`${PREFIX} Duplicate custom directive name: "${def.name}"`);
-    }
-    if (builtinAttributes.has(def.name)) {
-      throw new Error(
-        `${PREFIX} Custom directive "${def.name}" conflicts with a built-in directive`,
-      );
-    }
-    seen.add(def.name);
-  }
-}
 
 const defaultDirectories = ["/frontend/js/islands/"];
 
@@ -182,20 +68,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  // Deep merge directives — contract is single source of truth for defaults
-  const directives: DirectivesConfig = {
-    visible: { ...DEFAULT_DIRECTIVES.visible, ...options.directives?.visible },
-    idle: { ...DEFAULT_DIRECTIVES.idle, ...options.directives?.idle },
-    media: { ...DEFAULT_DIRECTIVES.media, ...options.directives?.media },
-    defer: { ...DEFAULT_DIRECTIVES.defer, ...options.directives?.defer },
-    interaction: { ...DEFAULT_DIRECTIVES.interaction, ...options.directives?.interaction },
-  };
-
-  const clientDirectiveDefinitions: ClientDirectiveDefinition[] = options.directives?.custom ?? [];
-
-  validateOptions(options, directives);
-
-  const debug = options.debug ?? false;
+  const policy = resolveThemeIslandsPolicy(options);
+  const { directives, customDirectives: clientDirectiveDefinitions, debug } = policy.plugin;
+  const { runtime: reviveOptions } = policy;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
 
   let resolvedDirs = rawDirs;
@@ -305,12 +180,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         directoryGlobs,
         islandPaths,
         customDirectives,
-        reviveOptions: {
-          directives,
-          debug,
-          retry: options.retry,
-          directiveTimeout: options.directiveTimeout,
-        },
+        reviveOptions,
       });
     },
   };
