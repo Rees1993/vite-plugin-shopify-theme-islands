@@ -11,11 +11,12 @@ description: >
   teardown.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.2.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
 ---
 
 ## Setup
@@ -144,7 +145,7 @@ import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
 
 Only the virtual module (`/revive`) exports the `disconnect` bound to the plugin-managed `revive()` instance. Importing from other entry points references a different or nonexistent instance.
 
-Source: src/index.ts — virtual module `export const { disconnect } = _islands(...)`
+Source: src/revive-module.ts — buildReviveModuleSource() emits `export const { disconnect } = _islands(payload)`
 
 ### MEDIUM `onIslandError` fires on every retry, not just final failure
 

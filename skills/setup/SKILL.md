@@ -10,10 +10,12 @@ description: >
   directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.2.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
 ---
 
 ## Setup
@@ -207,7 +209,7 @@ shopifyThemeIslands({
 
 `directives` accepts only `visible`, `idle`, `media`, `defer`, `interaction`, and `custom`. `retry` at `directives.retry` is silently ignored.
 
-Source: src/index.ts — ShopifyThemeIslandsOptions
+Source: src/options.ts — ShopifyThemeIslandsOptions
 
 ### HIGH Wrong key name for retry count
 
@@ -250,4 +252,4 @@ shopifyThemeIslands({
 
 `directiveTimeout` is a top-level plugin option, not part of the per-directive config object.
 
-Source: src/index.ts — ShopifyThemeIslandsOptions
+Source: src/options.ts — ShopifyThemeIslandsOptions

@@ -9,10 +9,11 @@ description: >
   client:interaction values warn and fall back to default events.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.2.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
 ---
 
 ## Setup
@@ -261,4 +262,4 @@ Correct:
 
 When `directives.visible.attribute` (or any directive's `attribute` option) is overridden in `vite.config.ts`, all Liquid templates must use the configured name. The default `client:*` names no longer apply. Always read `vite.config.ts` to check for overridden attribute names before writing directives in Liquid.
 
-Source: src/index.ts:DirectivesConfig — `attribute` field per directive; src/runtime.ts reads configured attribute names at runtime
+Source: src/options.ts:DirectivesConfig — `attribute` field per directive; src/runtime.ts reads configured attribute names at runtime

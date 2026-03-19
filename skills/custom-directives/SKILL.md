@@ -9,11 +9,12 @@ description: >
   built-in conditions resolve.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.0"
+library_version: "1.2.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
 ---
 
 ## Setup
@@ -222,7 +223,7 @@ shopifyThemeIslands({
 
 Custom directive names must be unique and must not collide with any built-in directive name, including renamed built-ins.
 
-Source: src/index.ts — validateOptions duplicate and built-in conflict checks
+Source: src/config-policy.ts — validateOptions() duplicate and built-in conflict checks
 
 ### HIGH Entrypoint path missing `./` prefix
 
