@@ -82,7 +82,9 @@ export function resolveThemeIslandsPolicy(
     directives,
     debug,
     ...(options.retry !== undefined ? { retry: options.retry } : {}),
-    ...(options.directiveTimeout !== undefined ? { directiveTimeout: options.directiveTimeout } : {}),
+    ...(options.directiveTimeout !== undefined
+      ? { directiveTimeout: options.directiveTimeout }
+      : {}),
   };
 
   return {

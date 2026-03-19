@@ -51,12 +51,12 @@ describe("config-policy", () => {
   });
 
   it("rejects invalid visible thresholds", () => {
-    expect(() => resolveThemeIslandsPolicy({ directives: { visible: { threshold: -0.1 } } })).toThrow(
-      '"directives.visible.threshold" must be between 0 and 1',
-    );
-    expect(() => resolveThemeIslandsPolicy({ directives: { visible: { threshold: 1.1 } } })).toThrow(
-      '"directives.visible.threshold" must be between 0 and 1',
-    );
+    expect(() =>
+      resolveThemeIslandsPolicy({ directives: { visible: { threshold: -0.1 } } }),
+    ).toThrow('"directives.visible.threshold" must be between 0 and 1');
+    expect(() =>
+      resolveThemeIslandsPolicy({ directives: { visible: { threshold: 1.1 } } }),
+    ).toThrow('"directives.visible.threshold" must be between 0 and 1');
   });
 
   it("rejects invalid retry values", () => {
