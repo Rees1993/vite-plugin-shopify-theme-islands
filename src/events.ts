@@ -1,4 +1,5 @@
 import type { IslandLoadDetail, IslandErrorDetail } from "./index.js";
+import { runtimeSurface } from "./runtime-surface.js";
 
 /**
  * Listen for successful island module loads.
@@ -15,9 +16,7 @@ import type { IslandLoadDetail, IslandErrorDetail } from "./index.js";
  * ```
  */
 export function onIslandLoad(handler: (detail: IslandLoadDetail) => void): () => void {
-  const listener = (e: CustomEvent<IslandLoadDetail>) => handler(e.detail);
-  document.addEventListener("islands:load", listener);
-  return () => document.removeEventListener("islands:load", listener);
+  return runtimeSurface.onLoad(handler);
 }
 
 /**
@@ -36,7 +35,5 @@ export function onIslandLoad(handler: (detail: IslandLoadDetail) => void): () =>
  * ```
  */
 export function onIslandError(handler: (detail: IslandErrorDetail) => void): () => void {
-  const listener = (e: CustomEvent<IslandErrorDetail>) => handler(e.detail);
-  document.addEventListener("islands:error", listener);
-  return () => document.removeEventListener("islands:error", listener);
+  return runtimeSurface.onError(handler);
 }
