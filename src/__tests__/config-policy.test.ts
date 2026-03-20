@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_DIRECTIVES } from "../contract";
 import { resolveThemeIslandsPolicy } from "../config-policy";
+import type { ShopifyThemeIslandsOptions } from "../options";
 
 describe("config-policy", () => {
   it("applies full defaults when options are omitted", () => {
@@ -17,7 +18,11 @@ describe("config-policy", () => {
   it("merges partial directive options and preserves runtime projection", () => {
     const customDirectives = [{ name: "client:on-click", entrypoint: "./click.ts" }];
     const policy = resolveThemeIslandsPolicy({
-      directives: { idle: { timeout: 100 }, custom: customDirectives },
+      directives: {
+        idle: { timeout: 100 },
+        interaction: { events: ["focusin"] },
+        custom: customDirectives,
+      },
       debug: true,
       retry: { retries: 2, delay: 500 },
       directiveTimeout: 250,
@@ -28,6 +33,7 @@ describe("config-policy", () => {
       attribute: "client:idle",
       timeout: 100,
     });
+    expect(policy.plugin.directives.interaction?.events).toEqual(["focusin"]);
     expect(policy.plugin.customDirectives).toBe(customDirectives);
     expect(policy.plugin.debug).toBe(true);
     expect(policy.runtime).toEqual({
@@ -36,7 +42,10 @@ describe("config-policy", () => {
         idle: { attribute: "client:idle", timeout: 100 },
         media: DEFAULT_DIRECTIVES.media,
         defer: DEFAULT_DIRECTIVES.defer,
-        interaction: DEFAULT_DIRECTIVES.interaction,
+        interaction: {
+          attribute: "client:interaction",
+          events: ["focusin"],
+        },
       },
       debug: true,
       retry: { retries: 2, delay: 500 },
@@ -94,5 +103,25 @@ describe("config-policy", () => {
         },
       }),
     ).toThrow("conflicts with a built-in directive");
+  });
+
+  it("rejects empty interaction event arrays", () => {
+    expect(() =>
+      resolveThemeIslandsPolicy({
+        directives: { interaction: { events: [] } },
+      }),
+    ).toThrow('"directives.interaction.events" must not be empty');
+  });
+
+  it("rejects unsupported interaction event names", () => {
+    const options = {
+      directives: {
+        interaction: { events: ["mouseenter", "click"] },
+      },
+    } as unknown as ShopifyThemeIslandsOptions;
+
+    expect(() => resolveThemeIslandsPolicy(options)).toThrow(
+      '"directives.interaction.events" contains unsupported event "click"',
+    );
   });
 });

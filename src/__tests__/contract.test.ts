@@ -13,6 +13,7 @@ import {
   DEFAULT_DIRECTIVES,
   type RevivePayload,
 } from "../contract";
+import { DEFAULT_INTERACTION_EVENTS } from "../interaction-events";
 
 describe("contract", () => {
   describe("key→tag (path-like keys become tag names)", () => {
@@ -38,6 +39,7 @@ describe("contract", () => {
       expect(opts.directives.visible.attribute).toBe("client:visible");
       expect(opts.directives.visible.rootMargin).toBe("200px");
       expect(opts.directives.idle.timeout).toBe(500);
+      expect(opts.directives.interaction.events).toEqual(DEFAULT_INTERACTION_EVENTS);
       expect(opts.retry.retries).toBe(0);
       expect(opts.retry.delay).toBe(1000);
       expect(opts.debug).toBe(false);
@@ -57,6 +59,28 @@ describe("contract", () => {
       const fromPlugin = normalizeReviveOptions({ directives: DEFAULT_DIRECTIVES });
       const fromUndefined = normalizeReviveOptions(undefined);
       expect(fromPlugin.directives).toEqual(fromUndefined.directives);
+    });
+
+    it("rejects empty interaction event arrays for direct runtime consumers", () => {
+      expect(() =>
+        normalizeReviveOptions({
+          directives: {
+            interaction: { events: [] as unknown as typeof DEFAULT_INTERACTION_EVENTS },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" must not be empty');
+    });
+
+    it("rejects unsupported interaction event names for direct runtime consumers", () => {
+      expect(() =>
+        normalizeReviveOptions({
+          directives: {
+            interaction: {
+              events: ["mouseenter", "click"] as unknown as typeof DEFAULT_INTERACTION_EVENTS,
+            },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" contains unsupported event "click"');
     });
   });
 

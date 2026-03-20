@@ -92,6 +92,24 @@ describe("plugin", () => {
         }),
       ).toThrow("conflicts with a built-in directive");
     });
+
+    it("throws for empty interaction event arrays", () => {
+      expect(() =>
+        makePlugin({
+          directives: { interaction: { events: [] } },
+        }),
+      ).toThrow('"directives.interaction.events" must not be empty');
+    });
+
+    it("throws for unsupported interaction event names", () => {
+      expect(() =>
+        makePlugin({
+          directives: {
+            interaction: { events: ["mouseenter", "click"] as unknown as never[] },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" contains unsupported event "click"');
+    });
   });
 
   describe("resolveId", () => {

@@ -37,6 +37,12 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
+export type { InteractionEventName } from "./interaction-events.js";
+export {
+  DEFAULT_INTERACTION_EVENTS,
+  INTERACTION_EVENT_NAMES,
+  isInteractionEventName,
+} from "./interaction-events.js";
 
 const defaultDirectories = ["/frontend/js/islands/"];
 

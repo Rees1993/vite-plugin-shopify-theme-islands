@@ -1,4 +1,5 @@
 import { DEFAULT_DIRECTIVES, type ReviveOptions } from "./contract.js";
+import { validateInteractionEvents } from "./interaction-events.js";
 import type {
   ClientDirectiveDefinition,
   DirectivesConfig,
@@ -38,6 +39,9 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
       `${PREFIX} "directives.visible.threshold" must be between 0 and 1, got ${threshold}`,
     );
   }
+
+  const interactionEvents = options.directives?.interaction?.events;
+  validateInteractionEvents(interactionEvents);
 
   if (options.retry !== undefined) {
     const { retries, delay } = options.retry;
