@@ -4,7 +4,7 @@ import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
 import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
 import { fileURLToPath } from "node:url";
-import type { Plugin, ResolvedConfig } from "vite";
+import type { Plugin } from "vite";
 
 const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
