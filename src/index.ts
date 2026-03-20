@@ -95,7 +95,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     transform(code, id) {
       const change = inventory.applyTransform(id, code);
       if (!change) return;
-      const { root } = inventory.getBootstrapState();
+      const root = inventory.getRoot();
       log(
         change.type === "detected" ? "Detected island:" : "Removed island:",
         relative(root, change.file),
@@ -105,7 +105,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     watchChange(id, { event }) {
       const change = inventory.applyWatchChange(id, event);
       if (!change) return;
-      const { root } = inventory.getBootstrapState();
+      const root = inventory.getRoot();
       const prefix =
         event === "delete"
           ? "Removed island (deleted):"
