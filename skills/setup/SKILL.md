@@ -7,8 +7,11 @@ description: >
   defer, interaction, custom), retry (retries, delay with exponential
   backoff), directiveTimeout for hung custom directives, and the curated
   interaction-event config policy (`mouseenter`, `touchstart`, `focusin`; empty
-  arrays rejected). Load when setting up the plugin, configuring island scan
-  directories, or enabling retry / directive timeout.
+  arrays rejected). Per-element `client:interaction` values are runtime-validated
+  against the same curated set: unsupported tokens warn and are ignored; if no
+  supported tokens remain, the runtime falls back to the configured default
+  events. Load when setting up the plugin, configuring island scan directories,
+  or enabling retry / directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.0"
@@ -51,6 +54,10 @@ import "vite-plugin-shopify-theme-islands/revive";
 
 This activates the runtime — islands are never loaded without this import.
 
+For SPA teardown, the virtual `/revive` module also exports `disconnect()`.
+If it is called before `DOMContentLoaded`, the runtime cancels its pending
+startup listener so islands never initialize later against stale DOM.
+
 ### 3. Add directives to Liquid templates
 
 ```html
@@ -86,6 +93,7 @@ shopifyThemeIslands({
 
 Per-directive options are deep-merged — overriding `visible.rootMargin` preserves `visible.threshold` at its default of `0`.
 For config, `directives.interaction.events` is intentionally narrow and only accepts `mouseenter`, `touchstart`, and `focusin`.
+Per-element `client:interaction="..."` values are checked at runtime against that same set. Unsupported tokens warn and are ignored; if all tokens are unsupported, the runtime warns and falls back to the configured default events.
 
 ### Enable automatic retry with exponential backoff
 

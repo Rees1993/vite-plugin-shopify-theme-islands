@@ -10,7 +10,8 @@ description: >
   expiry. disconnect() from the virtual module revive for SPA navigation
   teardown, including before DOMContentLoaded — it now prevents init from ever
   starting if called early. Startup, DOM walking, mutation observation, and
-  parent/child activation gating are now owned by src/lifecycle.ts.
+  parent/child activation gating are now owned by src/lifecycle.ts, while
+  runtime observability and event dispatch are routed through src/runtime-surface.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.0"
@@ -93,6 +94,8 @@ disconnect();
 `disconnect()` stops the MutationObserver and prevents new islands from activating. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
 
 The startup walk itself is now lifecycle-owned. The runtime resolves the root lazily at init time, then the lifecycle coordinator performs the initial walk, begins observing subtree additions, and keeps child islands gated behind queued parents until the parent resolves.
+
+Load/error events and debug-ready groups are dispatched through the runtime surface, but the user-facing lifecycle behavior remains the same: startup is lazy, activation is subtree-aware, and teardown prevents later observation.
 
 ### Raw DOM events (when type augmentation is in scope)
 
