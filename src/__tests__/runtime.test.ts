@@ -1473,6 +1473,52 @@ describe("revive", () => {
         expect(loader).toHaveBeenCalledTimes(1);
       });
 
+      it("warns for mixed supported and unsupported tokens and uses only supported tokens", async () => {
+        const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<mixed-interaction client:interaction="mouseenter click"></mixed-interaction>';
+        r({ "/islands/mixed-interaction.ts": loader });
+        await flush();
+
+        const el = document.querySelector("mixed-interaction")!;
+        el.dispatchEvent(new Event("click"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+
+        el.dispatchEvent(new Event("mouseenter"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("contains unsupported event token"),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("click"));
+        warnSpy.mockRestore();
+      });
+
+      it("warns and falls back to default events when all tokens are unsupported", async () => {
+        const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<invalid-interaction client:interaction="click submit"></invalid-interaction>';
+        r({ "/islands/invalid-interaction.ts": loader });
+        await flush();
+
+        const el = document.querySelector("invalid-interaction")!;
+        el.dispatchEvent(new Event("click"));
+        await flush();
+        expect(loader).not.toHaveBeenCalled();
+
+        el.dispatchEvent(new Event("touchstart"));
+        await flush();
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("contains no supported event tokens"),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("click, submit"));
+        warnSpy.mockRestore();
+      });
+
       it("all-whitespace attribute value warns and falls back to default events", async () => {
         const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
         const loader = mock(async () => {});

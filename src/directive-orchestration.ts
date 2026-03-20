@@ -1,4 +1,5 @@
 import type { ClientDirective, NormalizedReviveOptions } from "./contract.js";
+import { INTERACTION_EVENT_NAMES, partitionInteractionEventTokens } from "./interaction-events.js";
 import type { RuntimeLogger } from "./runtime-surface.js";
 
 export interface DirectiveWaiters {
@@ -174,11 +175,25 @@ export function createDirectiveOrchestrator(
       let events: string[] = [...directives.interaction.events];
       if (interactionAttr) {
         const tokens = interactionAttr.split(/\s+/).filter(Boolean);
-        if (tokens.length > 0) events = tokens;
-        else {
+        if (tokens.length === 0) {
           console.warn(
             `[islands] <${tagName}> ${directives.interaction.attribute} has no valid event tokens — using default events`,
           );
+        } else {
+          const { valid, invalid } = partitionInteractionEventTokens(tokens);
+          if (invalid.length > 0) {
+            const supported = INTERACTION_EVENT_NAMES.join(", ");
+            if (valid.length > 0) {
+              console.warn(
+                `[islands] <${tagName}> ${directives.interaction.attribute} contains unsupported event token${invalid.length === 1 ? "" : "s"} (${invalid.join(", ")}) — ignoring invalid token${invalid.length === 1 ? "" : "s"}; supported tokens: ${supported}`,
+              );
+            } else {
+              console.warn(
+                `[islands] <${tagName}> ${directives.interaction.attribute} contains no supported event tokens (${invalid.join(", ")}) — using default events; supported tokens: ${supported}`,
+              );
+            }
+          }
+          if (valid.length > 0) events = valid;
         }
       }
       log.note(`waiting for ${directives.interaction.attribute} (${events.join(", ")})`);

@@ -3,6 +3,7 @@ import {
   DEFAULT_INTERACTION_EVENTS,
   INTERACTION_EVENT_NAMES,
   isInteractionEventName,
+  partitionInteractionEventTokens,
 } from "../interaction-events";
 
 describe("interaction-events", () => {
@@ -17,5 +18,12 @@ describe("interaction-events", () => {
     expect(isInteractionEventName("focusin")).toBe(true);
     expect(isInteractionEventName("click")).toBe(false);
     expect(isInteractionEventName("pointerdown")).toBe(false);
+  });
+
+  it("partitions runtime tokens into supported and unsupported sets", () => {
+    expect(partitionInteractionEventTokens(["mouseenter", "click", "focusin", "submit"])).toEqual({
+      valid: ["mouseenter", "focusin"],
+      invalid: ["click", "submit"],
+    });
   });
 });

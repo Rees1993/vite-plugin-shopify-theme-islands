@@ -14,6 +14,11 @@ export const DEFAULT_INTERACTION_EVENTS = [...INTERACTION_EVENT_NAMES] as const;
 const INTERACTION_EVENT_NAME_SET = new Set<string>(INTERACTION_EVENT_NAMES);
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
+export interface InteractionEventTokenPartition {
+  valid: InteractionEventName[];
+  invalid: string[];
+}
+
 export function isInteractionEventName(value: string): value is InteractionEventName {
   return INTERACTION_EVENT_NAME_SET.has(value);
 }
@@ -31,4 +36,16 @@ export function validateInteractionEvents(
       `${PREFIX} "directives.interaction.events" contains unsupported event "${invalidEvent}"`,
     );
   }
+}
+
+export function partitionInteractionEventTokens(
+  tokens: readonly string[],
+): InteractionEventTokenPartition {
+  const valid: InteractionEventName[] = [];
+  const invalid: string[] = [];
+  for (const token of tokens) {
+    if (isInteractionEventName(token)) valid.push(token);
+    else invalid.push(token);
+  }
+  return { valid, invalid };
 }
