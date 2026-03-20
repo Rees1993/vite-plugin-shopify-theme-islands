@@ -11,6 +11,33 @@ const SKIP_DIRS = new Set(["node_modules", "dist", "build", "public", "assets", 
 /** Matches the island mixin import. Exported for plugin transform/watch detection. */
 export const ISLAND_IMPORT_RE = /from\s+['"]vite-plugin-shopify-theme-islands\/island['"]/;
 
+export interface AliasLike {
+  find: string | RegExp;
+  replacement: string;
+}
+
+export interface IslandInventoryConfig {
+  root: string;
+  aliases: readonly AliasLike[];
+}
+
+export interface IslandInventorySnapshot {
+  resolvedDirectories: string[];
+  islandFiles: string[];
+  directoryTagNames: string[];
+}
+
+export interface IslandInventoryChange {
+  type: "detected" | "removed";
+  file: string;
+}
+
+export interface IslandInventoryBootstrapState {
+  root: string;
+  directories: string[];
+  islandFiles: Set<string>;
+}
+
 /** True if file is under any of the given absolute directory paths. */
 export function inDirectory(file: string, absDirs: string[]): boolean {
   const resolvedFile = resolve(file);
@@ -40,6 +67,27 @@ function walkDir(dir: string, visitor: (name: string, full: string) => void): vo
   }
 }
 
+function resolveAliases(dirs: string[], aliasesInput: readonly AliasLike[]): string[] {
+  const aliases = [...aliasesInput].sort(
+    (a, b) =>
+      (typeof b.find === "string" ? b.find.length : 0) -
+      (typeof a.find === "string" ? a.find.length : 0),
+  );
+  return dirs.map((dir) => {
+    for (const { find, replacement } of aliases) {
+      if (typeof find === "string" && dir.startsWith(find)) return dir.replace(find, replacement);
+      if (find instanceof RegExp && find.test(dir)) return dir.replace(find, replacement);
+    }
+    return dir;
+  });
+}
+
+function toAbsoluteDirs(root: string, resolvedDirs: string[]): string[] {
+  return resolvedDirs.map((dir) =>
+    dir.startsWith(root) ? dir : join(root, dir.replace(/^\//, "")),
+  );
+}
+
 /** Scan from root for files containing the island import; returns paths (not in absDirs). */
 export function discoverIslandFiles(root: string, absDirs: string[]): Set<string> {
   const found = new Set<string>();
@@ -59,4 +107,76 @@ export function collectTagNames(dir: string): string[] {
   const names: string[] = [];
   walkDir(dir, (name) => names.push(name.replace(TS_JS_RE, "")));
   return names;
+}
+
+export function createIslandInventory(rawDirectories: string[]) {
+  let root = process.cwd();
+  let resolvedDirs = [...rawDirectories];
+  let absDirs = [...rawDirectories];
+  const islandFiles = new Set<string>();
+  let scanned = false;
+
+  const buildSnapshot = (): IslandInventorySnapshot => ({
+    resolvedDirectories: [...resolvedDirs],
+    islandFiles: [...islandFiles],
+    directoryTagNames: absDirs.flatMap((dir) => collectTagNames(dir)),
+  });
+
+  const updateIslandFile = (id: string, code: string): IslandInventoryChange | null => {
+    if (!TS_JS_RE.test(id)) return null;
+    if (
+      code.includes("shopify-theme-islands/island") &&
+      ISLAND_IMPORT_RE.test(code) &&
+      !inDirectory(id, absDirs)
+    ) {
+      const sizeBefore = islandFiles.size;
+      islandFiles.add(id);
+      return islandFiles.size !== sizeBefore ? { type: "detected", file: id } : null;
+    }
+    return islandFiles.delete(id) ? { type: "removed", file: id } : null;
+  };
+
+  return {
+    configure(config: IslandInventoryConfig): void {
+      root = config.root;
+      resolvedDirs = resolveAliases(rawDirectories, config.aliases);
+      absDirs = toAbsoluteDirs(root, resolvedDirs);
+    },
+
+    scan(): IslandInventorySnapshot | null {
+      if (scanned) return null;
+      scanned = true;
+      islandFiles.clear();
+      discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
+      return buildSnapshot();
+    },
+
+    applyTransform(id: string, code: string): IslandInventoryChange | null {
+      return updateIslandFile(id, code);
+    },
+
+    applyWatchChange(id: string, event: string): IslandInventoryChange | null {
+      if (!TS_JS_RE.test(id)) return null;
+      if (event === "delete") {
+        return islandFiles.delete(id) ? { type: "removed", file: id } : null;
+      }
+      try {
+        return updateIslandFile(id, readFileSync(id, "utf-8"));
+      } catch {
+        return null;
+      }
+    },
+
+    getBootstrapState(): IslandInventoryBootstrapState {
+      return {
+        root,
+        directories: [...resolvedDirs],
+        islandFiles: new Set(islandFiles),
+      };
+    },
+
+    getRoot(): string {
+      return root;
+    },
+  };
 }
