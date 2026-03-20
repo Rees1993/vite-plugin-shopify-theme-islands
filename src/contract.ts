@@ -4,6 +4,8 @@
  * Single source of truth for the payload shape, key→tag derivation, and defaults.
  * Plugin and runtime both depend on this module in-process.
  */
+import type { InteractionEventName } from "./interaction-events.js";
+import { DEFAULT_INTERACTION_EVENTS } from "./interaction-events.js";
 
 // ---------------------------------------------------------------------------
 // 1. Core payload and options (single source of truth)
@@ -18,7 +20,7 @@ export interface RuntimeDirectivesConfig {
   idle?: { attribute?: string; timeout?: number };
   media?: { attribute?: string };
   defer?: { attribute?: string; delay?: number };
-  interaction?: { attribute?: string; events?: string[] };
+  interaction?: { attribute?: string; events?: readonly InteractionEventName[] };
 }
 
 /** Retry configuration. */
@@ -105,7 +107,7 @@ export interface NormalizedReviveOptions {
     idle: { attribute: string; timeout: number };
     media: { attribute: string };
     defer: { attribute: string; delay: number };
-    interaction: { attribute: string; events: string[] };
+    interaction: { attribute: string; events: readonly InteractionEventName[] };
   };
   debug: boolean;
   retry: { retries: number; delay: number };
@@ -120,7 +122,7 @@ export const DEFAULT_DIRECTIVES: NormalizedReviveOptions["directives"] = {
   defer: { attribute: "client:defer", delay: 3000 },
   interaction: {
     attribute: "client:interaction",
-    events: ["mouseenter", "touchstart", "focusin"],
+    events: [...DEFAULT_INTERACTION_EVENTS],
   },
 };
 

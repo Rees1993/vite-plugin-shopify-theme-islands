@@ -1,4 +1,5 @@
 import { DEFAULT_DIRECTIVES, type ReviveOptions } from "./contract.js";
+import { isInteractionEventName } from "./interaction-events.js";
 import type {
   ClientDirectiveDefinition,
   DirectivesConfig,
@@ -37,6 +38,19 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
     throw new Error(
       `${PREFIX} "directives.visible.threshold" must be between 0 and 1, got ${threshold}`,
     );
+  }
+
+  const interactionEvents = options.directives?.interaction?.events;
+  if (interactionEvents !== undefined) {
+    if (interactionEvents.length === 0) {
+      throw new Error(`${PREFIX} "directives.interaction.events" must not be empty`);
+    }
+    const invalidEvent = interactionEvents.find((eventName) => !isInteractionEventName(eventName));
+    if (invalidEvent) {
+      throw new Error(
+        `${PREFIX} "directives.interaction.events" contains unsupported event "${invalidEvent}"`,
+      );
+    }
   }
 
   if (options.retry !== undefined) {

@@ -171,7 +171,7 @@ export function createDirectiveOrchestrator(
 
     const interactionAttr = el.getAttribute(directives.interaction.attribute);
     if (interactionAttr !== null) {
-      let events = directives.interaction.events;
+      let events: string[] = [...directives.interaction.events];
       if (interactionAttr) {
         const tokens = interactionAttr.split(/\s+/).filter(Boolean);
         if (tokens.length > 0) events = tokens;

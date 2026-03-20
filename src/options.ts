@@ -1,4 +1,5 @@
 import type { RetryConfig } from "./contract.js";
+import type { InteractionEventName } from "./interaction-events.js";
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -42,8 +43,8 @@ export interface DirectivesConfig {
   interaction?: {
     /** HTML attribute name. Default: `'client:interaction'` */
     attribute?: string;
-    /** DOM event names to listen for. Default: `['mouseenter', 'touchstart', 'focusin']` */
-    events?: string[];
+    /** Curated intent events to listen for. Default: `['mouseenter', 'touchstart', 'focusin']` */
+    events?: readonly InteractionEventName[];
   };
   /** Custom client directives to register. Each entry maps an attribute name to a module entrypoint. */
   custom?: ClientDirectiveDefinition[];
