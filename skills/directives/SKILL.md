@@ -15,7 +15,7 @@ description: >
   owned by src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.0"
+library_version: "1.3.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts

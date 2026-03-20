@@ -14,7 +14,7 @@ description: >
   or enabling retry / directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.0"
+library_version: "1.3.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts

@@ -14,7 +14,7 @@ description: >
   runtime observability and event dispatch are routed through src/runtime-surface.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.0"
+library_version: "1.3.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
