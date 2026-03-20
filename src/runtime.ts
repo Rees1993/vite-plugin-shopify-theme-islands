@@ -159,16 +159,24 @@ export function revive(
     run();
   }
 
-  const endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);
+  let endReadyLog: (() => void) | undefined;
   const disconnectLifecycle = lifecycle.start({
-    root: document.body,
+    getRoot: () => document.body,
     islandMap,
     onActivate: loadIsland,
-    onInitialWalkComplete: endReadyLog,
+    onBeforeInitialWalk: () => {
+      endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);
+    },
+    onInitialWalkComplete: () => {
+      endReadyLog?.();
+      endReadyLog = undefined;
+    },
   });
   return {
     disconnect() {
       disconnected = true;
+      endReadyLog?.();
+      endReadyLog = undefined;
       disconnectLifecycle.disconnect();
     },
   };

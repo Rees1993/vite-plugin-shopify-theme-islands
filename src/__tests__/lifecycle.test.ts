@@ -27,7 +27,7 @@ describe("lifecycle", () => {
     const child = document.querySelector("child-island") as HTMLElement;
 
     lifecycle.start({
-      root: document.body,
+      getRoot: () => document.body,
       islandMap,
       onActivate(tagName) {
         tags.push(tagName);
@@ -66,7 +66,7 @@ describe("lifecycle", () => {
       document.body.innerHTML = "<root-shell></root-shell>";
 
       const { disconnect } = lifecycle.start({
-        root: document.body,
+        getRoot: () => document.body,
         islandMap,
         onActivate(tagName) {
           tags.push(tagName);
@@ -87,6 +87,75 @@ describe("lifecycle", () => {
       expect(tags).toEqual(["dynamic-island"]);
     } finally {
       globalThis.MutationObserver = OriginalMO;
+    }
+  });
+
+  it("resolves the root lazily and skips startup callbacks when disconnected before init", () => {
+    const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
+    let domReadyHandler: (() => void) | undefined;
+    let readyState = "loading";
+    const rootCalls: string[] = [];
+    const beforeWalk = mock(() => {});
+    const afterWalk = mock(() => {});
+    const originalReadyState = Object.getOwnPropertyDescriptor(document, "readyState");
+    const originalAdd = document.addEventListener.bind(document);
+    const originalRemove = document.removeEventListener.bind(document);
+    const addSpy = mock((type: string, handler: EventListenerOrEventListenerObject) => {
+      if (type === "DOMContentLoaded") domReadyHandler = handler as () => void;
+    });
+    const removeSpy = mock(() => {});
+
+    Object.defineProperty(document, "readyState", {
+      configurable: true,
+      get: () => readyState,
+    });
+    document.addEventListener = addSpy as typeof document.addEventListener;
+    document.removeEventListener = removeSpy as typeof document.removeEventListener;
+
+    try {
+      const { disconnect } = lifecycle.start({
+        getRoot: () => {
+          rootCalls.push("called");
+          return document.body;
+        },
+        islandMap: new Map(),
+        onActivate() {},
+        onBeforeInitialWalk: beforeWalk,
+        onInitialWalkComplete: afterWalk,
+      });
+
+      expect(rootCalls).toEqual([]);
+      expect(beforeWalk).not.toHaveBeenCalled();
+      expect(afterWalk).not.toHaveBeenCalled();
+
+      disconnect();
+      domReadyHandler?.();
+
+      expect(rootCalls).toEqual([]);
+      expect(beforeWalk).not.toHaveBeenCalled();
+      expect(afterWalk).not.toHaveBeenCalled();
+
+      readyState = "interactive";
+      lifecycle.start({
+        getRoot: () => {
+          rootCalls.push("called");
+          return document.body;
+        },
+        islandMap: new Map(),
+        onActivate() {},
+        onBeforeInitialWalk: beforeWalk,
+        onInitialWalkComplete: afterWalk,
+      });
+
+      expect(rootCalls).toEqual(["called"]);
+      expect(beforeWalk).toHaveBeenCalledTimes(1);
+      expect(afterWalk).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalReadyState) {
+        Object.defineProperty(document, "readyState", originalReadyState);
+      }
+      document.addEventListener = originalAdd;
+      document.removeEventListener = originalRemove;
     }
   });
 });

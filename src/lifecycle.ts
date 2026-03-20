@@ -1,9 +1,10 @@
 import type { IslandLoader } from "./contract.js";
 
 export interface IslandLifecycleStartInput {
-  root: HTMLElement;
+  getRoot(): HTMLElement | null;
   islandMap: Map<string, IslandLoader>;
   onActivate(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): void;
+  onBeforeInitialWalk?: () => void;
   onInitialWalkComplete?: () => void;
 }
 
@@ -129,11 +130,14 @@ export function createIslandLifecycleCoordinator(opts: {
 
     const init = (): void => {
       if (disconnected || initialized) return;
+      const root = input.getRoot();
+      if (!root) return;
       initialized = true;
-      walk(input.root);
+      input.onBeforeInitialWalk?.();
+      walk(root);
       initialWalkComplete = true;
       input.onInitialWalkComplete?.();
-      observer.observe(input.root, { childList: true, subtree: true });
+      observer.observe(root, { childList: true, subtree: true });
     };
 
     if (document.readyState === "loading") {
