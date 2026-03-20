@@ -10,6 +10,7 @@ export const INTERACTION_EVENT_NAMES = ["mouseenter", "touchstart", "focusin"] a
 export type InteractionEventName = (typeof INTERACTION_EVENT_NAMES)[number];
 
 export const DEFAULT_INTERACTION_EVENTS = [...INTERACTION_EVENT_NAMES] as const;
+export const INTERACTION_EVENT_NAMES_LABEL = INTERACTION_EVENT_NAMES.join(", ");
 
 const INTERACTION_EVENT_NAME_SET = new Set<string>(INTERACTION_EVENT_NAMES);
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
@@ -30,7 +31,8 @@ export function validateInteractionEvents(
   if (events.length === 0) {
     throw new Error(`${PREFIX} "directives.interaction.events" must not be empty`);
   }
-  const invalidEvent = events.find((eventName) => !isInteractionEventName(eventName));
+  const { invalid } = partitionInteractionEventTokens(events);
+  const invalidEvent = invalid[0];
   if (invalidEvent) {
     throw new Error(
       `${PREFIX} "directives.interaction.events" contains unsupported event "${invalidEvent}"`,
