@@ -5,17 +5,19 @@ description: >
   install to first working island. shopifyThemeIslands() options: directories
   (string | string[]), debug, directives deep-merge (visible, idle, media,
   defer, interaction, custom), retry (retries, delay with exponential
-  backoff), and directiveTimeout for hung custom directives. Load when setting
-  up the plugin, configuring island scan directories, or enabling retry /
-  directive timeout.
+  backoff), directiveTimeout for hung custom directives, and the curated
+  interaction-event config policy (`mouseenter`, `touchstart`, `focusin`; empty
+  arrays rejected). Load when setting up the plugin, configuring island scan
+  directories, or enabling retry / directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.2"
+library_version: "1.3.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 
 ## Setup
@@ -83,6 +85,7 @@ shopifyThemeIslands({
 ```
 
 Per-directive options are deep-merged — overriding `visible.rootMargin` preserves `visible.threshold` at its default of `0`.
+For config, `directives.interaction.events` is intentionally narrow and only accepts `mouseenter`, `touchstart`, and `focusin`.
 
 ### Enable automatic retry with exponential backoff
 
@@ -253,3 +256,35 @@ shopifyThemeIslands({
 `directiveTimeout` is a top-level plugin option, not part of the per-directive config object.
 
 Source: src/options.ts — ShopifyThemeIslandsOptions
+
+### HIGH Empty or unsupported `directives.interaction.events` values fail config resolution
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    interaction: { events: [] },
+  },
+});
+
+shopifyThemeIslands({
+  directives: {
+    interaction: { events: ["click"] as never[] },
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    interaction: { events: ["mouseenter", "focusin"] },
+  },
+});
+```
+
+The typed config surface only supports the package-owned interaction events `mouseenter`, `touchstart`, and `focusin`. An empty array is rejected because it would otherwise create an interaction gate that never resolves.
+
+Source: src/interaction-events.ts — validateInteractionEvents()

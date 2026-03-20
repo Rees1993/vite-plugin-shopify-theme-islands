@@ -5,14 +5,16 @@ description: >
   configured directories auto-discovered by tag name = filename) and Island
   mixin (import Island from vite-plugin-shopify-theme-islands/island to mark
   files anywhere in the project). Covers customElements.define, the Island
-  base class, and child island cascade behaviour.
+  base class, and child island cascade behaviour now owned by
+  src/lifecycle.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.2"
+library_version: "1.3.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
 
@@ -82,6 +84,7 @@ Required when multiple entry points might import the same island file.
 ```
 
 `cart-line-item` is not activated until `cart-drawer`'s module has resolved. The runtime's TreeWalker rejects subtrees of unloaded parent islands and re-walks them after the parent loads.
+That parent/child gating now lives in the lifecycle coordinator, but the user-facing behavior is the same: nested islands wait for the queued parent to settle before their own activation starts.
 
 ### Vite alias in directories
 
@@ -188,4 +191,4 @@ Wrong assumption:
 
 `cart-line-item`'s `client:idle` wait does **not** begin until `cart-drawer` has finished loading. The cascade is sequential, not parallel.
 
-Source: src/runtime.ts — customElementFilter NodeFilter.FILTER_REJECT, walk() after parent loads
+Source: src/lifecycle.ts — customElementFilter NodeFilter.FILTER_REJECT, walk() after parent loads

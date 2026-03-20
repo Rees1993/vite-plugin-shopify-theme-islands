@@ -7,16 +7,19 @@ description: >
   Directives resolve sequentially — visible → media → idle → defer →
   interaction → custom. Per-element value overrides. Empty client:media
   warning. Whitespace-only client:interaction values warn and fall back to
-  default events. Current directive sequencing and custom-directive latching
-  are owned by src/directive-orchestration.ts.
+  default events. Global `directives.interaction.events` config is intentionally
+  narrowed to the curated set `mouseenter`, `touchstart`, and `focusin`.
+  Current directive sequencing and custom-directive latching are owned by
+  src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.2"
+library_version: "1.3.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 
 ## Setup
@@ -70,11 +73,12 @@ Combined directives are AND-latched. The island loads only after every condition
 <!-- Fixed delay in ms; empty attribute uses the global default (3000ms) -->
 <chat-widget client:defer="8000"></chat-widget>
 
-<!-- Override interaction events for this element only (space-separated MDN event names) -->
+<!-- Override interaction events for this element only -->
 <cart-flyout client:interaction="mouseenter"></cart-flyout>
 ```
 
 The attribute value overrides the globally configured default for that element. Other elements are unaffected.
+In config, `directives.interaction.events` is stricter and only accepts the curated package-owned list: `mouseenter`, `touchstart`, and `focusin`.
 
 ### `client:defer` without a value uses the global default
 
@@ -242,6 +246,32 @@ Correct:
 Directive attributes are case-sensitive. An unrecognised attribute is silently ignored — the island loads immediately as if no directive were set. No warning is emitted. Check for typos if an island activates earlier than expected.
 
 Source: src/directive-orchestration.ts — built-ins read exact configured attribute names
+
+### HIGH Unsupported interaction events in config fail plugin setup
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    interaction: { events: ["click"] as never[] },
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    interaction: { events: ["mouseenter", "focusin"] },
+  },
+});
+```
+
+The package now owns a curated interaction-event vocabulary for config. Supported values are `mouseenter`, `touchstart`, and `focusin`; unsupported names and empty arrays are rejected during config resolution.
+
+Source: src/interaction-events.ts — validateInteractionEvents()
 
 ### HIGH Agent uses default attribute name when developer has configured a custom one
 

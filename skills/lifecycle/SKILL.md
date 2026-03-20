@@ -9,13 +9,15 @@ description: >
   error, and attempt, including custom directive failures and directiveTimeout
   expiry. disconnect() from the virtual module revive for SPA navigation
   teardown, including before DOMContentLoaded — it now prevents init from ever
-  starting if called early.
+  starting if called early. Startup, DOM walking, mutation observation, and
+  parent/child activation gating are now owned by src/lifecycle.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.2"
+library_version: "1.3.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
@@ -89,6 +91,8 @@ disconnect();
 ```
 
 `disconnect()` stops the MutationObserver and prevents new islands from activating. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
+
+The startup walk itself is now lifecycle-owned. The runtime resolves the root lazily at init time, then the lifecycle coordinator performs the initial walk, begins observing subtree additions, and keeps child islands gated behind queued parents until the parent resolves.
 
 ### Raw DOM events (when type augmentation is in scope)
 
@@ -192,4 +196,6 @@ Source: src/runtime.ts — handleDirectiveError dispatches `islands:error`
 
 ### LOW Removed elements waiting on `client:visible` / `client:interaction` do not emit `islands:error`
 
-If an element is removed from the DOM before a cancellable built-in directive resolves, the runtime treats that as expected teardown and aborts silently. Use `onIslandError` for real failures, not DOM-removal cancellations.
+If an element is removed from the DOM before a cancellable built-in directive resolves, the lifecycle coordinator cancels that activation attempt and the runtime treats it as expected teardown. No `islands:error` event is dispatched.
+
+Source: src/lifecycle.ts — cancelDetached() with watchCancellable() ownership
