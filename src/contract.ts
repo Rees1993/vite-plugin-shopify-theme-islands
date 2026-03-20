@@ -5,7 +5,7 @@
  * Plugin and runtime both depend on this module in-process.
  */
 import type { InteractionEventName } from "./interaction-events.js";
-import { DEFAULT_INTERACTION_EVENTS } from "./interaction-events.js";
+import { DEFAULT_INTERACTION_EVENTS, validateInteractionEvents } from "./interaction-events.js";
 
 // ---------------------------------------------------------------------------
 // 1. Core payload and options (single source of truth)
@@ -136,6 +136,7 @@ export function normalizeReviveOptions(options?: ReviveOptions): NormalizedReviv
   const d = DEFAULT_DIRECTIVES;
   const r = DEFAULT_RETRY;
   const dir = options?.directives;
+  validateInteractionEvents(dir?.interaction?.events as readonly string[] | undefined);
   return {
     directives: {
       visible: { ...d.visible, ...dir?.visible },

@@ -60,6 +60,28 @@ describe("contract", () => {
       const fromUndefined = normalizeReviveOptions(undefined);
       expect(fromPlugin.directives).toEqual(fromUndefined.directives);
     });
+
+    it("rejects empty interaction event arrays for direct runtime consumers", () => {
+      expect(() =>
+        normalizeReviveOptions({
+          directives: {
+            interaction: { events: [] as unknown as typeof DEFAULT_INTERACTION_EVENTS },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" must not be empty');
+    });
+
+    it("rejects unsupported interaction event names for direct runtime consumers", () => {
+      expect(() =>
+        normalizeReviveOptions({
+          directives: {
+            interaction: {
+              events: ["mouseenter", "click"] as unknown as typeof DEFAULT_INTERACTION_EVENTS,
+            },
+          },
+        }),
+      ).toThrow('"directives.interaction.events" contains unsupported event "click"');
+    });
   });
 
   describe("payload → island map (buildIslandMap)", () => {
