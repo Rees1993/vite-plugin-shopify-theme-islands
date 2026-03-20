@@ -6,11 +6,13 @@ description: >
   client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
   Directives resolve sequentially — visible → media → idle → defer →
   interaction → custom. Per-element value overrides. Empty client:media
-  warning. Whitespace-only client:interaction values warn and fall back to
-  default events. Global `directives.interaction.events` config is intentionally
-  narrowed to the curated set `mouseenter`, `touchstart`, and `focusin`.
-  Current directive sequencing and custom-directive latching are owned by
-  src/directive-orchestration.ts.
+  warning. `client:interaction` now validates per-element tokens at runtime:
+  whitespace-only values warn and fall back; mixed supported/unsupported values
+  warn and ignore the unsupported tokens; fully unsupported values warn and fall
+  back to default events. Global `directives.interaction.events` config is
+  intentionally narrowed to the curated set `mouseenter`, `touchstart`, and
+  `focusin`. Current directive sequencing and custom-directive latching are
+  owned by src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.0"
@@ -79,6 +81,7 @@ Combined directives are AND-latched. The island loads only after every condition
 
 The attribute value overrides the globally configured default for that element. Other elements are unaffected.
 In config, `directives.interaction.events` is stricter and only accepts the curated package-owned list: `mouseenter`, `touchstart`, and `focusin`.
+At runtime, per-element `client:interaction` values use that same curated set. Unsupported tokens are ignored with a warning; if no supported tokens remain, the runtime warns and falls back to the default interaction events.
 
 ### `client:defer` without a value uses the global default
 
@@ -105,6 +108,18 @@ An empty `client:defer` attribute is NOT zero — it falls back to the configure
 An empty `client:interaction` attribute uses the configured default events with no warning. A whitespace-only value such as `client:interaction="   "` emits a warning and still falls back to the default events.
 
 Source: src/directive-orchestration.ts — interaction token parsing and fallback warning
+
+### Mixed supported and unsupported interaction tokens
+
+```html
+<!-- "click" is ignored with a warning; "mouseenter" still triggers load -->
+<cart-flyout client:interaction="mouseenter click"></cart-flyout>
+
+<!-- No supported tokens remain; warns and falls back to default events -->
+<cart-flyout client:interaction="click submit"></cart-flyout>
+```
+
+Per-element values are no longer treated as an unconstrained event surface. The runtime filters them against the curated package-owned set.
 
 ### Changing built-in directive defaults globally
 
@@ -168,6 +183,25 @@ Correct:
 Whitespace-only values are not treated the same as an empty attribute. The runtime warns and falls back to the configured default events.
 
 Source: src/directive-orchestration.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
+
+### MEDIUM Unsupported per-element interaction tokens are warned and ignored
+
+Wrong:
+
+```html
+<cart-flyout client:interaction="mouseenter click"></cart-flyout>
+```
+
+Correct:
+
+```html
+<!-- Use only the curated supported tokens -->
+<cart-flyout client:interaction="mouseenter focusin"></cart-flyout>
+```
+
+The runtime no longer attaches arbitrary listeners for unsupported per-element tokens. Supported tokens still work; unsupported ones are ignored with a warning. If no supported tokens remain, the runtime falls back to the configured default events.
+
+Source: src/directive-orchestration.ts — `partitionInteractionEventTokens()` handling
 
 ### HIGH Multiple directives are AND, not OR
 
