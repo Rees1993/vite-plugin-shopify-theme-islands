@@ -83,7 +83,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
           );
         }
         if (snapshot.islandFiles.length) {
-          const { root } = inventory.getBootstrapState();
+          const root = inventory.getRoot();
           log(`Found ${snapshot.islandFiles.length} island file(s) via mixin import:`);
           for (const file of snapshot.islandFiles) log(" ", relative(root, file));
         }

@@ -178,9 +178,5 @@ export function createIslandInventory(rawDirectories: string[]) {
     getRoot(): string {
       return root;
     },
-
-    getSnapshot(): IslandInventorySnapshot {
-      return buildSnapshot();
-    },
   };
 }
