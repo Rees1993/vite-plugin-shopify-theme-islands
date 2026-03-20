@@ -48,10 +48,10 @@ export function createReviveBootstrapCompiler(
             })),
           )
         : null;
-
+      const directoryGlobs = input.directories.map((dir) => dir + "**/*.{ts,js}");
       return {
         runtimePath,
-        directoryGlobs: input.directories.map((dir) => dir + "**/*.{ts,js}"),
+        directoryGlobs,
         islandPaths,
         customDirectives,
         reviveOptions: input.reviveOptions,

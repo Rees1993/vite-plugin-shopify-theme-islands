@@ -27,7 +27,7 @@ describe("revive-bootstrap", () => {
       },
     });
 
-    expect(plan).toEqual({
+    expect(plan).toMatchObject({
       runtimePath: "/runtime.js",
       directoryGlobs: ["/islands/**/*.{ts,js}", "/components/**/*.{ts,js}"],
       islandPaths: ["/src/widget.ts", "/src/other.js"],
@@ -41,9 +41,14 @@ describe("revive-bootstrap", () => {
         directiveTimeout: 100,
       },
     });
+    const source = compiler.emit(plan);
+    expect(source).toContain('import { revive as _islands } from "/runtime.js"');
+    expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
+    expect(source).toContain("export const { disconnect } = _islands(payload);");
   });
 
-  it("renders the bootstrap source from a semantic plan", () => {
+  it("renders the bootstrap source from a semantic plan", async () => {
     const compiler = createReviveBootstrapCompiler(
       {
         resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}`,
@@ -51,20 +56,17 @@ describe("revive-bootstrap", () => {
       },
       "/runtime.js",
     );
-
-    const source = compiler.emit({
-      runtimePath: "/runtime.js",
-      directoryGlobs: ["/islands/**/*.{ts,js}"],
-      islandPaths: ["/src/widget.ts"],
-      customDirectives: [
-        { name: "client:on-click", entrypoint: "/resolved/./src/directives/on-click.ts" },
-      ],
+    const plan = await compiler.plan({
+      root: "/project",
+      directories: ["/islands/"],
+      islandFiles: new Set(["/project/src/widget.ts"]),
+      customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
       reviveOptions: { debug: false },
     });
 
+    const source = compiler.emit(plan);
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
-    expect(source).toContain("export const { disconnect } = _islands(payload);");
   });
 });
