@@ -20,7 +20,6 @@ export interface ReviveBootstrapPlan {
   islandPaths: string[] | null;
   customDirectives: ResolvedCustomDirective[] | null;
   reviveOptions: ReviveOptions;
-  source: string;
 }
 
 export interface ReviveBootstrapCompilerPorts {
@@ -50,26 +49,23 @@ export function createReviveBootstrapCompiler(
           )
         : null;
       const directoryGlobs = input.directories.map((dir) => dir + "**/*.{ts,js}");
-      const source = buildReviveModuleSource({
-        runtimePath,
-        directoryGlobs,
-        islandPaths,
-        customDirectives: customDirectives?.length ? customDirectives : undefined,
-        reviveOptions: input.reviveOptions,
-      });
-
       return {
         runtimePath,
         directoryGlobs,
         islandPaths,
         customDirectives,
         reviveOptions: input.reviveOptions,
-        source,
       };
     },
 
     emit(plan) {
-      return plan.source;
+      return buildReviveModuleSource({
+        runtimePath: plan.runtimePath,
+        directoryGlobs: plan.directoryGlobs,
+        islandPaths: plan.islandPaths,
+        customDirectives: plan.customDirectives?.length ? plan.customDirectives : undefined,
+        reviveOptions: plan.reviveOptions,
+      });
     },
   };
 }

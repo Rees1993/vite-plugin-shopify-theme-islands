@@ -41,12 +41,13 @@ describe("revive-bootstrap", () => {
         directiveTimeout: 100,
       },
     });
-    expect(plan.source).toContain('import { revive as _islands } from "/runtime.js"');
-    expect(plan.source).toContain(
+    const source = compiler.emit(plan);
+    expect(source).toContain('import { revive as _islands } from "/runtime.js"');
+    expect(source).toContain(
       'import _directive0 from "/resolved/./src/directives/on-click.ts";',
     );
-    expect(plan.source).toContain("const payload = { islands, options, customDirectives };");
-    expect(plan.source).toContain("export const { disconnect } = _islands(payload);");
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
+    expect(source).toContain("export const { disconnect } = _islands(payload);");
   });
 
   it("renders the bootstrap source from a semantic plan", async () => {
@@ -66,7 +67,10 @@ describe("revive-bootstrap", () => {
     });
 
     const source = compiler.emit(plan);
-
-    expect(source).toBe(plan.source);
+    expect(source).toContain('import { revive as _islands } from "/runtime.js"');
+    expect(source).toContain(
+      'import _directive0 from "/resolved/./src/directives/on-click.ts";',
+    );
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 });
