@@ -43,9 +43,7 @@ describe("revive-bootstrap", () => {
     });
     const source = compiler.emit(plan);
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
-    expect(source).toContain(
-      'import _directive0 from "/resolved/./src/directives/on-click.ts";',
-    );
+    expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
     expect(source).toContain("export const { disconnect } = _islands(payload);");
   });
@@ -68,9 +66,7 @@ describe("revive-bootstrap", () => {
 
     const source = compiler.emit(plan);
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
-    expect(source).toContain(
-      'import _directive0 from "/resolved/./src/directives/on-click.ts";',
-    );
+    expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 });
