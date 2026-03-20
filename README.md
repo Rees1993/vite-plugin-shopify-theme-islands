@@ -44,6 +44,8 @@ import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
 disconnect();
 ```
 
+If `disconnect()` is called before `DOMContentLoaded`, the runtime also cancels its pending startup listener so islands never initialize later against stale DOM.
+
 ## Writing islands
 
 Two approaches — use either or both.
@@ -200,7 +202,7 @@ Loads the island when the user interacts with the element. Listens for `mouseent
 </cart-flyout>
 ```
 
-The attribute value overrides the events for that element only (space-separated MDN event names):
+The attribute value overrides the events for that element only:
 
 ```html
 <!-- only mouseenter — touchstart and focusin are excluded -->
@@ -208,6 +210,10 @@ The attribute value overrides the events for that element only (space-separated 
   <!-- ... -->
 </cart-flyout>
 ```
+
+In plugin config, `directives.interaction.events` is intentionally narrower than the raw HTML attribute surface. The typed config only accepts the curated package-owned set `mouseenter`, `touchstart`, and `focusin`, and rejects empty arrays.
+
+Per-element `client:interaction="..."` values are also validated at runtime against that same curated set. Unsupported tokens log a warning and are ignored. If no supported tokens remain, the runtime logs a warning and falls back to the configured default interaction events instead of attaching unsupported listeners.
 
 Combine with `client:visible` to avoid attaching listeners to off-screen elements. Because directives resolve sequentially, interaction listeners are only registered once the element has entered the viewport:
 
@@ -362,7 +368,7 @@ shopifyThemeIslands({
     },
     interaction: {
       attribute: "client:interaction", // HTML attribute name
-      events: ["mouseenter", "touchstart", "focusin"], // DOM events that trigger load
+      events: ["mouseenter", "touchstart", "focusin"], // curated config events that trigger load
     },
     custom: [], // custom directives — see Custom directives above
   },
@@ -379,6 +385,8 @@ shopifyThemeIslands({
   },
 });
 ```
+
+For `directives.interaction.events`, supported config values are currently limited to `mouseenter`, `touchstart`, and `focusin`. Passing `[]` or unsupported names causes config resolution to fail.
 
 ### Multiple island directories
 
@@ -441,6 +449,8 @@ const offError = onIslandError(({ tag, error, attempt }) => {
 offLoad();
 offError();
 ```
+
+For SPA teardown, the virtual `/revive` module also exports `disconnect()`, which stops further lifecycle observation and cancels pending startup before init has run.
 
 ### Raw DOM events
 
