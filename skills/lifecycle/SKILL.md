@@ -8,12 +8,14 @@ description: >
   duration (ms), and attempt (1-based). islands:error detail includes tag,
   error, and attempt, including custom directive failures and directiveTimeout
   expiry. disconnect() from the virtual module revive for SPA navigation
-  teardown.
+  teardown, including before DOMContentLoaded — it now prevents init from ever
+  starting if called early.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.1"
+library_version: "1.2.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
@@ -86,7 +88,7 @@ import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
 disconnect();
 ```
 
-`disconnect()` stops the MutationObserver and prevents new islands from activating. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
+`disconnect()` stops the MutationObserver and prevents new islands from activating. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
 
 ### Raw DOM events (when type augmentation is in scope)
 
@@ -171,7 +173,7 @@ onIslandError(({ tag, error, attempt }) => {
 
 With `retry: { retries: 3 }`, a single island can fire `islands:error` up to 4 times before exhausting retries. Use `attempt` to distinguish the initial failure from retries.
 
-Source: src/runtime.ts — `dispatch("islands:error", ...)` inside `.catch()` before retry check
+Source: src/runtime.ts — runtimeSurface.dispatchError(...) inside the loader failure path before retry check
 
 ### MEDIUM `islands:error` fires for custom directive failures too
 

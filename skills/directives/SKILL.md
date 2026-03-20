@@ -4,16 +4,19 @@ description: >
   Built-in client directives: client:visible (IntersectionObserver, rootMargin),
   client:media (matchMedia query), client:idle (requestIdleCallback),
   client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
-  Directives resolve sequentially — visible → media → idle → defer → interaction → custom.
-  Per-element value overrides. Empty client:media warning. Whitespace-only
-  client:interaction values warn and fall back to default events.
+  Directives resolve sequentially — visible → media → idle → defer →
+  interaction → custom. Per-element value overrides. Empty client:media
+  warning. Whitespace-only client:interaction values warn and fall back to
+  default events. Current directive sequencing and custom-directive latching
+  are owned by src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.1"
+library_version: "1.2.2"
 sources:
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
 ---
 
 ## Setup
@@ -50,10 +53,7 @@ Directives resolve in a fixed order: `visible → media → idle → defer → i
 <mega-menu client:visible client:interaction></mega-menu>
 
 <!-- Loads when visible AND the media query matches -->
-<product-recommendations
-  client:visible
-  client:media="(min-width: 768px)"
-></product-recommendations>
+<product-recommendations client:visible client:media="(min-width: 768px)"></product-recommendations>
 ```
 
 Combined directives are AND-latched. The island loads only after every condition resolves. There is no OR mode.
@@ -100,7 +100,7 @@ An empty `client:defer` attribute is NOT zero — it falls back to the configure
 
 An empty `client:interaction` attribute uses the configured default events with no warning. A whitespace-only value such as `client:interaction="   "` emits a warning and still falls back to the default events.
 
-Source: src/runtime.ts — interaction token parsing and fallback warning
+Source: src/directive-orchestration.ts — interaction token parsing and fallback warning
 
 ### Changing built-in directive defaults globally
 
@@ -118,8 +118,7 @@ shopifyThemeIslands({
 ### Removed elements abort waiting directives silently
 
 ```html
-<hero-banner client:visible></hero-banner>
-<cart-flyout client:interaction></cart-flyout>
+<hero-banner client:visible></hero-banner> <cart-flyout client:interaction></cart-flyout>
 ```
 
 If either element is removed from the DOM before its directive resolves, the runtime cancels that activation attempt and does not dispatch `islands:error`. This is expected teardown behavior, not a load failure.
@@ -142,7 +141,7 @@ Correct:
 
 An empty `client:media` value emits a console warning and skips the media check — the island loads immediately. Provide a valid media query string.
 
-Source: src/runtime.ts — `if (query === "")` branch
+Source: src/directive-orchestration.ts — `if (query === "")` branch
 
 ### MEDIUM Whitespace-only `client:interaction` value warns and falls back
 
@@ -164,7 +163,7 @@ Correct:
 
 Whitespace-only values are not treated the same as an empty attribute. The runtime warns and falls back to the configured default events.
 
-Source: src/runtime.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
+Source: src/directive-orchestration.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
 
 ### HIGH Multiple directives are AND, not OR
 
@@ -184,7 +183,7 @@ Correct understanding:
 
 The runtime awaits each directive sequentially. There is no way to express OR semantics with built-in directives — use a custom directive for that.
 
-Source: src/runtime.ts — loadIsland sequential awaits
+Source: src/directive-orchestration.ts — runBuiltIns() sequential awaits
 
 ### MEDIUM `client:defer` without value ≠ immediate load
 
@@ -204,7 +203,7 @@ Correct:
 
 `client:defer` with no value uses the global `defer.delay` default (3000ms). `parseInt("", 10)` produces `NaN`, which the runtime replaces with the configured default.
 
-Source: src/runtime.ts — `const ms = Number.isNaN(raw) ? deferDelay : raw`
+Source: src/directive-orchestration.ts — defer parsing and fallback to directives.defer.delay
 
 ### MEDIUM Per-element visible value replaces rootMargin, not adds to it
 
@@ -224,15 +223,14 @@ Correct:
 
 The attribute value is passed directly to `IntersectionObserver` as `rootMargin`, fully replacing the global default.
 
-Source: src/runtime.ts — `await visible(el, visibleAttr || rootMargin, threshold, registry.watchCancellable)`
+Source: src/directive-orchestration.ts — visible attribute value replaces directives.visible.rootMargin
 
 ### HIGH Directive attribute typo — island loads without condition
 
 Wrong:
 
 ```html
-<product-form client:visibled></product-form>
-<product-form client:Visible></product-form>
+<product-form client:visibled></product-form> <product-form client:Visible></product-form>
 ```
 
 Correct:
@@ -243,7 +241,7 @@ Correct:
 
 Directive attributes are case-sensitive. An unrecognised attribute is silently ignored — the island loads immediately as if no directive were set. No warning is emitted. Check for typos if an island activates earlier than expected.
 
-Source: src/runtime.ts — runtime checks exact attribute names from plugin config
+Source: src/directive-orchestration.ts — built-ins read exact configured attribute names
 
 ### HIGH Agent uses default attribute name when developer has configured a custom one
 

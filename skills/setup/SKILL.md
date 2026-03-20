@@ -10,7 +10,7 @@ description: >
   directive timeout.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.1"
+library_version: "1.2.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts

@@ -6,15 +6,17 @@ description: >
   multiple custom directives match the same element, all must call load() before
   the island activates. Error handling — thrown errors, rejected promises, and
   directiveTimeout expiry fire islands:error. Custom directives run after all
-  built-in conditions resolve.
+  built-in conditions resolve. Current matching, AND-latch, and timeout policy
+  are owned by src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.2.1"
+library_version: "1.2.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
 ---
 
 ## Setup
@@ -143,7 +145,7 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 
 No immediate error is thrown by default, so the island is silently never loaded unless you configure `directiveTimeout`.
 
-Source: src/runtime.ts — directive owns the `run()` call path
+Source: src/directive-orchestration.ts — matched custom directives own the `run()` call path
 
 ### HIGH Writing a custom directive for mouseenter/touchstart/focusin — use `client:interaction` instead
 
@@ -168,7 +170,7 @@ Correct:
 
 `client:interaction` is a built-in directive that handles `mouseenter`, `touchstart`, and `focusin`. Custom directives are for conditions the built-ins cannot express (e.g. URL hash matching, network conditions, feature flags).
 
-Source: src/runtime.ts — `interaction()` built-in handles the hover/touch/focus pattern
+Source: src/directive-orchestration.ts — built-in interaction handling covers the hover/touch/focus pattern
 
 ### HIGH AND-latch: both matched directives must call `load()`
 
@@ -191,7 +193,7 @@ Correct:
 
 With two matching custom directives, `remaining = 2`. Each `load()` call decrements it. The island activates only when `remaining === 0`.
 
-Source: src/runtime.ts — `let remaining = matched.length`
+Source: src/directive-orchestration.ts — `let remaining = matched.length`
 
 ### HIGH Duplicate custom directive names or collisions with built-ins fail plugin setup
 
@@ -247,7 +249,7 @@ Correct:
 
 Custom directive entrypoints are resolved through Vite. Relative local files should usually use `./...`; unresolved entrypoints fail the build.
 
-Source: src/index.ts — `this.resolve(def.entrypoint)` throws on null
+Source: src/index.ts — `this.resolve(entrypoint)` throws on null during revive bootstrap planning
 
 ### MEDIUM Custom directives run after all built-in directive awaits
 
@@ -260,7 +262,7 @@ Wrong expectation:
 
 The runtime awaits built-ins in order (`visible → media → idle → defer → interaction`) first, then passes control to matched custom directives. Custom directives cannot short-circuit or replace built-in awaits.
 
-Source: src/runtime.ts — built-in awaits precede `if (customDirectives?.size)` block
+Source: src/directive-orchestration.ts — runBuiltIns() completes before runCustomDirectives()
 
 ### MEDIUM Calling `load()` multiple times has no effect after the first
 
@@ -282,4 +284,4 @@ const retryDirective: ClientDirective = (load, _opts, el) => {
 
 The `loadOnce` wrapper ignores all calls after the first (`fired` guard). Use `{ once: true }` on event listeners to avoid unnecessary calls.
 
-Source: src/runtime.ts — `if (fired || aborted) return Promise.resolve()`
+Source: src/directive-orchestration.ts — `if (fired || aborted) return Promise.resolve()`
