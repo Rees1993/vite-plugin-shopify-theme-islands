@@ -38,6 +38,15 @@ export interface IslandInventoryBootstrapState {
   islandFiles: Set<string>;
 }
 
+export interface IslandInventory {
+  configure(config: IslandInventoryConfig): void;
+  scan(): IslandInventorySnapshot | null;
+  applyTransform(id: string, code: string): IslandInventoryChange | null;
+  applyWatchChange(id: string, event: string): IslandInventoryChange | null;
+  getBootstrapState(): IslandInventoryBootstrapState;
+  getRoot(): string;
+}
+
 /** True if file is under any of the given absolute directory paths. */
 export function inDirectory(file: string, absDirs: string[]): boolean {
   const resolvedFile = resolve(file);
@@ -109,7 +118,7 @@ export function collectTagNames(dir: string): string[] {
   return names;
 }
 
-export function createIslandInventory(rawDirectories: string[]) {
+export function createIslandInventory(rawDirectories: string[]): IslandInventory {
   let root = process.cwd();
   let resolvedDirs = [...rawDirectories];
   let absDirs = [...rawDirectories];

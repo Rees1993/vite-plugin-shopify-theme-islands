@@ -1,5 +1,8 @@
-import { describe, it, expect } from "bun:test";
-import { createReviveBootstrapCompiler } from "../revive-bootstrap";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createReviveBootstrapCompiler, createRevivePluginSession } from "../revive-bootstrap";
 import { getIslandPathsForLoad } from "../discovery";
 
 describe("revive-bootstrap", () => {
@@ -68,5 +71,57 @@ describe("revive-bootstrap", () => {
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
+  });
+
+  describe("createRevivePluginSession", () => {
+    let tmp: string;
+
+    beforeEach(() => {
+      tmp = mkdtempSync(join(tmpdir(), "revive-session-"));
+    });
+
+    afterEach(() => {
+      rmSync(tmp, { recursive: true, force: true });
+    });
+
+    it("owns inventory state and emits the current revive artifact", async () => {
+      const session = createRevivePluginSession({
+        directories: ["/islands/"],
+        directives: {},
+        customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
+        reviveOptions: { debug: false },
+        debug: false,
+        runtimePath: "/runtime.js",
+        log() {},
+      });
+
+      session.configure({ root: tmp, aliases: [] });
+
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "inside-widget.ts"),
+        "export default class X extends HTMLElement {}",
+      );
+      writeFileSync(
+        join(tmp, "outside-widget.ts"),
+        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class X extends Island(HTMLElement) {}',
+      );
+
+      session.buildStart();
+
+      const addedFile = join(tmp, "watch-widget.ts");
+      writeFileSync(
+        addedFile,
+        'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class X extends Island(HTMLElement) {}',
+      );
+      session.watchChange(addedFile, "create");
+
+      const source = await session.load(async (entrypoint) => `/resolved/${entrypoint}`);
+      expect(source).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
+      expect(source).toContain('import.meta.glob(["/outside-widget.ts","/watch-widget.ts"])');
+      expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
+      expect(source).toContain("const payload = { islands, options, customDirectives };");
+    });
   });
 });
