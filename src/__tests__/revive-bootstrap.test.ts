@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { createReviveBootstrapCompiler, createRevivePluginSession } from "../revive-bootstrap";
+import { createReviveBootstrapCompiler } from "../revive-bootstrap";
 import { getIslandPathsForLoad } from "../discovery";
+import { createRevivePluginSession } from "../revive-session";
 
 describe("revive-bootstrap", () => {
   it("plans a semantic bootstrap artifact from resolved plugin state", async () => {

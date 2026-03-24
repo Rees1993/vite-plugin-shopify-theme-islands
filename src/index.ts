@@ -1,6 +1,6 @@
 import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
-import { createRevivePluginSession } from "./revive-bootstrap.js";
+import { createRevivePluginSession } from "./revive-session.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
