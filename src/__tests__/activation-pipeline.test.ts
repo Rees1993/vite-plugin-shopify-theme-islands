@@ -1,10 +1,19 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { createActivationPipeline } from "../activation-pipeline";
 import { DEFAULT_DIRECTIVES } from "../contract";
 
 const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const originalConsoleError = console.error;
 
 describe("activation-pipeline", () => {
+  beforeEach(() => {
+    console.error = mock(() => {});
+  });
+
+  afterEach(() => {
+    console.error = originalConsoleError;
+  });
+
   it("dispatches load and re-walks child islands after a successful activation", async () => {
     const dispatchLoad = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
     const dispatchError = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
@@ -17,11 +26,9 @@ describe("activation-pipeline", () => {
       settleSuccess: mock(() => 2),
       settleFailure: mock(() => ({ retryDelayMs: null, attempt: 1 })),
       evict: mock(() => {}),
-      isQueued: mock(() => false),
       initialWalkComplete: true,
       watchCancellable: mock(() => () => {}),
       walk: mock(() => {}),
-      start: mock(() => ({ disconnect() {} })),
     };
     const pipeline = createActivationPipeline({
       directives: DEFAULT_DIRECTIVES,
@@ -66,11 +73,9 @@ describe("activation-pipeline", () => {
       settleSuccess: mock(() => 1),
       settleFailure: mock(() => ({ retryDelayMs: null, attempt: 1 })),
       evict: mock(() => {}),
-      isQueued: mock(() => false),
       initialWalkComplete: true,
       watchCancellable: mock(() => () => {}),
       walk: mock(() => {}),
-      start: mock(() => ({ disconnect() {} })),
     };
     const pipeline = createActivationPipeline({
       directives: DEFAULT_DIRECTIVES,
@@ -113,11 +118,9 @@ describe("activation-pipeline", () => {
         settleSuccess: mock(() => 1),
         settleFailure: mock(() => ({ retryDelayMs: null, attempt: 1 })),
         evict: mock(() => {}),
-        isQueued: mock(() => false),
         initialWalkComplete: false,
         watchCancellable: mock(() => () => {}),
         walk: mock(() => {}),
-        start: mock(() => ({ disconnect() {} })),
       },
       runtimeSurface: {
         dispatchLoad: mock(() => {}),

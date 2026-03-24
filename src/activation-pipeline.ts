@@ -4,7 +4,7 @@ import {
   DirectiveCancelledError,
   type DirectiveOrchestrator,
 } from "./directive-orchestration.js";
-import type { IslandLifecycle } from "./lifecycle.js";
+import type { ActivationLifecycle } from "./activation-lifecycle.js";
 import type { RuntimeSurface } from "./runtime-surface.js";
 
 export interface ActivationPipeline {
@@ -19,7 +19,7 @@ export interface ActivationPipelineDeps {
   customDirectives?: Map<string, ClientDirective>;
   debug: boolean;
   directiveTimeout: number;
-  lifecycle: IslandLifecycle;
+  lifecycle: ActivationLifecycle;
   runtimeSurface: RuntimeSurface;
   directiveOrchestrator?: DirectiveOrchestrator;
 }
