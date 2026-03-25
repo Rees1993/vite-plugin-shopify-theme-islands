@@ -24,6 +24,7 @@ export interface IslandInventoryConfig {
 export interface IslandInventorySnapshot {
   resolvedDirectories: string[];
   islandFiles: string[];
+  directoryFiles: string[];
   directoryTagNames: string[];
 }
 
@@ -35,6 +36,7 @@ export interface IslandInventoryChange {
 export interface IslandInventoryBootstrapState {
   root: string;
   directories: string[];
+  directoryFiles: Set<string>;
   islandFiles: Set<string>;
 }
 
@@ -109,15 +111,23 @@ export function collectTagNames(dir: string): string[] {
   return names;
 }
 
+function collectFiles(dir: string): string[] {
+  const files: string[] = [];
+  walkDir(dir, (_, full) => files.push(full));
+  return files;
+}
+
 export function createIslandInventory(rawDirectories: string[]) {
   let root = process.cwd();
   let resolvedDirs = [...rawDirectories];
   let absDirs = [...rawDirectories];
+  const directoryFiles = new Set<string>();
   const islandFiles = new Set<string>();
   let scanned = false;
 
   const buildSnapshot = (): IslandInventorySnapshot => ({
     resolvedDirectories: [...resolvedDirs],
+    directoryFiles: [...directoryFiles],
     islandFiles: [...islandFiles],
     directoryTagNames: absDirs.flatMap((dir) => collectTagNames(dir)),
   });
@@ -146,6 +156,8 @@ export function createIslandInventory(rawDirectories: string[]) {
     scan(): IslandInventorySnapshot | null {
       if (scanned) return null;
       scanned = true;
+      directoryFiles.clear();
+      absDirs.flatMap((dir) => collectFiles(dir)).forEach((file) => directoryFiles.add(file));
       islandFiles.clear();
       discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
       return buildSnapshot();
@@ -157,6 +169,16 @@ export function createIslandInventory(rawDirectories: string[]) {
 
     applyWatchChange(id: string, event: string): IslandInventoryChange | null {
       if (!TS_JS_RE.test(id)) return null;
+      if (inDirectory(id, absDirs)) {
+        if (event === "delete") {
+          return directoryFiles.delete(id) ? { type: "removed", file: id } : null;
+        }
+        if (!directoryFiles.has(id)) {
+          directoryFiles.add(id);
+          return { type: "detected", file: id };
+        }
+        return null;
+      }
       if (event === "delete") {
         return islandFiles.delete(id) ? { type: "removed", file: id } : null;
       }
@@ -171,6 +193,7 @@ export function createIslandInventory(rawDirectories: string[]) {
       return {
         root,
         directories: [...resolvedDirs],
+        directoryFiles: new Set(directoryFiles),
         islandFiles: new Set(islandFiles),
       };
     },

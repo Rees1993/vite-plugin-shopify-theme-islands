@@ -11,6 +11,8 @@ export interface BuildReviveModuleSourceParams {
   directoryGlobs: string[];
   /** Additional discovered island paths outside the configured directories. */
   islandPaths?: string[] | null;
+  /** Explicit file-path-to-tag overrides emitted by the plugin. */
+  resolvedTags?: Record<string, string | null>;
   /** Resolved custom directive modules keyed by attribute name. */
   customDirectives?: Array<{ name: string; entrypoint: string }>;
   /** Options object passed to revive (JSON-serialized in output). */
@@ -22,7 +24,8 @@ export interface BuildReviveModuleSourceParams {
  * Used by the plugin's load() so the emitted shape is defined and testable in one place.
  */
 export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): string {
-  const { runtimePath, directoryGlobs, islandPaths, customDirectives, reviveOptions } = params;
+  const { runtimePath, directoryGlobs, islandPaths, resolvedTags, customDirectives, reviveOptions } =
+    params;
   const directiveImportLines =
     customDirectives?.map(
       ({ entrypoint }, index) => `import _directive${index} from ${JSON.stringify(entrypoint)};`,
@@ -44,9 +47,19 @@ export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): 
       ({ name }, index) => `  [${JSON.stringify(name)}, _directive${index}]`,
     );
     lines.push(`const customDirectives = new Map([\n${customDirectivesMapLines.join(",\n")}\n]);`);
-    lines.push(`const payload = { islands, options, customDirectives };`);
+    if (resolvedTags) lines.push(`const resolvedTags = ${JSON.stringify(resolvedTags)};`);
+    lines.push(
+      resolvedTags
+        ? `const payload = { islands, options, customDirectives, resolvedTags };`
+        : `const payload = { islands, options, customDirectives };`,
+    );
   } else {
-    lines.push(`const payload = { islands, options };`);
+    if (resolvedTags) lines.push(`const resolvedTags = ${JSON.stringify(resolvedTags)};`);
+    lines.push(
+      resolvedTags
+        ? `const payload = { islands, options, resolvedTags };`
+        : `const payload = { islands, options };`,
+    );
   }
   lines.push(`const runtimeKey = "__shopify_theme_islands_runtime__";`);
   lines.push(`const runtimeState = (globalThis[runtimeKey] ??= {});`);

@@ -50,7 +50,12 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   ).map(normalizeDir);
 
   const policy = resolveThemeIslandsPolicy(options);
-  const { directives, customDirectives: clientDirectiveDefinitions, debug } = policy.plugin;
+  const {
+    directives,
+    customDirectives: clientDirectiveDefinitions,
+    debug,
+    resolveTag,
+  } = policy.plugin;
   const { runtime: reviveOptions } = policy;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const inventory = createIslandInventory(rawDirs);
@@ -159,6 +164,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
       const plan = await compiler.plan({
         ...inventory.getBootstrapState(),
+        resolveTag,
         customDirectives: clientDirectiveDefinitions,
         reviveOptions,
       });

@@ -128,5 +128,37 @@ describe("contract", () => {
       const map = buildIslandMap(payload);
       expect(map.get("my-island")).toBe(first);
     });
+
+    it("uses resolvedTags overrides when provided", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/productForm.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/productForm.ts": "product-form",
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.get("product-form")).toBe(loader);
+    });
+
+    it("skips entries whose resolvedTags override is null", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/product-form.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/product-form.ts": null,
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.size).toBe(0);
+    });
   });
 });

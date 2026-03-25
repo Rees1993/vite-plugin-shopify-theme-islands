@@ -53,6 +53,8 @@ export interface DirectivesConfig {
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
   directories?: string | string[];
+  /** Override file-path-to-tag resolution. Return null to exclude a file from the island map. */
+  resolveTag?: (filePath: string) => string | null;
   /** Log discovered islands and generated virtual module. Default: `false` */
   debug?: boolean;
   /** Per-directive configuration. */

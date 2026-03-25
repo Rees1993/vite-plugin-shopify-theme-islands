@@ -9,7 +9,9 @@ export interface ResolvedCustomDirective {
 export interface ReviveBootstrapInputs {
   root: string;
   directories: string[];
+  directoryFiles: Set<string>;
   islandFiles: Set<string>;
+  resolveTag?: (filePath: string) => string | null;
   customDirectives?: Array<{ name: string; entrypoint: string }>;
   reviveOptions: ReviveOptions;
 }
@@ -18,6 +20,7 @@ export interface ReviveBootstrapPlan {
   runtimePath: string;
   directoryGlobs: string[];
   islandPaths: string[] | null;
+  resolvedTags: Record<string, string | null> | null;
   customDirectives: ResolvedCustomDirective[] | null;
   reviveOptions: ReviveOptions;
 }
@@ -40,6 +43,13 @@ export function createReviveBootstrapCompiler(
     async plan(input) {
       const islandPaths =
         input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
+      const resolvedTags = input.resolveTag
+        ? Object.fromEntries(
+            ports
+              .toLoadPaths(new Set([...input.directoryFiles, ...input.islandFiles]), input.root)
+              .map((filePath) => [filePath, input.resolveTag!(filePath)]),
+          )
+        : null;
       const customDirectives = input.customDirectives?.length
         ? await Promise.all(
             input.customDirectives.map(async ({ name, entrypoint }) => ({
@@ -53,6 +63,7 @@ export function createReviveBootstrapCompiler(
         runtimePath,
         directoryGlobs,
         islandPaths,
+        resolvedTags,
         customDirectives,
         reviveOptions: input.reviveOptions,
       };
@@ -63,6 +74,7 @@ export function createReviveBootstrapCompiler(
         runtimePath: plan.runtimePath,
         directoryGlobs: plan.directoryGlobs,
         islandPaths: plan.islandPaths,
+        resolvedTags: plan.resolvedTags ?? undefined,
         customDirectives: plan.customDirectives?.length ? plan.customDirectives : undefined,
         reviveOptions: plan.reviveOptions,
       });

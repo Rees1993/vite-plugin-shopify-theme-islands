@@ -13,6 +13,7 @@ export interface ResolvedThemeIslandsPolicy {
     directives: DirectivesConfig;
     customDirectives: ClientDirectiveDefinition[];
     debug: boolean;
+    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
   };
   runtime: ReviveOptions;
 }
@@ -96,6 +97,7 @@ export function resolveThemeIslandsPolicy(
       directives,
       customDirectives,
       debug,
+      resolveTag: options.resolveTag,
     },
     runtime,
   };

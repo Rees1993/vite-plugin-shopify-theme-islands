@@ -332,6 +332,23 @@ describe("plugin", () => {
       expect(output).toContain("my-widget.ts");
     });
 
+    it("emits resolvedTags overrides when resolveTag is configured", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(join(islandsDir, "productForm.ts"), "export default class ProductForm extends HTMLElement {}");
+
+      const plugin = makePlugin({
+        directories: ["/islands/"],
+        resolveTag: (filePath) => (filePath.endsWith("productForm.ts") ? "product-form" : null),
+      });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+
+      expect(output).toContain('const resolvedTags = {"/islands/productForm.ts":"product-form"};');
+      expect(output).toContain("const payload = { islands, options, resolvedTags };");
+    });
+
     it("excludes mixin files already covered by a scanned directory", async () => {
       const islandsDir = join(tmp, "islands");
       mkdirSync(islandsDir);
