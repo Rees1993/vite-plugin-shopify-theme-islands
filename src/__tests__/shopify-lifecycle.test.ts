@@ -1,7 +1,11 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { connectShopifyLifecycle } from "../shopify-lifecycle";
 
 describe("connectShopifyLifecycle", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
   it("observes and unobserves section roots for Shopify section load and unload events", () => {
     const runtime = {
       scan: mock(() => {}),
@@ -28,6 +32,32 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.observe).toHaveBeenCalledWith(section);
     expect(runtime.unobserve).toHaveBeenCalledWith(section);
+
+    disconnect();
+  });
+
+  it("normalizes bubbled section events to the owning section root", () => {
+    const runtime = {
+      scan: mock(() => {}),
+      observe: mock(() => {}),
+      unobserve: mock(() => {}),
+    };
+    const disconnect = connectShopifyLifecycle(runtime);
+    const section = document.createElement("section");
+    section.id = "shopify-section-main";
+    const child = document.createElement("button");
+    section.appendChild(child);
+    document.body.appendChild(section);
+
+    child.dispatchEvent(
+      new CustomEvent("shopify:section:load", {
+        bubbles: true,
+        detail: { sectionId: "main" },
+      }),
+    );
+
+    expect(runtime.observe).toHaveBeenCalledTimes(1);
+    expect(runtime.observe).toHaveBeenCalledWith(section);
 
     disconnect();
   });
@@ -73,6 +103,32 @@ describe("connectShopifyLifecycle", () => {
     }
 
     expect(runtime.scan).toHaveBeenCalledTimes(2);
+    expect(runtime.scan).toHaveBeenCalledWith(block);
+
+    disconnect();
+  });
+
+  it("normalizes bubbled block events to the owning block root", () => {
+    const runtime = {
+      scan: mock(() => {}),
+      observe: mock(() => {}),
+      unobserve: mock(() => {}),
+    };
+    const disconnect = connectShopifyLifecycle(runtime);
+    const block = document.createElement("div");
+    block.id = "shopify-block-main";
+    const child = document.createElement("button");
+    block.appendChild(child);
+    document.body.appendChild(block);
+
+    child.dispatchEvent(
+      new CustomEvent("shopify:block:select", {
+        bubbles: true,
+        detail: { blockId: "main" },
+      }),
+    );
+
+    expect(runtime.scan).toHaveBeenCalledTimes(1);
     expect(runtime.scan).toHaveBeenCalledWith(block);
 
     disconnect();

@@ -21,6 +21,7 @@ import {
 } from "./contract.js";
 import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
+import { describeEffectiveLoadGate } from "./load-gates.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
 import { connectShopifyLifecycle } from "./shopify-lifecycle.js";
 
@@ -55,8 +56,8 @@ export function revive(payload: RevivePayload): ReviveRuntime {
   const attrInteraction = opts.directives.interaction.attribute;
   const debug = opts.debug;
   const directiveTimeout = opts.directiveTimeout;
-  const seenLoadGates = new Map<string, string>();
-  const warnedLoadGateConflicts = new Set<string>();
+  const discoveredElementsByTag = new Map<string, Set<HTMLElement>>();
+  const warnedLoadGateSignatures = new Map<string, string>();
 
   const lifecycle = createIslandLifecycleCoordinator({
     retries: opts.retry.retries,
@@ -98,65 +99,55 @@ export function revive(payload: RevivePayload): ReviveRuntime {
   const evictSubtreeTags = (root: HTMLElement): void => {
     const tags = getSubtreeTags(root);
     clearRetryTimers(tags);
+    clearLoadGateTracking(tags);
     for (const tagName of tags) lifecycle.evict(tagName);
   };
 
-  const describeLoadGate = (el: HTMLElement): string => {
-    const parts: string[] = [];
-    const pushGate = (attr: string, value: string | number | null) => {
-      if (value === null) return;
-      parts.push(value === "" ? attr : `${attr}="${String(value)}"`);
-    };
-
-    const visibleValue = el.getAttribute(attrVisible);
-    if (visibleValue !== null) pushGate(attrVisible, visibleValue || opts.directives.visible.rootMargin);
-
-    const mediaValue = el.getAttribute(attrMedia);
-    if (mediaValue) pushGate(attrMedia, mediaValue);
-
-    const idleValue = el.getAttribute(attrIdle);
-    if (idleValue !== null) {
-      const parsed = Number(idleValue);
-      pushGate(attrIdle, Number.isNaN(parsed) ? opts.directives.idle.timeout : parsed);
-    }
-
-    const deferValue = el.getAttribute(attrDefer);
-    if (deferValue !== null) {
-      const parsed = Number(deferValue);
-      pushGate(attrDefer, Number.isNaN(parsed) ? opts.directives.defer.delay : parsed);
-    }
-
-    const interactionValue = el.getAttribute(attrInteraction);
-    if (interactionValue !== null) {
-      pushGate(attrInteraction, interactionValue.trim() || opts.directives.interaction.events.join(" "));
-    }
-
-    if (resolvedDirectives?.size) {
-      for (const attrName of resolvedDirectives.keys()) {
-        const value = el.getAttribute(attrName);
-        if (value !== null) pushGate(attrName, value);
+  const clearLoadGateTracking = (tagNames?: Iterable<string>): void => {
+    if (tagNames) {
+      for (const tagName of tagNames) {
+        discoveredElementsByTag.delete(tagName);
+        warnedLoadGateSignatures.delete(tagName);
       }
+      return;
     }
 
-    return parts.join(", ") || "immediate";
+    discoveredElementsByTag.clear();
+    warnedLoadGateSignatures.clear();
   };
 
   const warnOnConflictingLoadGate = (tagName: string, el: HTMLElement): void => {
     if (!debug) return;
 
-    const gate = describeLoadGate(el);
-    const firstGate = seenLoadGates.get(tagName);
+    const elements = discoveredElementsByTag.get(tagName) ?? new Set<HTMLElement>();
+    elements.add(el);
+    discoveredElementsByTag.set(tagName, elements);
 
-    if (firstGate === undefined) {
-      seenLoadGates.set(tagName, gate);
+    const gates = new Set<string>();
+    for (const candidate of elements) {
+      if (!candidate.isConnected || !lifecycle.isObserved(candidate)) {
+        elements.delete(candidate);
+        continue;
+      }
+      gates.add(describeEffectiveLoadGate(candidate, opts.directives, resolvedDirectives));
+    }
+
+    if (elements.size === 0) {
+      discoveredElementsByTag.delete(tagName);
+      warnedLoadGateSignatures.delete(tagName);
       return;
     }
 
-    if (firstGate === gate || warnedLoadGateConflicts.has(tagName)) return;
+    if (gates.size <= 1) {
+      warnedLoadGateSignatures.delete(tagName);
+      return;
+    }
 
-    warnedLoadGateConflicts.add(tagName);
+    const signature = [...gates].sort().join(" vs ");
+    if (warnedLoadGateSignatures.get(tagName) === signature) return;
+    warnedLoadGateSignatures.set(tagName, signature);
     console.warn(
-      `[islands] Found same tag <${tagName}> with conflicting directive gates (${firstGate} vs ${gate}). Directives load code at the tag level, so the first-resolved instance wins for this tag.`,
+      `[islands] Found same tag <${tagName}> with conflicting directive gates (${signature}). Directives load code at the tag level, so the first-resolved instance wins for this tag.`,
     );
   };
 
@@ -286,6 +277,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     if (root !== document.body) return;
     disconnected = true;
     clearRetryTimers();
+    clearLoadGateTracking();
     endReadyLog?.();
     endReadyLog = undefined;
     disconnectLifecycle.disconnect();

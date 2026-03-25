@@ -17,27 +17,39 @@ const SHOPIFY_LIFECYCLE_ACTIONS: ReadonlyArray<[type: string, action: ShopifyLif
 ];
 
 const isBlockLifecycleEvent = (type: string): boolean => type.startsWith("shopify:block:");
+const isSectionLifecycleEvent = (type: string): boolean => type.startsWith("shopify:section:");
+
+function findClosestLifecycleRoot(target: EventTarget | null, selector: string): HTMLElement | null {
+  if (!(target instanceof Element)) return null;
+  const root = target.closest(selector);
+  return root instanceof HTMLElement ? root : null;
+}
 
 function resolveLifecycleRoot(event: Event): HTMLElement | null {
-  if (event.target instanceof HTMLElement) return event.target;
-
   if (!(event instanceof CustomEvent)) return null;
   const detail = event.detail;
   if (!detail || typeof detail !== "object") return null;
 
   if (isBlockLifecycleEvent(event.type)) {
     const blockId = "blockId" in detail && typeof detail.blockId === "string" ? detail.blockId : null;
-    if (!blockId) return null;
-    const root = document.getElementById(`shopify-block-${blockId}`);
-    return root instanceof HTMLElement ? root : null;
+    if (blockId) {
+      const root = document.getElementById(`shopify-block-${blockId}`);
+      if (root instanceof HTMLElement) return root;
+    }
+    return findClosestLifecycleRoot(event.target, '[id^="shopify-block-"]');
   }
 
-  const sectionId =
-    "sectionId" in detail && typeof detail.sectionId === "string" ? detail.sectionId : null;
-  if (!sectionId) return null;
+  if (isSectionLifecycleEvent(event.type)) {
+    const sectionId =
+      "sectionId" in detail && typeof detail.sectionId === "string" ? detail.sectionId : null;
+    if (sectionId) {
+      const root = document.getElementById(`shopify-section-${sectionId}`);
+      if (root instanceof HTMLElement) return root;
+    }
+    return findClosestLifecycleRoot(event.target, '[id^="shopify-section-"]');
+  }
 
-  const root = document.getElementById(`shopify-section-${sectionId}`);
-  return root instanceof HTMLElement ? root : null;
+  return null;
 }
 
 export function connectShopifyLifecycle(runtime: ShopifyLifecycleRuntime): () => void {

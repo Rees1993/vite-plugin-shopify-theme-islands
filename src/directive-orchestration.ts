@@ -7,6 +7,7 @@ import {
   INTERACTION_EVENT_NAMES_LABEL,
   partitionInteractionEventTokens,
 } from "./interaction-events.js";
+import { getBuiltInLoadGateState } from "./load-gates.js";
 import type { RuntimeLogger } from "./runtime-surface.js";
 
 export interface DirectiveWaiters {
@@ -211,78 +212,73 @@ export function createDirectiveOrchestrator(
     const { tagName, element: el, directives, log, watchCancellable } = ctx;
     const controller = new AbortController();
     const unwatch = watchCancellable(el, () => controller.abort());
+    const builtIns = getBuiltInLoadGateState(el, directives);
 
     try {
-    const visibleAttr = directives.visible.attribute;
-    if (el.getAttribute(visibleAttr) !== null) {
-      log.note(`waiting for ${visibleAttr}`);
-      await waiters.waitVisible(
-        el,
-        el.getAttribute(visibleAttr) || directives.visible.rootMargin,
-        directives.visible.threshold,
-        controller.signal,
-      );
-    }
-
-    const query = el.getAttribute(directives.media.attribute);
-    if (query === "") {
-      console.warn(
-        `[islands] <${tagName}> ${directives.media.attribute} has no value — media check skipped, island will load immediately`,
-      );
-    } else if (query) {
-      log.note(`waiting for ${directives.media.attribute}="${query}"`);
-      await waiters.waitMedia(query, controller.signal);
-    }
-
-    const idleAttr = el.getAttribute(directives.idle.attribute);
-    if (idleAttr !== null) {
-      const raw = parseInt(idleAttr, 10);
-      const elTimeout = Number.isNaN(raw) ? directives.idle.timeout : raw;
-      log.note(`waiting for ${directives.idle.attribute} (${elTimeout}ms)`);
-      await waiters.waitIdle(elTimeout, controller.signal);
-    }
-
-    const deferAttr = el.getAttribute(directives.defer.attribute);
-    if (deferAttr !== null) {
-      const msParsed = parseInt(deferAttr, 10);
-      if (deferAttr !== "" && Number.isNaN(msParsed)) {
-        console.warn(
-          `[islands] <${tagName}> invalid ${directives.defer.attribute} value "${deferAttr}" — using default ${directives.defer.delay}ms`,
+      const visibleAttr = directives.visible.attribute;
+      if (builtIns.visible !== null) {
+        log.note(`waiting for ${visibleAttr}`);
+        await waiters.waitVisible(
+          el,
+          builtIns.visible,
+          directives.visible.threshold,
+          controller.signal,
         );
       }
-      const ms = Number.isNaN(msParsed) ? directives.defer.delay : msParsed;
-      log.note(`waiting for ${directives.defer.attribute} (${ms}ms)`);
-      await waiters.waitDelay(ms, controller.signal);
-    }
 
-    const interactionAttr = el.getAttribute(directives.interaction.attribute);
-    if (interactionAttr !== null) {
-      let events: string[] = [...directives.interaction.events];
-      if (interactionAttr) {
-        const tokens = interactionAttr.split(/\s+/).filter(Boolean);
-        if (tokens.length === 0) {
+      const query = el.getAttribute(directives.media.attribute);
+      if (query === "") {
+        console.warn(
+          `[islands] <${tagName}> ${directives.media.attribute} has no value — media check skipped, island will load immediately`,
+        );
+      } else if (builtIns.media) {
+        log.note(`waiting for ${directives.media.attribute}="${builtIns.media}"`);
+        await waiters.waitMedia(builtIns.media, controller.signal);
+      }
+
+      if (builtIns.idle !== null) {
+        log.note(`waiting for ${directives.idle.attribute} (${builtIns.idle}ms)`);
+        await waiters.waitIdle(builtIns.idle, controller.signal);
+      }
+
+      const deferAttr = el.getAttribute(directives.defer.attribute);
+      if (builtIns.defer !== null) {
+        if (deferAttr !== null && deferAttr !== "" && Number.isNaN(parseInt(deferAttr, 10))) {
           console.warn(
-            `[islands] <${tagName}> ${directives.interaction.attribute} has no valid event tokens — using default events`,
+            `[islands] <${tagName}> invalid ${directives.defer.attribute} value "${deferAttr}" — using default ${directives.defer.delay}ms`,
           );
-        } else {
-          const { valid, invalid } = partitionInteractionEventTokens(tokens);
-          if (invalid.length > 0) {
-            if (valid.length > 0) {
-              console.warn(
-                `[islands] <${tagName}> ${directives.interaction.attribute} contains unsupported event token${invalid.length === 1 ? "" : "s"} (${invalid.join(", ")}) — ignoring invalid token${invalid.length === 1 ? "" : "s"}; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
-              );
-            } else {
-              console.warn(
-                `[islands] <${tagName}> ${directives.interaction.attribute} contains no supported event tokens (${invalid.join(", ")}) — using default events; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
-              );
+        }
+        log.note(`waiting for ${directives.defer.attribute} (${builtIns.defer}ms)`);
+        await waiters.waitDelay(builtIns.defer, controller.signal);
+      }
+
+      const interactionAttr = el.getAttribute(directives.interaction.attribute);
+      if (builtIns.interaction !== null) {
+        let events: string[] = builtIns.interaction;
+        if (interactionAttr) {
+          const tokens = interactionAttr.split(/\s+/).filter(Boolean);
+          if (tokens.length === 0) {
+            console.warn(
+              `[islands] <${tagName}> ${directives.interaction.attribute} has no valid event tokens — using default events`,
+            );
+          } else {
+            const { valid, invalid } = partitionInteractionEventTokens(tokens);
+            if (invalid.length > 0) {
+              if (valid.length > 0) {
+                console.warn(
+                  `[islands] <${tagName}> ${directives.interaction.attribute} contains unsupported event token${invalid.length === 1 ? "" : "s"} (${invalid.join(", ")}) — ignoring invalid token${invalid.length === 1 ? "" : "s"}; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
+                );
+              } else {
+                console.warn(
+                  `[islands] <${tagName}> ${directives.interaction.attribute} contains no supported event tokens (${invalid.join(", ")}) — using default events; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
+                );
+              }
             }
           }
-          if (valid.length > 0) events = valid;
         }
+        log.note(`waiting for ${directives.interaction.attribute} (${events.join(", ")})`);
+        await waiters.waitInteraction(el, events, controller.signal);
       }
-      log.note(`waiting for ${directives.interaction.attribute} (${events.join(", ")})`);
-      await waiters.waitInteraction(el, events, controller.signal);
-    }
     } finally {
       unwatch();
     }

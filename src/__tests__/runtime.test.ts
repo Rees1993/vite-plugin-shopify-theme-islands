@@ -1037,6 +1037,31 @@ describe("revive", () => {
 
       warnSpy.mockRestore();
     });
+
+    it("forgets stale same-tag conflicts after subtree teardown", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      document.body.innerHTML = '<div id="alpha"></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      alphaRoot.innerHTML =
+        '<same-reset client:defer="100"></same-reset><same-reset client:idle></same-reset>';
+
+      const runtime = r({ "/islands/same-reset.ts": mock(async () => {}) }, { debug: true });
+      await flush(20);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      runtime.unobserve(alphaRoot);
+      alphaRoot.innerHTML =
+        '<same-reset client:visible></same-reset><same-reset client:interaction></same-reset>';
+      warnSpy.mockClear();
+
+      runtime.observe(alphaRoot);
+      await flush(20);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      warnSpy.mockRestore();
+    });
   });
 
   describe("custom directives", () => {

@@ -104,8 +104,9 @@ export function createIslandLifecycleCoordinator(opts: {
     const customElementFilter: NodeFilter = {
       acceptNode: (node) => {
         if (isExcluded(node as Element)) return NodeFilter.FILTER_REJECT;
-        const tag = (node as Element).tagName;
+        const tag = (node as Element).tagName.toLowerCase();
         if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
+        if (!input.islandMap.has(tag)) return NodeFilter.FILTER_SKIP;
         return NodeFilter.FILTER_ACCEPT;
       },
     };
