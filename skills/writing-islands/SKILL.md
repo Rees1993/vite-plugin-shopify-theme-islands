@@ -4,12 +4,13 @@ description: >
   Writing island files. Two discovery modes: directory scanning (files in
   configured directories auto-discovered by tag name = filename) and Island
   mixin (import Island from vite-plugin-shopify-theme-islands/island to mark
-  files anywhere in the project). Covers customElements.define, the Island
+  files anywhere in the project). Mixin islands added or removed during dev
+  trigger an automatic reload. Covers customElements.define, the Island
   base class, and child island cascade behaviour now owned by
   src/lifecycle.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.1"
+library_version: "1.3.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
@@ -61,7 +62,7 @@ if (!customElements.get("cart-drawer")) {
 }
 ```
 
-The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks.
+The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island file triggers an automatic reload — no Vite restart needed.
 
 ## Core Patterns
 
