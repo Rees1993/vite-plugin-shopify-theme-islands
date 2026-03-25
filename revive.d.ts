@@ -1,5 +1,5 @@
 declare module "vite-plugin-shopify-theme-islands/revive" {
-  /** Stops all island observation and pending runtime work. */
+  /** Stops the shared runtime, Shopify lifecycle listeners, and pending runtime work. */
   export const disconnect: () => void;
   /** Immediately scans a subtree for matching island elements. */
   export const scan: (root?: HTMLElement | null) => void;
