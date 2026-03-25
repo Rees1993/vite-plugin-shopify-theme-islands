@@ -1,4 +1,8 @@
-import type { ClientDirective, NormalizedReviveOptions } from "./contract.js";
+import type {
+  ClientDirective,
+  ClientDirectiveContext,
+  NormalizedReviveOptions,
+} from "./contract.js";
 import {
   INTERACTION_EVENT_NAMES_LABEL,
   partitionInteractionEventTokens,
@@ -10,15 +14,15 @@ export interface DirectiveWaiters {
     element: Element,
     rootMargin: string,
     threshold: number,
-    watch: (el: Element, cancel: () => void) => () => void,
+    signal: AbortSignal,
   ): Promise<void>;
-  waitMedia(query: string): Promise<void>;
-  waitIdle(timeout: number): Promise<void>;
-  waitDelay(ms: number): Promise<void>;
+  waitMedia(query: string, signal: AbortSignal): Promise<void>;
+  waitIdle(timeout: number, signal: AbortSignal): Promise<void>;
+  waitDelay(ms: number, signal: AbortSignal): Promise<void>;
   waitInteraction(
     element: Element,
     events: string[],
-    watch: (el: Element, cancel: () => void) => () => void,
+    signal: AbortSignal,
   ): Promise<void>;
 }
 
@@ -49,18 +53,23 @@ function waitVisible(
   element: Element,
   rootMargin: string,
   threshold: number,
-  watch: (el: Element, cancel: () => void) => () => void,
+  signal: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DirectiveCancelledError());
+      return;
+    }
+
     let settled = false;
-    let unwatch = () => {};
     const finish = (done: () => void) => {
       if (settled) return;
       settled = true;
-      unwatch();
+      signal.removeEventListener("abort", abort);
       io.disconnect();
       done();
     };
+    const abort = () => finish(() => reject(new DirectiveCancelledError()));
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -71,52 +80,121 @@ function waitVisible(
     );
 
     io.observe(element);
-    unwatch = watch(element, () => finish(() => reject(new DirectiveCancelledError())));
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
 function waitInteraction(
   element: Element,
   events: string[],
-  watch: (el: Element, cancel: () => void) => () => void,
+  signal: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DirectiveCancelledError());
+      return;
+    }
+
     let settled = false;
-    let unwatch = () => {};
     const cleanup = () => {
       for (const name of events) element.removeEventListener(name, handler);
+      signal.removeEventListener("abort", abort);
     };
     const finish = (done: () => void) => {
       if (settled) return;
       settled = true;
-      unwatch();
       cleanup();
       done();
     };
+    const abort = () => finish(() => reject(new DirectiveCancelledError()));
     const handler = () => {
       finish(resolve);
     };
     for (const name of events) element.addEventListener(name, handler);
-    unwatch = watch(element, () => finish(() => reject(new DirectiveCancelledError())));
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
-function waitDelay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+function waitDelay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DirectiveCancelledError());
+      return;
+    }
 
-function waitIdle(timeout: number): Promise<void> {
-  return new Promise((resolve) => {
-    if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout });
-    else setTimeout(resolve, timeout);
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, ms);
+    const abort = () => {
+      clearTimeout(timer);
+      reject(new DirectiveCancelledError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
-function waitMedia(query: string): Promise<void> {
+function waitIdle(timeout: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DirectiveCancelledError());
+      return;
+    }
+
+    const abort = () => {
+      if ("cancelIdleCallback" in window && idleId !== null) {
+        window.cancelIdleCallback(idleId);
+      } else if (timer !== null) {
+        clearTimeout(timer);
+      }
+      reject(new DirectiveCancelledError());
+    };
+
+    let idleId: number | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const finish = () => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(() => finish(), { timeout });
+    } else {
+      timer = setTimeout(() => finish(), timeout);
+    }
+
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
+function waitMedia(query: string, signal: AbortSignal): Promise<void> {
   const m = window.matchMedia(query);
-  return new Promise((resolve) => {
-    if (m.matches) resolve();
-    else m.addEventListener("change", () => resolve(), { once: true });
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DirectiveCancelledError());
+      return;
+    }
+
+    if (m.matches) {
+      resolve();
+      return;
+    }
+
+    const onChange = () => {
+      cleanup();
+      resolve();
+    };
+    const onAbort = () => {
+      cleanup();
+      reject(new DirectiveCancelledError());
+    };
+    const cleanup = () => {
+      m.removeEventListener("change", onChange);
+      signal.removeEventListener("abort", onAbort);
+    };
+
+    m.addEventListener("change", onChange, { once: true });
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -131,6 +209,10 @@ export function createDirectiveOrchestrator(
 ): DirectiveOrchestrator {
   async function runBuiltIns(ctx: DirectiveRunContext): Promise<void> {
     const { tagName, element: el, directives, log, watchCancellable } = ctx;
+    const controller = new AbortController();
+    const unwatch = watchCancellable(el, () => controller.abort());
+
+    try {
     const visibleAttr = directives.visible.attribute;
     if (el.getAttribute(visibleAttr) !== null) {
       log.note(`waiting for ${visibleAttr}`);
@@ -138,7 +220,7 @@ export function createDirectiveOrchestrator(
         el,
         el.getAttribute(visibleAttr) || directives.visible.rootMargin,
         directives.visible.threshold,
-        watchCancellable,
+        controller.signal,
       );
     }
 
@@ -149,7 +231,7 @@ export function createDirectiveOrchestrator(
       );
     } else if (query) {
       log.note(`waiting for ${directives.media.attribute}="${query}"`);
-      await waiters.waitMedia(query);
+      await waiters.waitMedia(query, controller.signal);
     }
 
     const idleAttr = el.getAttribute(directives.idle.attribute);
@@ -157,7 +239,7 @@ export function createDirectiveOrchestrator(
       const raw = parseInt(idleAttr, 10);
       const elTimeout = Number.isNaN(raw) ? directives.idle.timeout : raw;
       log.note(`waiting for ${directives.idle.attribute} (${elTimeout}ms)`);
-      await waiters.waitIdle(elTimeout);
+      await waiters.waitIdle(elTimeout, controller.signal);
     }
 
     const deferAttr = el.getAttribute(directives.defer.attribute);
@@ -170,7 +252,7 @@ export function createDirectiveOrchestrator(
       }
       const ms = Number.isNaN(msParsed) ? directives.defer.delay : msParsed;
       log.note(`waiting for ${directives.defer.attribute} (${ms}ms)`);
-      await waiters.waitDelay(ms);
+      await waiters.waitDelay(ms, controller.signal);
     }
 
     const interactionAttr = el.getAttribute(directives.interaction.attribute);
@@ -199,7 +281,10 @@ export function createDirectiveOrchestrator(
         }
       }
       log.note(`waiting for ${directives.interaction.attribute} (${events.join(", ")})`);
-      await waiters.waitInteraction(el, events, watchCancellable);
+      await waiters.waitInteraction(el, events, controller.signal);
+    }
+    } finally {
+      unwatch();
     }
   }
 
@@ -221,21 +306,55 @@ export function createDirectiveOrchestrator(
     let fired = false;
     let aborted = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let cleanupRan = false;
+    const cleanupFns = new Set<() => void>();
+    let unwatch = () => {};
+
+    const runCleanup = () => {
+      if (cleanupRan) return;
+      cleanupRan = true;
+      unwatch();
+      clearTimeout(timer);
+      for (const cleanup of cleanupFns) cleanup();
+      cleanupFns.clear();
+    };
+
+    const abort = () => {
+      if (aborted) return;
+      aborted = true;
+      controller.abort();
+      runCleanup();
+    };
+
+    const controller = new AbortController();
+    const directiveContext: ClientDirectiveContext = {
+      signal: controller.signal,
+      onCleanup(cleanup) {
+        if (controller.signal.aborted) {
+          cleanup();
+          return;
+        }
+        cleanupFns.add(cleanup);
+      },
+    };
 
     const loadOnce = () => {
       if (fired || aborted) return Promise.resolve();
       if (--remaining === 0) {
-        clearTimeout(timer);
         fired = true;
+        controller.abort();
+        runCleanup();
         return ctx.run();
       }
       return Promise.resolve();
     };
 
+    unwatch = ctx.watchCancellable(ctx.element, abort);
+
     if (ctx.directiveTimeout > 0) {
       timer = setTimeout(() => {
         if (fired || aborted) return;
-        aborted = true;
+        abort();
         ctx.onError(
           attrNames,
           new Error(
@@ -247,16 +366,18 @@ export function createDirectiveOrchestrator(
 
     for (const [attrName, directiveFn, value] of matched) {
       try {
-        Promise.resolve(directiveFn(loadOnce, { name: attrName, value }, ctx.element)).catch(
+        Promise.resolve(
+          directiveFn(loadOnce, { name: attrName, value }, ctx.element, directiveContext),
+        ).catch(
           (err) => {
-            clearTimeout(timer);
-            aborted = true;
+            if (fired) return;
+            abort();
             ctx.onError(attrName, err);
           },
         );
       } catch (err) {
-        clearTimeout(timer);
-        aborted = true;
+        if (fired) continue;
+        abort();
         ctx.onError(attrName, err);
       }
     }

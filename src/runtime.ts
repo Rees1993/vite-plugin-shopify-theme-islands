@@ -32,18 +32,25 @@ function isRevivePayload(v: unknown): v is RevivePayload {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function revive(payload: RevivePayload): { disconnect: () => void };
+export interface ReviveRuntime {
+  disconnect: () => void;
+  scan: (root?: HTMLElement | null) => void;
+  observe: (root?: HTMLElement | null) => void;
+  unobserve: (root?: HTMLElement | null) => void;
+}
+
+export function revive(payload: RevivePayload): ReviveRuntime;
 /** @deprecated Pass a RevivePayload object instead. Will be removed in v2.0. */
 export function revive(
   islands: Record<string, IslandLoader>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
-): { disconnect: () => void };
+): ReviveRuntime;
 export function revive(
   islandsOrPayload: RevivePayload | Record<string, IslandLoader>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
-): { disconnect: () => void } {
+): ReviveRuntime {
   const runtimeSurface = getRuntimeSurface();
   const payload: RevivePayload = isRevivePayload(islandsOrPayload)
     ? islandsOrPayload
@@ -66,6 +73,42 @@ export function revive(
   });
   const directiveOrchestrator = createDirectiveOrchestrator();
   let disconnected = false;
+  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const clearRetryTimer = (tagName: string): void => {
+    const timer = retryTimers.get(tagName);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    retryTimers.delete(tagName);
+  };
+
+  const clearRetryTimers = (tagNames?: Iterable<string>): void => {
+    if (tagNames) {
+      for (const tagName of tagNames) clearRetryTimer(tagName);
+      return;
+    }
+
+    for (const timer of retryTimers.values()) clearTimeout(timer);
+    retryTimers.clear();
+  };
+
+  const getSubtreeTags = (root: HTMLElement): Set<string> => {
+    const tags = new Set<string>();
+    const maybeEvict = (el: Element) => {
+      const tagName = el.tagName.toLowerCase();
+      if (tagName.includes("-")) tags.add(tagName);
+    };
+
+    maybeEvict(root);
+    for (const el of root.querySelectorAll("*")) maybeEvict(el);
+    return tags;
+  };
+
+  const evictSubtreeTags = (root: HTMLElement): void => {
+    const tags = getSubtreeTags(root);
+    clearRetryTimers(tags);
+    for (const tagName of tags) lifecycle.evict(tagName);
+  };
 
   async function loadIsland(
     tagName: string,
@@ -98,11 +141,20 @@ export function revive(
 
     const log = runtimeSurface.createLogger(tagName, debug);
 
+    const abortIfInactive = (): boolean => {
+      if (!disconnected && lifecycle.isObserved(el)) return false;
+      clearRetryTimer(tagName);
+      lifecycle.evict(tagName);
+      return true;
+    };
+
     const run = (): Promise<void> => {
-      if (disconnected) return Promise.resolve();
+      if (abortIfInactive()) return Promise.resolve();
       const t0 = performance.now();
       return loader()
         .then(() => {
+          if (abortIfInactive()) return;
+          clearRetryTimer(tagName);
           const attempt = lifecycle.settleSuccess(tagName);
           runtimeSurface.dispatchLoad({
             tag: tagName,
@@ -116,7 +168,12 @@ export function revive(
           const { retryDelayMs, attempt } = lifecycle.settleFailure(tagName);
           runtimeSurface.dispatchError({ tag: tagName, error: err, attempt });
           if (retryDelayMs !== null) {
-            setTimeout(run, retryDelayMs);
+            clearRetryTimer(tagName);
+            const timer = setTimeout(() => {
+              retryTimers.delete(tagName);
+              void run();
+            }, retryDelayMs);
+            retryTimers.set(tagName, timer);
           }
         });
     };
@@ -129,6 +186,7 @@ export function revive(
         console.error(`[islands] Built-in directive failed for <${tagName}>:`, err);
       }
       runtimeSurface.dispatchError({ tag: tagName, error: err, attempt: 1 });
+      clearRetryTimer(tagName);
       lifecycle.evict(tagName);
     };
 
@@ -172,12 +230,36 @@ export function revive(
       endReadyLog = undefined;
     },
   });
+
+  const disconnectRoot = (root: HTMLElement | null = document.body): void => {
+    if (root !== document.body) return;
+    disconnected = true;
+    clearRetryTimers();
+    endReadyLog?.();
+    endReadyLog = undefined;
+    disconnectLifecycle.disconnect();
+  };
+
   return {
+    scan(root = document.body) {
+      if (disconnected || !root) return;
+      lifecycle.walk(root);
+    },
+    observe(root = document.body) {
+      if (disconnected || !root) return;
+      if (root !== document.body) lifecycle.includeRoot(root);
+      lifecycle.walk(root);
+    },
+    unobserve(root = document.body) {
+      if (root && root !== document.body) {
+        evictSubtreeTags(root);
+        lifecycle.excludeRoot(root);
+        return;
+      }
+      disconnectRoot(root);
+    },
     disconnect() {
-      disconnected = true;
-      endReadyLog?.();
-      endReadyLog = undefined;
-      disconnectLifecycle.disconnect();
+      disconnectRoot(document.body);
     },
   };
 }

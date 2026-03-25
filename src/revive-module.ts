@@ -48,7 +48,20 @@ export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): 
   } else {
     lines.push(`const payload = { islands, options };`);
   }
-  lines.push(`export const { disconnect } = _islands(payload);`);
+  lines.push(`const runtimeKey = "__shopify_theme_islands_runtime__";`);
+  lines.push(`const runtimeState = (globalThis[runtimeKey] ??= {});`);
+  lines.push(`const runtime = runtimeState.runtime ?? _islands(payload);`);
+  lines.push(`runtimeState.runtime = runtime;`);
+  lines.push(`if (import.meta.hot) {`);
+  lines.push(`  import.meta.hot.accept();`);
+  lines.push(`  import.meta.hot.dispose(() => {`);
+  lines.push(`    if (runtimeState.runtime === runtime) {`);
+  lines.push(`      runtime.disconnect();`);
+  lines.push(`      delete runtimeState.runtime;`);
+  lines.push(`    }`);
+  lines.push(`  });`);
+  lines.push(`}`);
+  lines.push(`export const { disconnect, scan, observe, unobserve } = runtime;`);
 
   return lines.join("\n");
 }

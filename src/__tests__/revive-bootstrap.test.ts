@@ -45,7 +45,10 @@ describe("revive-bootstrap", () => {
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
-    expect(source).toContain("export const { disconnect } = _islands(payload);");
+    expect(source).toContain('const runtimeKey = "__shopify_theme_islands_runtime__";');
+    expect(source).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
+    expect(source).toContain("import.meta.hot.accept();");
+    expect(source).toContain("export const { disconnect, scan, observe, unobserve } = runtime;");
   });
 
   it("renders the bootstrap source from a semantic plan", async () => {

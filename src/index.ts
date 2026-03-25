@@ -61,6 +61,10 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     const mod = devServer.moduleGraph.getModuleById(RESOLVED_ID);
     if (!mod) return;
     devServer.moduleGraph.invalidateModule(mod);
+    if (typeof devServer.reloadModule === "function") {
+      void devServer.reloadModule(mod);
+      return;
+    }
     devServer.ws.send({ type: "full-reload" });
   };
 

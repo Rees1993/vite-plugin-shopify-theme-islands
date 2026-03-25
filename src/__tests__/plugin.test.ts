@@ -138,7 +138,9 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
       expect(output).toContain("import { revive as _islands }");
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain(
+        "export const { disconnect, scan, observe, unobserve } = runtime",
+      );
     });
 
     it("generates import.meta.glob for multiple directories", async () => {
@@ -261,14 +263,18 @@ describe("plugin", () => {
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain(
+        "export const { disconnect, scan, observe, unobserve } = runtime",
+      );
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain(
+        "export const { disconnect, scan, observe, unobserve } = runtime",
+      );
       expect(output).not.toContain("customDirectives");
     });
 
@@ -435,9 +441,9 @@ describe("plugin", () => {
       expect(() => plugin.watchChange(filePath, { event: "update" })).not.toThrow();
     });
 
-    it("invalidates the revive module and triggers a full reload when the island set changes", () => {
+    it("invalidates and reloads the revive module when the island set changes", () => {
       const invalidated: object[] = [];
-      const payloads: Array<{ type: string }> = [];
+      const reloaded: object[] = [];
       const reviveModule = {};
       const plugin = makeWatchPlugin();
       plugin.configureServer({
@@ -449,10 +455,9 @@ describe("plugin", () => {
             invalidated.push(mod);
           },
         },
-        ws: {
-          send(payload: { type: string }) {
-            payloads.push(payload);
-          },
+        reloadModule(mod: object) {
+          reloaded.push(mod);
+          return Promise.resolve();
         },
       } as unknown as ViteDevServer);
 
@@ -461,12 +466,12 @@ describe("plugin", () => {
       plugin.watchChange(filePath, { event: "create" });
 
       expect(invalidated).toEqual([reviveModule]);
-      expect(payloads).toEqual([{ type: "full-reload" }]);
+      expect(reloaded).toEqual([reviveModule]);
     });
 
     it("does not trigger a reload when the revive module is not in the graph", () => {
       let invalidated = false;
-      const payloads: Array<{ type: string }> = [];
+      let reloaded = false;
       const plugin = makeWatchPlugin();
       plugin.configureServer({
         moduleGraph: {
@@ -477,10 +482,9 @@ describe("plugin", () => {
             invalidated = true;
           },
         },
-        ws: {
-          send(payload: { type: string }) {
-            payloads.push(payload);
-          },
+        reloadModule() {
+          reloaded = true;
+          return Promise.resolve();
         },
       } as unknown as ViteDevServer);
 
@@ -489,7 +493,7 @@ describe("plugin", () => {
       plugin.watchChange(filePath, { event: "create" });
 
       expect(invalidated).toBe(false);
-      expect(payloads).toEqual([]);
+      expect(reloaded).toBe(false);
     });
   });
 });

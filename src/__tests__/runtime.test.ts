@@ -52,6 +52,19 @@ describe("revive", () => {
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("revive(payload) returns the singleton helper surface", () => {
+      const runtime = revive({
+        islands: { "/frontend/js/islands/product-form.ts": async () => {} },
+      });
+
+      expect(runtime).toEqual({
+        disconnect: expect.any(Function),
+        scan: expect.any(Function),
+        observe: expect.any(Function),
+        unobserve: expect.any(Function),
+      });
+    });
   });
 
   describe("backward-compat overload", () => {
@@ -446,6 +459,7 @@ describe("revive", () => {
           addEventListener: (_: string, h: () => void) => {
             changeHandler = h;
           },
+          removeEventListener: () => {},
         }) as unknown as MediaQueryList;
 
       const loader = mock(async () => {});
@@ -457,6 +471,31 @@ describe("revive", () => {
       changeHandler();
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not load after subtree unobserve even if the media query later matches", async () => {
+      let changeHandler!: () => void;
+      window.matchMedia = (_q) =>
+        ({
+          matches: false,
+          addEventListener: (_: string, h: () => void) => {
+            changeHandler = h;
+          },
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList;
+
+      const loader = mock(async () => {});
+      document.body.innerHTML =
+        '<div id="alpha"><media-panel client:media="(max-width: 768px)"></media-panel></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const runtime = r({ "/islands/media-panel.ts": loader });
+      await flush();
+
+      runtime.unobserve(alphaRoot);
+      changeHandler();
+      await flush();
+
+      expect(loader).not.toHaveBeenCalled();
     });
   });
 
@@ -675,6 +714,7 @@ describe("revive", () => {
 
     it("disconnect() cancels pending retries — run() does not execute after teardown", async () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
+      const clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
       let callCount = 0;
       const loader = mock(async () => {
         callCount++;
@@ -691,6 +731,8 @@ describe("revive", () => {
       disconnect(); // cancel before any retry fires
       await flush(400); // wait long enough for retries to have fired if not cancelled
       expect(callCount).toBe(1); // no retries executed after disconnect
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
       spy.mockRestore();
     });
 
@@ -713,6 +755,95 @@ describe("revive", () => {
       } finally {
         delete (document as { readyState?: string }).readyState;
       }
+    });
+  });
+
+  describe("runtime subtree controls", () => {
+    it("unobserve(root) stops future activation in that subtree without affecting sibling subtrees", async () => {
+      const alphaLoader = mock(async () => {});
+      const betaLoader = mock(async () => {});
+      document.body.innerHTML = '<div id="alpha"></div><div id="beta"></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const betaRoot = document.getElementById("beta") as HTMLElement;
+
+      const runtime = r({
+        "/islands/alpha-widget.ts": alphaLoader,
+        "/islands/beta-widget.ts": betaLoader,
+      });
+      await flush();
+
+      runtime.unobserve(alphaRoot);
+      alphaRoot.appendChild(document.createElement("alpha-widget"));
+      betaRoot.appendChild(document.createElement("beta-widget"));
+      runtime.scan(document.body);
+
+      await flush();
+
+      expect(alphaLoader).not.toHaveBeenCalled();
+      expect(betaLoader).toHaveBeenCalledTimes(1);
+    });
+
+    it("unobserve(root) prevents pending built-in directive work from loading later", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML =
+        '<div id="alpha"><slow-widget client:defer="100"></slow-widget></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+
+      const runtime = r({ "/islands/slow-widget.ts": loader });
+      await flush(20);
+
+      runtime.unobserve(alphaRoot);
+      await flush(140);
+
+      expect(loader).not.toHaveBeenCalled();
+    });
+
+    it("unobserve(root) cancels a pending visible directive inside that subtree", async () => {
+      let trigger!: IntersectionObserverCallback;
+      const originalIO = mockIntersectionObserver(
+        class {
+          observe = (): void => {};
+          disconnect = (): void => {};
+          constructor(cb: IntersectionObserverCallback) {
+            trigger = cb;
+          }
+        },
+      );
+
+      try {
+        const loader = mock(async () => {});
+        document.body.innerHTML =
+          '<div id="alpha"><visible-widget client:visible></visible-widget></div>';
+        const alphaRoot = document.getElementById("alpha") as HTMLElement;
+        const runtime = r({ "/islands/visible-widget.ts": loader });
+
+        runtime.unobserve(alphaRoot);
+        trigger([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+        await flush();
+
+        expect(loader).not.toHaveBeenCalled();
+      } finally {
+        globalThis.IntersectionObserver = originalIO;
+      }
+    });
+
+    it("observe(root) re-enables activation for a previously unobserved subtree", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<div id="alpha"></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const runtime = r({ "/islands/alpha-widget.ts": loader });
+
+      runtime.unobserve(alphaRoot);
+      alphaRoot.appendChild(document.createElement("alpha-widget"));
+      runtime.scan(document.body);
+      await flush();
+
+      expect(loader).not.toHaveBeenCalled();
+
+      runtime.observe(alphaRoot);
+      await flush();
+
+      expect(loader).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -835,16 +966,20 @@ describe("revive", () => {
 
   describe("custom directives", () => {
     it("calls the directive function with loader, options, and element", async () => {
-      const directiveFn = mock<ClientDirective>((_load, _opts, _el) => {});
+      const directiveFn = mock<ClientDirective>((_load, _opts, _el, _ctx) => {});
       document.body.innerHTML = "<click-island client:on-click></click-island>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
       r({ "/islands/click-island.ts": mock(async () => {}) }, {}, customDirectives);
       await flush();
       expect(directiveFn).toHaveBeenCalledTimes(1);
-      const [loadArg, optsArg, elArg] = directiveFn.mock.calls[0];
+      const [loadArg, optsArg, elArg, ctxArg] = directiveFn.mock.calls[0];
       expect(typeof loadArg).toBe("function");
       expect(optsArg).toEqual({ name: "client:on-click", value: "" });
       expect(elArg.tagName.toLowerCase()).toBe("click-island");
+      expect(ctxArg).toEqual({
+        onCleanup: expect.any(Function),
+        signal: expect.any(AbortSignal),
+      });
     });
 
     it("passes attribute value in options", async () => {
@@ -867,6 +1002,66 @@ describe("revive", () => {
       await flush();
       expect(loader).not.toHaveBeenCalled();
       expect(directiveFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("runs custom directive cleanup and aborts its signal when the subtree is unobserved", async () => {
+      const cleanup = mock(() => {});
+      const directiveFn = mock<ClientDirective>((_load, _opts, _el, ctx) => {
+        ctx.onCleanup(cleanup);
+      });
+
+      document.body.innerHTML = '<div id="alpha"><cleanup-island client:on-click></cleanup-island></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      const runtime = r({ "/islands/cleanup-island.ts": mock(async () => {}) }, {}, customDirectives);
+      await flush();
+
+      const ctxArg = directiveFn.mock.calls[0][3];
+      runtime.unobserve(alphaRoot);
+      await flush();
+
+      expect(ctxArg.signal.aborted).toBe(true);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it("aborts custom directive signal after successful load and runs cleanup once", async () => {
+      const cleanup = mock(() => {});
+      const loader = mock(async () => {});
+      const directiveFn = mock<ClientDirective>(async (load, _opts, _el, ctx) => {
+        ctx.onCleanup(cleanup);
+        await load();
+      });
+
+      document.body.innerHTML = "<success-island client:on-click></success-island>";
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      r({ "/islands/success-island.ts": loader }, {}, customDirectives);
+      await flush();
+
+      const ctxArg = directiveFn.mock.calls[0][3];
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(ctxArg.signal.aborted).toBe(true);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores a custom directive rejection after load has already been released", async () => {
+      const loader = mock(async () => {});
+      const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+      const directiveFn = mock<ClientDirective>(async (load) => {
+        await load();
+        throw new Error("late directive failure");
+      });
+
+      document.body.innerHTML = "<late-failure client:on-click></late-failure>";
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      r({ "/islands/late-failure.ts": loader }, {}, customDirectives);
+      await flush();
+
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(errorSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Custom directive client:on-click failed"),
+        expect.any(Error),
+      );
+      errorSpy.mockRestore();
     });
 
     it("calls load immediately when no custom directive attribute matches", async () => {

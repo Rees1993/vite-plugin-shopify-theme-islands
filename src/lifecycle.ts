@@ -9,6 +9,9 @@ export interface IslandLifecycleStartInput {
 }
 
 export interface IslandLifecycle {
+  excludeRoot(root: HTMLElement): void;
+  includeRoot(root: HTMLElement): void;
+  isObserved(el: Element): boolean;
   settleSuccess(tag: string): number;
   settleFailure(tag: string): { retryDelayMs: number | null; attempt: number };
   evict(tag: string): void;
@@ -26,9 +29,17 @@ export function createIslandLifecycleCoordinator(opts: {
   const queued = new Set<string>();
   const loaded = new Set<string>();
   const retryCount = new Map<string, number>();
-  const cancellableElements = new Map<Element, () => void>();
+  const cancellableElements = new Map<Element, Set<() => void>>();
+  const excludedRoots = new Set<HTMLElement>();
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
+
+  const isExcluded = (el: Element): boolean => {
+    for (const root of excludedRoots) {
+      if (el === root || root.contains(el)) return true;
+    }
+    return false;
+  };
 
   const queue = (tag: string): boolean => {
     if (queued.has(tag) || loaded.has(tag)) return false;
@@ -64,18 +75,23 @@ export function createIslandLifecycleCoordinator(opts: {
   const isQueued = (tag: string): boolean => queued.has(tag);
 
   const watchCancellable = (el: Element, cancel: () => void): (() => void) => {
-    cancellableElements.set(el, cancel);
+    const cancels = cancellableElements.get(el) ?? new Set<() => void>();
+    cancels.add(cancel);
+    cancellableElements.set(el, cancels);
     return () => {
-      cancellableElements.delete(el);
+      const activeCancels = cancellableElements.get(el);
+      if (!activeCancels) return;
+      activeCancels.delete(cancel);
+      if (activeCancels.size === 0) cancellableElements.delete(el);
     };
   };
 
   const cancelDetached = (): void => {
     if (cancellableElements.size === 0) return;
-    for (const [el, cancel] of cancellableElements) {
+    for (const [el, cancels] of cancellableElements) {
       if (!el.isConnected) {
         cancellableElements.delete(el);
-        cancel();
+        for (const cancel of cancels) cancel();
       }
     }
   };
@@ -86,6 +102,7 @@ export function createIslandLifecycleCoordinator(opts: {
 
     const customElementFilter: NodeFilter = {
       acceptNode: (node) => {
+        if (isExcluded(node as Element)) return NodeFilter.FILTER_REJECT;
         const tag = (node as Element).tagName;
         if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
         return isQueued(tag.toLowerCase()) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
@@ -93,6 +110,7 @@ export function createIslandLifecycleCoordinator(opts: {
     };
 
     const activate = (el: HTMLElement): void => {
+      if (isExcluded(el)) return;
       const tagName = el.tagName.toLowerCase();
       const loader = input.islandMap.get(tagName);
       if (!loader) return;
@@ -156,6 +174,21 @@ export function createIslandLifecycleCoordinator(opts: {
   };
 
   return {
+    excludeRoot(root) {
+      excludedRoots.add(root);
+      for (const [el, cancels] of cancellableElements) {
+        if (el === root || root.contains(el)) {
+          cancellableElements.delete(el);
+          for (const cancel of cancels) cancel();
+        }
+      }
+    },
+    includeRoot(root) {
+      excludedRoots.delete(root);
+    },
+    isObserved(el) {
+      return !isExcluded(el);
+    },
     settleSuccess,
     settleFailure,
     evict,

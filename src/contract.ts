@@ -50,11 +50,19 @@ export interface ClientDirectiveOptions {
   value: string;
 }
 
-/** Custom directive function at runtime (load, opts, element). */
+export interface ClientDirectiveContext {
+  /** Aborted when the directive should stop waiting and clean up any side effects. */
+  signal: AbortSignal;
+  /** Registers cleanup work that should run when the directive is aborted or resolves. */
+  onCleanup(cleanup: () => void): void;
+}
+
+/** Custom directive function at runtime (load, opts, element, ctx). */
 export type ClientDirective = (
   load: () => Promise<void>,
   options: ClientDirectiveOptions,
   el: HTMLElement,
+  ctx: ClientDirectiveContext,
 ) => void | Promise<void>;
 
 /** Event detail for the `islands:load` DOM event. */
