@@ -67,6 +67,8 @@ export function revive(
   const attrInteraction = opts.directives.interaction.attribute;
   const debug = opts.debug;
   const directiveTimeout = opts.directiveTimeout;
+  const seenLoadGates = new Map<string, string>();
+  const warnedLoadGateConflicts = new Set<string>();
 
   const lifecycle = createIslandLifecycleCoordinator({
     retries: opts.retry.retries,
@@ -109,6 +111,65 @@ export function revive(
     const tags = getSubtreeTags(root);
     clearRetryTimers(tags);
     for (const tagName of tags) lifecycle.evict(tagName);
+  };
+
+  const describeLoadGate = (el: HTMLElement): string => {
+    const parts: string[] = [];
+    const pushGate = (attr: string, value: string | number | null) => {
+      if (value === null) return;
+      parts.push(value === "" ? attr : `${attr}="${String(value)}"`);
+    };
+
+    const visibleValue = el.getAttribute(attrVisible);
+    if (visibleValue !== null) pushGate(attrVisible, visibleValue || opts.directives.visible.rootMargin);
+
+    const mediaValue = el.getAttribute(attrMedia);
+    if (mediaValue) pushGate(attrMedia, mediaValue);
+
+    const idleValue = el.getAttribute(attrIdle);
+    if (idleValue !== null) {
+      const parsed = Number(idleValue);
+      pushGate(attrIdle, Number.isNaN(parsed) ? opts.directives.idle.timeout : parsed);
+    }
+
+    const deferValue = el.getAttribute(attrDefer);
+    if (deferValue !== null) {
+      const parsed = Number(deferValue);
+      pushGate(attrDefer, Number.isNaN(parsed) ? opts.directives.defer.delay : parsed);
+    }
+
+    const interactionValue = el.getAttribute(attrInteraction);
+    if (interactionValue !== null) {
+      pushGate(attrInteraction, interactionValue.trim() || opts.directives.interaction.events.join(" "));
+    }
+
+    if (resolvedDirectives?.size) {
+      for (const attrName of resolvedDirectives.keys()) {
+        const value = el.getAttribute(attrName);
+        if (value !== null) pushGate(attrName, value);
+      }
+    }
+
+    return parts.join(", ") || "immediate";
+  };
+
+  const warnOnConflictingLoadGate = (tagName: string, el: HTMLElement): void => {
+    if (!debug) return;
+
+    const gate = describeLoadGate(el);
+    const firstGate = seenLoadGates.get(tagName);
+
+    if (firstGate === undefined) {
+      seenLoadGates.set(tagName, gate);
+      return;
+    }
+
+    if (firstGate === gate || warnedLoadGateConflicts.has(tagName)) return;
+
+    warnedLoadGateConflicts.add(tagName);
+    console.warn(
+      `[islands] Found same tag <${tagName}> with conflicting directive gates (${firstGate} vs ${gate}). Directives load code at the tag level, so the first-resolved instance wins for this tag.`,
+    );
   };
 
   async function loadIsland(
@@ -222,6 +283,7 @@ export function revive(
   const disconnectLifecycle = lifecycle.start({
     getRoot: () => document.body,
     islandMap,
+    onDiscover: warnOnConflictingLoadGate,
     onActivate: loadIsland,
     onBeforeInitialWalk: () => {
       endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);

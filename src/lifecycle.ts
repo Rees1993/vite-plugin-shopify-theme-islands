@@ -4,6 +4,7 @@ export interface IslandLifecycleStartInput {
   getRoot(): HTMLElement | null;
   islandMap: Map<string, IslandLoader>;
   onActivate(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): void;
+  onDiscover?(tagName: string, el: HTMLElement): void;
   onBeforeInitialWalk?: () => void;
   onInitialWalkComplete?: () => void;
 }
@@ -105,7 +106,7 @@ export function createIslandLifecycleCoordinator(opts: {
         if (isExcluded(node as Element)) return NodeFilter.FILTER_REJECT;
         const tag = (node as Element).tagName;
         if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
-        return isQueued(tag.toLowerCase()) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+        return NodeFilter.FILTER_ACCEPT;
       },
     };
 
@@ -114,6 +115,7 @@ export function createIslandLifecycleCoordinator(opts: {
       const tagName = el.tagName.toLowerCase();
       const loader = input.islandMap.get(tagName);
       if (!loader) return;
+      input.onDiscover?.(tagName, el);
 
       let ancestor = el.parentElement;
       while (ancestor) {

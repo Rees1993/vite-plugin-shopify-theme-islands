@@ -1012,6 +1012,53 @@ describe("revive", () => {
       groupCollapsed.mockRestore();
       groupEnd.mockRestore();
     });
+
+    it("warns once when the same tag appears with conflicting directive gates", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      document.body.innerHTML =
+        '<same-tag client:defer="100"></same-tag><same-tag client:idle></same-tag>';
+
+      r({ "/islands/same-tag.ts": mock(async () => {}) }, { debug: true });
+      await flush(20);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same tag <same-tag>"));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("first-resolved instance"),
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it("warns when the same tag mixes custom directive gates", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      const customDirectives = new Map<string, ClientDirective>([
+        ["client:on-click", mock(() => {}) as ClientDirective],
+      ]);
+      document.body.innerHTML =
+        "<same-custom></same-custom><same-custom client:on-click></same-custom>";
+
+      r({ "/islands/same-custom.ts": mock(async () => {}) }, { debug: true }, customDirectives);
+      await flush(20);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("client:on-click"));
+
+      warnSpy.mockRestore();
+    });
+
+    it("does not warn when the same tag repeats the same effective gate", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      document.body.innerHTML =
+        '<same-stable client:defer="100"></same-stable><same-stable client:defer="100"></same-stable>';
+
+      r({ "/islands/same-stable.ts": mock(async () => {}) }, { debug: true });
+      await flush(20);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
   });
 
   describe("custom directives", () => {
