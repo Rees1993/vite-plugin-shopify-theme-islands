@@ -16,12 +16,21 @@ const SHOPIFY_LIFECYCLE_ACTIONS: ReadonlyArray<[type: string, action: ShopifyLif
   ["shopify:block:deselect", "scan"],
 ];
 
+const isBlockLifecycleEvent = (type: string): boolean => type.startsWith("shopify:block:");
+
 function resolveLifecycleRoot(event: Event): HTMLElement | null {
   if (event.target instanceof HTMLElement) return event.target;
 
   if (!(event instanceof CustomEvent)) return null;
   const detail = event.detail;
   if (!detail || typeof detail !== "object") return null;
+
+  if (isBlockLifecycleEvent(event.type)) {
+    const blockId = "blockId" in detail && typeof detail.blockId === "string" ? detail.blockId : null;
+    if (!blockId) return null;
+    const root = document.getElementById(`shopify-block-${blockId}`);
+    return root instanceof HTMLElement ? root : null;
+  }
 
   const sectionId =
     "sectionId" in detail && typeof detail.sectionId === "string" ? detail.sectionId : null;
