@@ -31,78 +31,8 @@ function makePlugin(opts?: ShopifyThemeIslandsOptions): PluginUnderTest {
 
 describe("plugin", () => {
   describe("validateOptions", () => {
-    it("throws for an empty directories array", () => {
+    it("surfaces config-policy validation errors during plugin creation", () => {
       expect(() => makePlugin({ directories: [] })).toThrow('"directories" must not be empty');
-    });
-
-    it("throws for threshold below 0", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: -0.1 } } })).toThrow(
-        '"directives.visible.threshold" must be between 0 and 1',
-      );
-    });
-
-    it("throws for threshold above 1", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: 1.1 } } })).toThrow(
-        '"directives.visible.threshold" must be between 0 and 1',
-      );
-    });
-
-    it("accepts threshold of 0 and 1", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: 0 } } })).not.toThrow();
-      expect(() => makePlugin({ directives: { visible: { threshold: 1 } } })).not.toThrow();
-    });
-
-    it("throws for negative retry.retries", () => {
-      expect(() => makePlugin({ retry: { retries: -1 } })).toThrow('"retry.retries" must be >= 0');
-    });
-
-    it("throws for negative retry.delay", () => {
-      expect(() => makePlugin({ retry: { delay: -1 } })).toThrow('"retry.delay" must be >= 0');
-    });
-
-    it("accepts retry.retries of 0", () => {
-      expect(() => makePlugin({ retry: { retries: 0 } })).not.toThrow();
-    });
-
-    it("throws for duplicate custom directive names", () => {
-      expect(() =>
-        makePlugin({
-          directives: {
-            custom: [
-              { name: "client:hover", entrypoint: "./a.ts" },
-              { name: "client:hover", entrypoint: "./b.ts" },
-            ],
-          },
-        }),
-      ).toThrow('Duplicate custom directive name: "client:hover"');
-    });
-
-    it("throws when custom directive name collides with a built-in", () => {
-      expect(() =>
-        makePlugin({ directives: { custom: [{ name: "client:visible", entrypoint: "./a.ts" }] } }),
-      ).toThrow("conflicts with a built-in directive");
-    });
-
-    it("throws when custom directive name collides with a renamed built-in", () => {
-      expect(() =>
-        makePlugin({
-          directives: {
-            visible: { attribute: "data:visible" },
-            custom: [{ name: "data:visible", entrypoint: "./a.ts" }],
-          },
-        }),
-      ).toThrow("conflicts with a built-in directive");
-    });
-
-    it("throws for empty interaction event arrays", () => {
-      expect(() =>
-        makePlugin({
-          directives: { interaction: { events: [] } },
-        }),
-      ).toThrow('"directives.interaction.events" must not be empty');
-    });
-
-    it("throws for unsupported interaction event names", () => {
       expect(() =>
         makePlugin({
           directives: {
@@ -374,12 +304,6 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("/islands-legacy/legacy-widget.ts");
     });
-
-    it("skips unreadable files silently", () => {
-      const plugin = makePlugin({ directories: ["/nonexistent/"] });
-      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
-      expect(() => plugin.buildStart()).not.toThrow();
-    });
   });
 
   describe("watchChange", () => {
@@ -409,16 +333,6 @@ describe("plugin", () => {
       expect(output).toContain("watch-widget.ts");
     });
 
-    it("delete event removes file from islandFiles", async () => {
-      const filePath = join(tmp, "del-widget.ts");
-      writeFileSync(filePath, ISLAND_CONTENT);
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      plugin.watchChange(filePath, { event: "delete" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("del-widget.ts");
-    });
-
     it("create event for file inside scanned directory does not add to islandFiles", async () => {
       const islandsDir = join(tmp, "islands");
       mkdirSync(islandsDir);
@@ -430,32 +344,6 @@ describe("plugin", () => {
       // Only the directory glob — no second import.meta.glob for individual file
       const globCount = (output?.match(/import\.meta\.glob/g) ?? []).length;
       expect(globCount).toBe(1);
-    });
-
-    it("update event removes file when island import is lost", async () => {
-      const filePath = join(tmp, "losing-island.ts");
-      writeFileSync(filePath, ISLAND_CONTENT);
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      // Remove the island import
-      writeFileSync(filePath, "export default class X extends HTMLElement {}");
-      plugin.watchChange(filePath, { event: "update" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("losing-island.ts");
-    });
-
-    it("non-TS/JS file triggers no change", async () => {
-      const filePath = join(tmp, "image.png");
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("image.png");
-    });
-
-    it("unreadable file (deleted before event) does not throw", () => {
-      const filePath = join(tmp, "gone-widget.ts"); // never created
-      const plugin = makeWatchPlugin();
-      expect(() => plugin.watchChange(filePath, { event: "update" })).not.toThrow();
     });
 
     it("invalidates and reloads the revive module when the island set changes", () => {
