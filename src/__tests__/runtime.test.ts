@@ -67,33 +67,11 @@ describe("revive", () => {
     });
   });
 
-  describe("backward-compat overload", () => {
-    it("deprecated 3-arg form revive(islands, options, customDirectives) activates islands", async () => {
-      const loader = mock(async () => {});
-      document.body.innerHTML = "<my-widget></my-widget>";
-      revive({ "/islands/my-widget.ts": loader });
-      await flush();
-      expect(loader).toHaveBeenCalledTimes(1);
-    });
-
-    it("deprecated 3-arg form passes options correctly", async () => {
-      const loader = mock(async () => {});
-      document.body.innerHTML = "<my-widget></my-widget>";
-      revive({ "/islands/my-widget.ts": loader }, { debug: false });
-      await flush();
-      expect(loader).toHaveBeenCalledTimes(1);
-    });
-
-    it("deprecated 3-arg form passes customDirectives correctly", async () => {
-      const loader = mock(async () => {});
-      const directive: ClientDirective = (load) => {
-        void load();
-      };
-      document.body.innerHTML = "<my-widget client:custom></my-widget>";
-      const customDirectives = new Map<string, ClientDirective>([["client:custom", directive]]);
-      revive({ "/islands/my-widget.ts": loader }, undefined, customDirectives);
-      await flush();
-      expect(loader).toHaveBeenCalledTimes(1);
+  describe("payload-only contract", () => {
+    it("throws a helpful error when called with the removed legacy signature", () => {
+      expect(() =>
+        revive({ "/islands/my-widget.ts": async () => {} } as unknown as Parameters<typeof revive>[0]),
+      ).toThrow(/requires a RevivePayload object/);
     });
   });
 

@@ -17,9 +17,6 @@
 import {
   buildIslandMap,
   normalizeReviveOptions,
-  type ClientDirective,
-  type IslandLoader,
-  type ReviveOptions,
   type RevivePayload,
 } from "./contract.js";
 import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
@@ -40,22 +37,13 @@ export interface ReviveRuntime {
   unobserve: (root?: HTMLElement | null) => void;
 }
 
-export function revive(payload: RevivePayload): ReviveRuntime;
-/** @deprecated Pass a RevivePayload object instead. Will be removed in v2.0. */
-export function revive(
-  islands: Record<string, IslandLoader>,
-  options?: ReviveOptions,
-  customDirectives?: Map<string, ClientDirective>,
-): ReviveRuntime;
-export function revive(
-  islandsOrPayload: RevivePayload | Record<string, IslandLoader>,
-  options?: ReviveOptions,
-  customDirectives?: Map<string, ClientDirective>,
-): ReviveRuntime {
+export function revive(payload: RevivePayload): ReviveRuntime {
   const runtimeSurface = getRuntimeSurface();
-  const payload: RevivePayload = isRevivePayload(islandsOrPayload)
-    ? islandsOrPayload
-    : { islands: islandsOrPayload as Record<string, IslandLoader>, options, customDirectives };
+  if (!isRevivePayload(payload)) {
+    throw new TypeError(
+      "[islands] revive() now requires a RevivePayload object. Pass { islands, options?, customDirectives?, resolvedTags? }.",
+    );
+  }
   const opts = normalizeReviveOptions(payload.options);
   const islandMap = buildIslandMap(payload);
   const resolvedDirectives = payload.customDirectives;
