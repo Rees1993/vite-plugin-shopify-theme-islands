@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import shopifyThemeIslands from "../index";
 import type { ShopifyThemeIslandsOptions } from "../index";
-import type { ResolvedConfig } from "vite";
+import type { ResolvedConfig, ViteDevServer } from "vite";
 
 const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
@@ -18,6 +18,7 @@ function makeConfig(aliases: ResolvedConfig["resolve"]["alias"] = []): ResolvedC
 interface PluginUnderTest {
   resolveId(id: string): string | undefined;
   configResolved(config: ResolvedConfig): void;
+  configureServer(server: ViteDevServer): void;
   buildStart(): void;
   load(id: string): Promise<string | undefined>;
   transform(code: string, id: string): void;
@@ -432,6 +433,63 @@ describe("plugin", () => {
       const filePath = join(tmp, "gone-widget.ts"); // never created
       const plugin = makeWatchPlugin();
       expect(() => plugin.watchChange(filePath, { event: "update" })).not.toThrow();
+    });
+
+    it("invalidates the revive module and triggers a full reload when the island set changes", () => {
+      const invalidated: object[] = [];
+      const payloads: Array<{ type: string }> = [];
+      const reviveModule = {};
+      const plugin = makeWatchPlugin();
+      plugin.configureServer({
+        moduleGraph: {
+          getModuleById(id: string) {
+            return id === RESOLVED_ID ? reviveModule : undefined;
+          },
+          invalidateModule(mod: object) {
+            invalidated.push(mod);
+          },
+        },
+        ws: {
+          send(payload: { type: string }) {
+            payloads.push(payload);
+          },
+        },
+      } as unknown as ViteDevServer);
+
+      const filePath = join(tmp, "hmr-widget.ts");
+      writeFileSync(filePath, ISLAND_CONTENT);
+      plugin.watchChange(filePath, { event: "create" });
+
+      expect(invalidated).toEqual([reviveModule]);
+      expect(payloads).toEqual([{ type: "full-reload" }]);
+    });
+
+    it("does not trigger a reload when the revive module is not in the graph", () => {
+      let invalidated = false;
+      const payloads: Array<{ type: string }> = [];
+      const plugin = makeWatchPlugin();
+      plugin.configureServer({
+        moduleGraph: {
+          getModuleById() {
+            return undefined;
+          },
+          invalidateModule() {
+            invalidated = true;
+          },
+        },
+        ws: {
+          send(payload: { type: string }) {
+            payloads.push(payload);
+          },
+        },
+      } as unknown as ViteDevServer);
+
+      const filePath = join(tmp, "hmr-widget.ts");
+      writeFileSync(filePath, ISLAND_CONTENT);
+      plugin.watchChange(filePath, { event: "create" });
+
+      expect(invalidated).toBe(false);
+      expect(payloads).toEqual([]);
     });
   });
 });

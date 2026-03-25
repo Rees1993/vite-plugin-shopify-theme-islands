@@ -4,7 +4,7 @@ import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
 import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 
 const VIRTUAL_ID = "vite-plugin-shopify-theme-islands/revive";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
@@ -54,6 +54,15 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const { runtime: reviveOptions } = policy;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const inventory = createIslandInventory(rawDirs);
+  let devServer: ViteDevServer | null = null;
+
+  const invalidateReviveModule = (): void => {
+    if (!devServer) return;
+    const mod = devServer.moduleGraph.getModuleById(RESOLVED_ID);
+    if (!mod) return;
+    devServer.moduleGraph.invalidateModule(mod);
+    devServer.ws.send({ type: "full-reload" });
+  };
 
   return {
     name: "vite-plugin-shopify-theme-islands",
@@ -64,6 +73,10 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
         root: config.root,
         aliases: config.resolve.alias,
       });
+    },
+
+    configureServer(server) {
+      devServer = server;
     },
 
     buildStart() {
@@ -113,6 +126,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
             ? "Detected island (watchChange):"
             : "Removed island (watchChange):";
       log(prefix, relative(root, change.file));
+      invalidateReviveModule();
     },
 
     resolveId(id) {
