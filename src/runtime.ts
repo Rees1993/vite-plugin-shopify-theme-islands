@@ -25,6 +25,7 @@ import {
 import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
+import { connectShopifyLifecycle } from "./shopify-lifecycle.js";
 
 function isRevivePayload(v: unknown): v is RevivePayload {
   return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
@@ -240,7 +241,7 @@ export function revive(
     disconnectLifecycle.disconnect();
   };
 
-  return {
+  const runtime: ReviveRuntime = {
     scan(root = document.body) {
       if (disconnected || !root) return;
       lifecycle.walk(root);
@@ -260,6 +261,16 @@ export function revive(
     },
     disconnect() {
       disconnectRoot(document.body);
+    },
+  };
+
+  const disconnectShopifyLifecycle = connectShopifyLifecycle(runtime);
+
+  return {
+    ...runtime,
+    disconnect() {
+      disconnectShopifyLifecycle();
+      runtime.disconnect();
     },
   };
 }

@@ -847,6 +847,56 @@ describe("revive", () => {
     });
   });
 
+  describe("Shopify theme lifecycle", () => {
+    it("re-observes a previously unloaded section root on shopify:section:load", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<section id="shopify-section-main"></section>';
+      const section = document.getElementById("shopify-section-main") as HTMLElement;
+
+      r({ "/islands/shopify-widget.ts": loader });
+      await flush();
+
+      section.dispatchEvent(
+        new CustomEvent("shopify:section:unload", {
+          bubbles: true,
+          detail: { sectionId: "main" },
+        }),
+      );
+
+      section.appendChild(document.createElement("shopify-widget"));
+      section.dispatchEvent(
+        new CustomEvent("shopify:section:load", {
+          bubbles: true,
+          detail: { sectionId: "main" },
+        }),
+      );
+
+      await flush();
+
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("cancels pending directive work on shopify:section:unload", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML =
+        '<section id="shopify-section-main"><shopify-slow client:defer="100"></shopify-slow></section>';
+      const section = document.getElementById("shopify-section-main") as HTMLElement;
+
+      r({ "/islands/shopify-slow.ts": loader });
+      await flush(20);
+
+      section.dispatchEvent(
+        new CustomEvent("shopify:section:unload", {
+          bubbles: true,
+          detail: { sectionId: "main" },
+        }),
+      );
+      await flush(140);
+
+      expect(loader).not.toHaveBeenCalled();
+    });
+  });
+
   describe("client:media empty value", () => {
     it("warns and skips when client:media has an empty value", async () => {
       const spy = spyOn(console, "warn");
