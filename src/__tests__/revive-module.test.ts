@@ -21,6 +21,22 @@ describe("revive-module", () => {
       );
     });
 
+    it("guards the shared runtime singleton so multiple imports and HMR disposal do not tear down a newer runtime", () => {
+      const out = buildReviveModuleSource({
+        runtimePath: "/path/to/runtime.js",
+        directoryGlobs: ["/islands/**/*.{ts,js}"],
+        reviveOptions: { debug: false },
+      });
+
+      expect(out).toContain('const runtimeKey = "__shopify_theme_islands_runtime__";');
+      expect(out).toContain("const runtimeState = (globalThis[runtimeKey] ??= {});");
+      expect(out).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
+      expect(out).toContain("runtimeState.runtime = runtime;");
+      expect(out).toContain("if (runtimeState.runtime === runtime) {");
+      expect(out).toContain("runtime.disconnect();");
+      expect(out).toContain("delete runtimeState.runtime;");
+    });
+
     it("includes islands and options in payload", () => {
       const out = buildReviveModuleSource({
         runtimePath: "/r.js",

@@ -202,15 +202,19 @@ export function createDirectiveOrchestrator(
       }
 
       if (builtIns.idle !== null) {
+        if (builtIns.idleInvalid) {
+          console.warn(
+            `[islands] <${tagName}> invalid ${directives.idle.attribute} value "${el.getAttribute(directives.idle.attribute)}" — using default ${directives.idle.timeout}ms`,
+          );
+        }
         log.note(`waiting for ${directives.idle.attribute} (${builtIns.idle}ms)`);
         await waiters.waitIdle(builtIns.idle, controller.signal);
       }
 
-      const deferAttr = el.getAttribute(directives.defer.attribute);
       if (builtIns.defer !== null) {
-        if (deferAttr !== null && deferAttr !== "" && Number.isNaN(parseInt(deferAttr, 10))) {
+        if (builtIns.deferInvalid) {
           console.warn(
-            `[islands] <${tagName}> invalid ${directives.defer.attribute} value "${deferAttr}" — using default ${directives.defer.delay}ms`,
+            `[islands] <${tagName}> invalid ${directives.defer.attribute} value "${el.getAttribute(directives.defer.attribute)}" — using default ${directives.defer.delay}ms`,
           );
         }
         log.note(`waiting for ${directives.defer.attribute} (${builtIns.defer}ms)`);

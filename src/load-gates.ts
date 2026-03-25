@@ -5,8 +5,23 @@ export interface BuiltInLoadGateState {
   visible: string | null;
   media: string | null;
   idle: number | null;
+  idleInvalid: boolean;
   defer: number | null;
+  deferInvalid: boolean;
   interaction: string[] | null;
+}
+
+function parseStrictIntegerAttribute(
+  value: string | null,
+  fallback: number,
+): { value: number | null; invalid: boolean } {
+  if (value === null) return { value: null, invalid: false };
+  if (value === "") return { value: fallback, invalid: false };
+
+  const trimmed = value.trim();
+  if (!/^-?\d+$/.test(trimmed)) return { value: fallback, invalid: true };
+
+  return { value: Number.parseInt(trimmed, 10), invalid: false };
 }
 
 export function getBuiltInLoadGateState(
@@ -31,21 +46,16 @@ export function getBuiltInLoadGateState(
     }
   }
 
+  const idle = parseStrictIntegerAttribute(idleAttr, directives.idle.timeout);
+  const defer = parseStrictIntegerAttribute(deferAttr, directives.defer.delay);
+
   return {
     visible: visibleAttr !== null ? visibleAttr || directives.visible.rootMargin : null,
     media: mediaAttr || null,
-    idle:
-      idleAttr !== null
-        ? Number.isNaN(parseInt(idleAttr, 10))
-          ? directives.idle.timeout
-          : parseInt(idleAttr, 10)
-        : null,
-    defer:
-      deferAttr !== null
-        ? Number.isNaN(parseInt(deferAttr, 10))
-          ? directives.defer.delay
-          : parseInt(deferAttr, 10)
-        : null,
+    idle: idle.value,
+    idleInvalid: idle.invalid,
+    defer: defer.value,
+    deferInvalid: defer.invalid,
     interaction: interactionEvents,
   };
 }

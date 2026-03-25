@@ -260,6 +260,19 @@ describe("revive", () => {
       await flush(80);
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("falls back to configured timeout and warns when the attribute value is not a strict integer", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<idle-invalid client:idle="20ms"></idle-invalid>';
+      r({ "/islands/idle-invalid.ts": loader }, { directives: { idle: { timeout: 5000 } } });
+      await flush(80);
+
+      expect(loader).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("invalid client:idle value"));
+
+      warnSpy.mockRestore();
+    });
   });
 
   describe("client:visible", () => {
@@ -522,6 +535,19 @@ describe("revive", () => {
       expect(loader).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("invalid"));
       spy.mockRestore();
+    });
+
+    it("treats suffix junk as invalid and falls back to the configured delay", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<defer-strict client:defer="20ms"></defer-strict>';
+      r({ "/islands/defer-strict.ts": loader }, { directives: { defer: { delay: 5000 } } });
+      await flush(80);
+
+      expect(loader).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("invalid client:defer value"));
+
+      warnSpy.mockRestore();
     });
 
     it('treats client:defer="0" as a zero ms delay, not the default', async () => {
@@ -1052,7 +1078,7 @@ describe("revive", () => {
       document.body.innerHTML =
         '<same-tag client:defer="100"></same-tag><same-tag client:idle></same-tag>';
 
-      r({ "/islands/same-tag.ts": mock(async () => {}) }, { debug: true });
+      const runtime = r({ "/islands/same-tag.ts": mock(async () => {}) }, { debug: true });
       await flush(20);
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -1061,6 +1087,7 @@ describe("revive", () => {
         expect.stringContaining("first-resolved instance"),
       );
 
+      runtime.disconnect();
       warnSpy.mockRestore();
     });
 
@@ -1086,11 +1113,12 @@ describe("revive", () => {
       document.body.innerHTML =
         '<same-stable client:defer="100"></same-stable><same-stable client:defer="100"></same-stable>';
 
-      r({ "/islands/same-stable.ts": mock(async () => {}) }, { debug: true });
+      const runtime = r({ "/islands/same-stable.ts": mock(async () => {}) }, { debug: true });
       await flush(20);
 
       expect(warnSpy).not.toHaveBeenCalled();
 
+      runtime.disconnect();
       warnSpy.mockRestore();
     });
 
@@ -1116,6 +1144,34 @@ describe("revive", () => {
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
 
+      runtime.disconnect();
+      warnSpy.mockRestore();
+    });
+
+    it("retains sibling same-tag diagnostics when one subtree is unobserved", async () => {
+      const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+      document.body.innerHTML = '<div id="alpha"></div><div id="beta"></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const betaRoot = document.getElementById("beta") as HTMLElement;
+      alphaRoot.innerHTML = '<same-sibling client:defer="100"></same-sibling>';
+      betaRoot.innerHTML = '<same-sibling client:idle></same-sibling>';
+
+      const runtime = r({ "/islands/same-sibling.ts": mock(async () => {}) }, { debug: true });
+      await flush(20);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      runtime.unobserve(alphaRoot);
+      warnSpy.mockClear();
+      const betaConflict = document.createElement("same-sibling");
+      betaConflict.setAttribute("client:defer", "100");
+      betaRoot.appendChild(betaConflict);
+      runtime.scan(betaRoot);
+      await flush(20);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same tag <same-sibling>"));
+
+      runtime.disconnect();
       warnSpy.mockRestore();
     });
   });

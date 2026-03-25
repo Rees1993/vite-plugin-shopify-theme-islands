@@ -42,6 +42,8 @@ The shared runtime also handles:
 - Shopify Theme Editor section and block lifecycle events
 - subtree teardown and reactivation through helpers exported from the same module
 
+`./revive` is a shared page-level singleton. Importing it in multiple files does not create multiple runtimes; later named imports reuse the same runtime instance and helper surface.
+
 If you need explicit control for partial swaps, drawers, or teardown, import the helpers from that same entrypoint:
 
 ```ts
@@ -205,6 +207,8 @@ The attribute value overrides the global `timeout` for that element only:
 </recently-viewed>
 ```
 
+If the attribute value is not a strict integer, the runtime logs a warning and falls back to the configured default timeout.
+
 ### `client:defer`
 
 Loads the island after a fixed delay. The delay in milliseconds is read from the attribute value. If no value is given, the configured default (3000ms) is used.
@@ -221,6 +225,8 @@ Loads the island after a fixed delay. The delay in milliseconds is read from the
 ```
 
 Unlike `client:idle`, which waits for genuine browser idle time, `client:defer` always waits exactly the specified number of milliseconds.
+
+If the attribute value is not a strict integer, the runtime logs a warning and falls back to the configured default delay.
 
 ### `client:interaction`
 
