@@ -714,6 +714,62 @@ describe("revive", () => {
       spy.mockRestore();
     });
 
+    it("disconnect() cancels pending built-in directive work for the document root", async () => {
+      let trigger!: IntersectionObserverCallback;
+      const visibleDisconnect = mock(() => {});
+      const originalIO = mockIntersectionObserver(
+        class {
+          observe = (): void => {};
+          disconnect = visibleDisconnect;
+          constructor(cb: IntersectionObserverCallback) {
+            trigger = cb;
+          }
+        },
+      );
+
+      const loader = mock(async () => {});
+      document.body.innerHTML = "<dc-visible client:visible></dc-visible>";
+      const { disconnect } = r({ "/islands/dc-visible.ts": loader });
+      await flush();
+
+      disconnect();
+      expect(visibleDisconnect).toHaveBeenCalledTimes(1);
+      trigger(
+        [
+          {
+            isIntersecting: true,
+            target: document.querySelector("dc-visible")!,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+      await flush();
+
+      expect(loader).not.toHaveBeenCalled();
+      expect(visibleDisconnect).toHaveBeenCalledTimes(1);
+
+      globalThis.IntersectionObserver = originalIO;
+    });
+
+    it("disconnect() aborts custom directive signals and runs cleanup", async () => {
+      const cleanup = mock(() => {});
+      const directiveFn = mock<ClientDirective>((_load, _opts, _el, ctx) => {
+        ctx.onCleanup(cleanup);
+      });
+
+      document.body.innerHTML = "<dc-custom client:on-click></dc-custom>";
+      const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
+      const { disconnect } = r({ "/islands/dc-custom.ts": mock(async () => {}) }, {}, customDirectives);
+      await flush();
+
+      const ctxArg = directiveFn.mock.calls[0][3];
+      disconnect();
+      await flush();
+
+      expect(ctxArg.signal.aborted).toBe(true);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+    });
+
     it("disconnect() before DOMContentLoaded prevents init from ever running", async () => {
       Object.defineProperty(document, "readyState", {
         configurable: true,

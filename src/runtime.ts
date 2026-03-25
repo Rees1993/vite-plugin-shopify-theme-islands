@@ -84,23 +84,31 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     retryTimers.clear();
   };
 
-  const getSubtreeTags = (root: HTMLElement): Set<string> => {
+  const collectSubtreeTags = (root: HTMLElement): Set<string> => {
     const tags = new Set<string>();
-    const maybeEvict = (el: Element) => {
+    const collect = (el: Element) => {
       const tagName = el.tagName.toLowerCase();
-      if (tagName.includes("-")) tags.add(tagName);
+      if (islandMap.has(tagName)) tags.add(tagName);
     };
 
-    maybeEvict(root);
-    for (const el of root.querySelectorAll("*")) maybeEvict(el);
+    collect(root);
+    for (const el of root.querySelectorAll("*")) collect(el);
     return tags;
   };
 
-  const evictSubtreeTags = (root: HTMLElement): void => {
-    const tags = getSubtreeTags(root);
-    clearRetryTimers(tags);
-    clearLoadGateTracking(tags);
-    for (const tagName of tags) lifecycle.evict(tagName);
+  const clearTagState = (tagNames?: Iterable<string>): void => {
+    if (tagNames) {
+      for (const tagName of tagNames) {
+        clearRetryTimer(tagName);
+        discoveredElementsByTag.delete(tagName);
+        warnedLoadGateSignatures.delete(tagName);
+        lifecycle.evict(tagName);
+      }
+      return;
+    }
+
+    clearRetryTimers();
+    clearLoadGateTracking();
   };
 
   const clearLoadGateTracking = (tagNames?: Iterable<string>): void => {
@@ -275,9 +283,9 @@ export function revive(payload: RevivePayload): ReviveRuntime {
 
   const disconnectRoot = (root: HTMLElement | null = document.body): void => {
     if (root !== document.body) return;
+    lifecycle.excludeRoot(document.body);
     disconnected = true;
-    clearRetryTimers();
-    clearLoadGateTracking();
+    clearTagState();
     endReadyLog?.();
     endReadyLog = undefined;
     disconnectLifecycle.disconnect();
@@ -295,7 +303,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     },
     unobserve(root = document.body) {
       if (root && root !== document.body) {
-        evictSubtreeTags(root);
+        clearTagState(collectSubtreeTags(root));
         lifecycle.excludeRoot(root);
         return;
       }
