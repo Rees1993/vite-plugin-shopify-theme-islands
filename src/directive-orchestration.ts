@@ -50,11 +50,9 @@ export class DirectiveCancelledError extends Error {
   }
 }
 
-function waitVisible(
-  element: Element,
-  rootMargin: string,
-  threshold: number,
+function abortableWait(
   signal: AbortSignal,
+  setup: (finish: () => void) => (() => void) | void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
@@ -63,25 +61,46 @@ function waitVisible(
     }
 
     let settled = false;
+    let cleanup = () => {};
     const finish = (done: () => void) => {
       if (settled) return;
       settled = true;
       signal.removeEventListener("abort", abort);
-      io.disconnect();
+      cleanup();
       done();
     };
     const abort = () => finish(() => reject(new DirectiveCancelledError()));
+
+    signal.addEventListener("abort", abort, { once: true });
+
+    try {
+      const registeredCleanup = setup(() => finish(resolve));
+      cleanup = () => {
+        registeredCleanup?.();
+      };
+      if (settled) cleanup();
+    } catch (err) {
+      finish(() => reject(err));
+    }
+  });
+}
+
+function waitVisible(
+  element: Element,
+  rootMargin: string,
+  threshold: number,
+  signal: AbortSignal,
+): Promise<void> {
+  return abortableWait(signal, (finish) => {
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          finish(resolve);
-        }
+        if (entry.isIntersecting) finish();
       },
       { rootMargin, threshold },
     );
 
     io.observe(element);
-    signal.addEventListener("abort", abort, { once: true });
+    return () => io.disconnect();
   });
 }
 
@@ -90,112 +109,58 @@ function waitInteraction(
   events: string[],
   signal: AbortSignal,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DirectiveCancelledError());
-      return;
-    }
-
-    let settled = false;
-    const cleanup = () => {
-      for (const name of events) element.removeEventListener(name, handler);
-      signal.removeEventListener("abort", abort);
-    };
-    const finish = (done: () => void) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      done();
-    };
-    const abort = () => finish(() => reject(new DirectiveCancelledError()));
+  return abortableWait(signal, (finish) => {
     const handler = () => {
-      finish(resolve);
+      finish();
     };
     for (const name of events) element.addEventListener(name, handler);
-    signal.addEventListener("abort", abort, { once: true });
+    return () => {
+      for (const name of events) element.removeEventListener(name, handler);
+    };
   });
 }
 
 function waitDelay(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DirectiveCancelledError());
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    }, ms);
-    const abort = () => {
-      clearTimeout(timer);
-      reject(new DirectiveCancelledError());
-    };
-    signal.addEventListener("abort", abort, { once: true });
+  return abortableWait(signal, (finish) => {
+    const timer = setTimeout(finish, ms);
+    return () => clearTimeout(timer);
   });
 }
 
 function waitIdle(timeout: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DirectiveCancelledError());
-      return;
+  return abortableWait(signal, (finish) => {
+    let idleId: number | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(() => finish(), { timeout });
+    } else {
+      timer = setTimeout(finish, timeout);
     }
 
-    const abort = () => {
+    return () => {
       if ("cancelIdleCallback" in window && idleId !== null) {
         window.cancelIdleCallback(idleId);
       } else if (timer !== null) {
         clearTimeout(timer);
       }
-      reject(new DirectiveCancelledError());
     };
-
-    let idleId: number | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const finish = () => {
-      signal.removeEventListener("abort", abort);
-      resolve();
-    };
-
-    if ("requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(() => finish(), { timeout });
-    } else {
-      timer = setTimeout(() => finish(), timeout);
-    }
-
-    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
 function waitMedia(query: string, signal: AbortSignal): Promise<void> {
   const m = window.matchMedia(query);
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DirectiveCancelledError());
-      return;
-    }
-
+  return abortableWait(signal, (finish) => {
     if (m.matches) {
-      resolve();
+      finish();
       return;
     }
 
-    const onChange = () => {
-      cleanup();
-      resolve();
-    };
-    const onAbort = () => {
-      cleanup();
-      reject(new DirectiveCancelledError());
-    };
-    const cleanup = () => {
-      m.removeEventListener("change", onChange);
-      signal.removeEventListener("abort", onAbort);
-    };
-
+    const onChange = () => finish();
     m.addEventListener("change", onChange, { once: true });
-    signal.addEventListener("abort", onAbort, { once: true });
+    return () => {
+      m.removeEventListener("change", onChange);
+    };
   });
 }
 
