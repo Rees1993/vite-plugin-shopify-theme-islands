@@ -145,7 +145,9 @@ describe("connectShopifyLifecycle", () => {
     section.id = "shopify-section-main";
     document.body.appendChild(section);
 
-    document.dispatchEvent(new CustomEvent("shopify:block:select", { detail: { sectionId: "main" } }));
+    document.dispatchEvent(
+      new CustomEvent("shopify:block:select", { detail: { sectionId: "main" } }),
+    );
 
     expect(runtime.scan).not.toHaveBeenCalled();
 

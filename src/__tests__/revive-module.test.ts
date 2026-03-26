@@ -16,9 +16,7 @@ describe("revive-module", () => {
       expect(out).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
       expect(out).toContain("import.meta.hot.accept();");
       expect(out).toContain("import.meta.hot.dispose(() => {");
-      expect(out).toContain(
-        "export const { disconnect, scan, observe, unobserve } = runtime;",
-      );
+      expect(out).toContain("export const { disconnect, scan, observe, unobserve } = runtime;");
     });
 
     it("guards the shared runtime singleton so multiple imports and HMR disposal do not tear down a newer runtime", () => {

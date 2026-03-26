@@ -20,11 +20,7 @@ export interface DirectiveWaiters {
   waitMedia(query: string, signal: AbortSignal): Promise<void>;
   waitIdle(timeout: number, signal: AbortSignal): Promise<void>;
   waitDelay(ms: number, signal: AbortSignal): Promise<void>;
-  waitInteraction(
-    element: Element,
-    events: string[],
-    signal: AbortSignal,
-  ): Promise<void>;
+  waitInteraction(element: Element, events: string[], signal: AbortSignal): Promise<void>;
 }
 
 export interface DirectiveRunContext {
@@ -104,11 +100,7 @@ function waitVisible(
   });
 }
 
-function waitInteraction(
-  element: Element,
-  events: string[],
-  signal: AbortSignal,
-): Promise<void> {
+function waitInteraction(element: Element, events: string[], signal: AbortSignal): Promise<void> {
   return abortableWait(signal, (finish) => {
     const handler = () => {
       finish();
@@ -333,13 +325,11 @@ export function createDirectiveOrchestrator(
       try {
         Promise.resolve(
           directiveFn(loadOnce, { name: attrName, value }, ctx.element, directiveContext),
-        ).catch(
-          (err) => {
-            if (fired) return;
-            abort();
-            ctx.onError(attrName, err);
-          },
-        );
+        ).catch((err) => {
+          if (fired) return;
+          abort();
+          ctx.onError(attrName, err);
+        });
       } catch (err) {
         if (fired) continue;
         abort();

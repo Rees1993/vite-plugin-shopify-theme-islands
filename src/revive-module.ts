@@ -24,8 +24,14 @@ export interface BuildReviveModuleSourceParams {
  * Used by the plugin's load() so the emitted shape is defined and testable in one place.
  */
 export function buildReviveModuleSource(params: BuildReviveModuleSourceParams): string {
-  const { runtimePath, directoryGlobs, islandPaths, resolvedTags, customDirectives, reviveOptions } =
-    params;
+  const {
+    runtimePath,
+    directoryGlobs,
+    islandPaths,
+    resolvedTags,
+    customDirectives,
+    reviveOptions,
+  } = params;
   const directiveImportLines =
     customDirectives?.map(
       ({ entrypoint }, index) => `import _directive${index} from ${JSON.stringify(entrypoint)};`,

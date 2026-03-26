@@ -68,9 +68,7 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
       expect(output).toContain("import { revive as _islands }");
-      expect(output).toContain(
-        "export const { disconnect, scan, observe, unobserve } = runtime",
-      );
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
     });
 
     it("generates import.meta.glob for multiple directories", async () => {
@@ -193,18 +191,14 @@ describe("plugin", () => {
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
-      expect(output).toContain(
-        "export const { disconnect, scan, observe, unobserve } = runtime",
-      );
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
-      expect(output).toContain(
-        "export const { disconnect, scan, observe, unobserve } = runtime",
-      );
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
       expect(output).not.toContain("customDirectives");
     });
 
@@ -265,7 +259,10 @@ describe("plugin", () => {
     it("emits resolvedTags overrides when resolveTag is configured", async () => {
       const islandsDir = join(tmp, "islands");
       mkdirSync(islandsDir);
-      writeFileSync(join(islandsDir, "productForm.ts"), "export default class ProductForm extends HTMLElement {}");
+      writeFileSync(
+        join(islandsDir, "productForm.ts"),
+        "export default class ProductForm extends HTMLElement {}",
+      );
 
       const plugin = makePlugin({
         directories: ["/islands/"],

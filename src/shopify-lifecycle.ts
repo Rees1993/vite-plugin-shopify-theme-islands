@@ -19,7 +19,10 @@ const SHOPIFY_LIFECYCLE_ACTIONS: ReadonlyArray<[type: string, action: ShopifyLif
 const isBlockLifecycleEvent = (type: string): boolean => type.startsWith("shopify:block:");
 const isSectionLifecycleEvent = (type: string): boolean => type.startsWith("shopify:section:");
 
-function findClosestLifecycleRoot(target: EventTarget | null, selector: string): HTMLElement | null {
+function findClosestLifecycleRoot(
+  target: EventTarget | null,
+  selector: string,
+): HTMLElement | null {
   if (!(target instanceof Element)) return null;
   const root = target.closest(selector);
   return root instanceof HTMLElement ? root : null;
@@ -31,7 +34,8 @@ function resolveLifecycleRoot(event: Event): HTMLElement | null {
   if (!detail || typeof detail !== "object") return null;
 
   if (isBlockLifecycleEvent(event.type)) {
-    const blockId = "blockId" in detail && typeof detail.blockId === "string" ? detail.blockId : null;
+    const blockId =
+      "blockId" in detail && typeof detail.blockId === "string" ? detail.blockId : null;
     if (blockId) {
       const root = document.getElementById(`shopify-block-${blockId}`);
       if (root instanceof HTMLElement) return root;

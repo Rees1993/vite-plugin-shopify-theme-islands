@@ -51,8 +51,12 @@ describe("revive-bootstrap", () => {
     const source = compiler.emit(plan);
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
-    expect(source).toContain("const payload = { islands, options, customDirectives, resolvedTags };");
-    expect(source).toContain('const resolvedTags = {"/islands/productForm.ts":"product-form","/src/widget.ts":null,"/src/other.js":null};');
+    expect(source).toContain(
+      "const payload = { islands, options, customDirectives, resolvedTags };",
+    );
+    expect(source).toContain(
+      'const resolvedTags = {"/islands/productForm.ts":"product-form","/src/widget.ts":null,"/src/other.js":null};',
+    );
     expect(source).toContain('const runtimeKey = "__shopify_theme_islands_runtime__";');
     expect(source).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
     expect(source).toContain("import.meta.hot.accept();");

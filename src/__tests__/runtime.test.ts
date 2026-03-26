@@ -70,7 +70,9 @@ describe("revive", () => {
   describe("payload-only contract", () => {
     it("throws a helpful error when called with the removed legacy signature", () => {
       expect(() =>
-        revive({ "/islands/my-widget.ts": async () => {} } as unknown as Parameters<typeof revive>[0]),
+        revive({ "/islands/my-widget.ts": async () => {} } as unknown as Parameters<
+          typeof revive
+        >[0]),
       ).toThrow(/requires a RevivePayload object/);
     });
   });
@@ -785,7 +787,11 @@ describe("revive", () => {
 
       document.body.innerHTML = "<dc-custom client:on-click></dc-custom>";
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      const { disconnect } = r({ "/islands/dc-custom.ts": mock(async () => {}) }, {}, customDirectives);
+      const { disconnect } = r(
+        { "/islands/dc-custom.ts": mock(async () => {}) },
+        {},
+        customDirectives,
+      );
       await flush();
 
       const ctxArg = directiveFn.mock.calls[0][3];
@@ -878,7 +884,10 @@ describe("revive", () => {
         const runtime = r({ "/islands/visible-widget.ts": loader });
 
         runtime.unobserve(alphaRoot);
-        trigger([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+        trigger(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
         await flush();
 
         expect(loader).not.toHaveBeenCalled();
@@ -1083,9 +1092,7 @@ describe("revive", () => {
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same tag <same-tag>"));
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("first-resolved instance"),
-      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("first-resolved instance"));
 
       runtime.disconnect();
       warnSpy.mockRestore();
@@ -1136,7 +1143,7 @@ describe("revive", () => {
 
       runtime.unobserve(alphaRoot);
       alphaRoot.innerHTML =
-        '<same-reset client:visible></same-reset><same-reset client:interaction></same-reset>';
+        "<same-reset client:visible></same-reset><same-reset client:interaction></same-reset>";
       warnSpy.mockClear();
 
       runtime.observe(alphaRoot);
@@ -1154,7 +1161,7 @@ describe("revive", () => {
       const alphaRoot = document.getElementById("alpha") as HTMLElement;
       const betaRoot = document.getElementById("beta") as HTMLElement;
       alphaRoot.innerHTML = '<same-sibling client:defer="100"></same-sibling>';
-      betaRoot.innerHTML = '<same-sibling client:idle></same-sibling>';
+      betaRoot.innerHTML = "<same-sibling client:idle></same-sibling>";
 
       const runtime = r({ "/islands/same-sibling.ts": mock(async () => {}) }, { debug: true });
       await flush(20);
@@ -1222,10 +1229,15 @@ describe("revive", () => {
         ctx.onCleanup(cleanup);
       });
 
-      document.body.innerHTML = '<div id="alpha"><cleanup-island client:on-click></cleanup-island></div>';
+      document.body.innerHTML =
+        '<div id="alpha"><cleanup-island client:on-click></cleanup-island></div>';
       const alphaRoot = document.getElementById("alpha") as HTMLElement;
       const customDirectives = new Map<string, ClientDirective>([["client:on-click", directiveFn]]);
-      const runtime = r({ "/islands/cleanup-island.ts": mock(async () => {}) }, {}, customDirectives);
+      const runtime = r(
+        { "/islands/cleanup-island.ts": mock(async () => {}) },
+        {},
+        customDirectives,
+      );
       await flush();
 
       const ctxArg = directiveFn.mock.calls[0][3];

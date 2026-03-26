@@ -14,11 +14,7 @@
  * A MutationObserver re-runs the same logic for elements added dynamically.
  */
 
-import {
-  buildIslandMap,
-  normalizeReviveOptions,
-  type RevivePayload,
-} from "./contract.js";
+import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./contract.js";
 import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
 import { describeEffectiveLoadGate } from "./load-gates.js";
