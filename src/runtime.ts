@@ -15,9 +15,8 @@
  */
 
 import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./contract.js";
-import { createDirectiveOrchestrator, DirectiveCancelledError } from "./directive-orchestration.js";
+import { createActivationSession } from "./activation-session.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
-import { describeEffectiveLoadGate } from "./load-gates.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
 import { connectShopifyLifecycle } from "./shopify-lifecycle.js";
 
@@ -43,42 +42,12 @@ export function revive(payload: RevivePayload): ReviveRuntime {
   }
   const opts = normalizeReviveOptions(payload.options);
   const islandMap = buildIslandMap(payload);
-  const resolvedDirectives = payload.customDirectives;
-
-  const attrVisible = opts.directives.visible.attribute;
-  const attrMedia = opts.directives.media.attribute;
-  const attrIdle = opts.directives.idle.attribute;
-  const attrDefer = opts.directives.defer.attribute;
-  const attrInteraction = opts.directives.interaction.attribute;
-  const debug = opts.debug;
-  const directiveTimeout = opts.directiveTimeout;
-  const discoveredElementsByTag = new Map<string, Set<HTMLElement>>();
-  const warnedLoadGateSignatures = new Map<string, string>();
 
   const lifecycle = createIslandLifecycleCoordinator({
     retries: opts.retry.retries,
     retryDelay: opts.retry.delay,
   });
-  const directiveOrchestrator = createDirectiveOrchestrator();
   let disconnected = false;
-  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  const clearRetryTimer = (tagName: string): void => {
-    const timer = retryTimers.get(tagName);
-    if (timer === undefined) return;
-    clearTimeout(timer);
-    retryTimers.delete(tagName);
-  };
-
-  const clearRetryTimers = (tagNames?: Iterable<string>): void => {
-    if (tagNames) {
-      for (const tagName of tagNames) clearRetryTimer(tagName);
-      return;
-    }
-
-    for (const timer of retryTimers.values()) clearTimeout(timer);
-    retryTimers.clear();
-  };
 
   const collectSubtreeTags = (root: HTMLElement): Set<string> => {
     const tags = new Set<string>();
@@ -92,184 +61,31 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     return tags;
   };
 
-  const clearTagState = (tagNames?: Iterable<string>): void => {
-    if (tagNames) {
-      for (const tagName of tagNames) {
-        clearRetryTimer(tagName);
-        discoveredElementsByTag.delete(tagName);
-        warnedLoadGateSignatures.delete(tagName);
-        lifecycle.evict(tagName);
-      }
-      return;
-    }
-
-    clearRetryTimers();
-    clearLoadGateTracking();
-  };
-
-  const clearLoadGateTracking = (tagNames?: Iterable<string>): void => {
-    if (tagNames) {
-      for (const tagName of tagNames) {
-        discoveredElementsByTag.delete(tagName);
-        warnedLoadGateSignatures.delete(tagName);
-      }
-      return;
-    }
-
-    discoveredElementsByTag.clear();
-    warnedLoadGateSignatures.clear();
-  };
-
-  const warnOnConflictingLoadGate = (tagName: string, el: HTMLElement): void => {
-    if (!debug) return;
-
-    const elements = discoveredElementsByTag.get(tagName) ?? new Set<HTMLElement>();
-    elements.add(el);
-    discoveredElementsByTag.set(tagName, elements);
-
-    const gates = new Set<string>();
-    for (const candidate of elements) {
-      if (!candidate.isConnected || !lifecycle.isObserved(candidate)) {
-        elements.delete(candidate);
-        continue;
-      }
-      gates.add(describeEffectiveLoadGate(candidate, opts.directives, resolvedDirectives));
-    }
-
-    if (elements.size === 0) {
-      discoveredElementsByTag.delete(tagName);
-      warnedLoadGateSignatures.delete(tagName);
-      return;
-    }
-
-    if (gates.size <= 1) {
-      warnedLoadGateSignatures.delete(tagName);
-      return;
-    }
-
-    const signature = [...gates].sort().join(" vs ");
-    if (warnedLoadGateSignatures.get(tagName) === signature) return;
-    warnedLoadGateSignatures.set(tagName, signature);
-    console.warn(
-      `[islands] Found same tag <${tagName}> with conflicting directive gates (${signature}). Directives load code at the tag level, so the first-resolved instance wins for this tag.`,
-    );
-  };
-
-  async function loadIsland(
-    tagName: string,
-    el: HTMLElement,
-    loader: () => Promise<unknown>,
-  ): Promise<void> {
-    // Show which directives the island is waiting on inside the init group. Skipped for
-    // dynamic (post-init) activations — the completion group is sufficient there.
-    // Empty client:media is excluded: it's warned and skipped, so the island fires immediately.
-    if (debug && !lifecycle.initialWalkComplete) {
-      const parts: string[] = [];
-      // Push `attr` or `attr="val"` when the element has the attribute; skip null (absent)
-      const pushAttr = (attr: string, val: string | null) => {
-        if (val !== null) parts.push(val ? `${attr}="${val}"` : attr);
-      };
-      pushAttr(attrVisible, el.getAttribute(attrVisible));
-      // client:media excluded when empty — it warns+skips, so the island fires immediately
-      const mediaVal = el.getAttribute(attrMedia);
-      if (mediaVal) parts.push(`${attrMedia}="${mediaVal}"`);
-      pushAttr(attrIdle, el.getAttribute(attrIdle));
-      pushAttr(attrDefer, el.getAttribute(attrDefer));
-      pushAttr(attrInteraction, el.getAttribute(attrInteraction));
-      if (resolvedDirectives?.size) {
-        for (const a of resolvedDirectives.keys()) {
-          if (el.hasAttribute(a)) parts.push(a);
-        }
-      }
-      if (parts.length > 0) console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
-    }
-
-    const log = runtimeSurface.createLogger(tagName, debug);
-
-    const abortIfInactive = (): boolean => {
-      if (!disconnected && lifecycle.isObserved(el)) return false;
-      clearRetryTimer(tagName);
-      lifecycle.evict(tagName);
-      return true;
-    };
-
-    const run = (): Promise<void> => {
-      if (abortIfInactive()) return Promise.resolve();
-      const t0 = performance.now();
-      return loader()
-        .then(() => {
-          if (abortIfInactive()) return;
-          clearRetryTimer(tagName);
-          const attempt = lifecycle.settleSuccess(tagName);
-          runtimeSurface.dispatchLoad({
-            tag: tagName,
-            duration: performance.now() - t0,
-            attempt,
-          });
-          if (!disconnected && el.children.length) lifecycle.walk(el);
-        })
-        .catch((err) => {
-          console.error(`[islands] Failed to load <${tagName}>:`, err);
-          const { retryDelayMs, attempt } = lifecycle.settleFailure(tagName);
-          runtimeSurface.dispatchError({ tag: tagName, error: err, attempt });
-          if (retryDelayMs !== null) {
-            clearRetryTimer(tagName);
-            const timer = setTimeout(() => {
-              retryTimers.delete(tagName);
-              void run();
-            }, retryDelayMs);
-            retryTimers.set(tagName, timer);
-          }
-        });
-    };
-
-    const handleDirectiveError = (attrName: string | null, err: unknown) => {
-      if (attrName === null && err instanceof DirectiveCancelledError) return;
-      if (attrName !== null) {
-        console.error(`[islands] Custom directive ${attrName} failed for <${tagName}>:`, err);
-      } else {
-        console.error(`[islands] Built-in directive failed for <${tagName}>:`, err);
-      }
-      runtimeSurface.dispatchError({ tag: tagName, error: err, attempt: 1 });
-      clearRetryTimer(tagName);
-      lifecycle.evict(tagName);
-    };
-
-    try {
-      const matchedCustomDirectives = await directiveOrchestrator.run({
-        tagName,
-        element: el,
-        directives: opts.directives,
-        customDirectives: resolvedDirectives,
-        directiveTimeout,
-        watchCancellable: lifecycle.watchCancellable,
-        log,
-        run,
-        onError: handleDirectiveError,
-      });
-      if (matchedCustomDirectives) return;
-    } catch (err) {
-      handleDirectiveError(null, err);
-      log.flush(
-        err instanceof DirectiveCancelledError
-          ? "aborted (element removed)"
-          : "aborted (directive error)",
-      );
-      return;
-    }
-
-    log.flush("triggered");
-    run();
-  }
+  const session = createActivationSession({
+    directives: opts.directives,
+    debug: opts.debug,
+    directiveTimeout: opts.directiveTimeout,
+    customDirectives: payload.customDirectives,
+    ownership: lifecycle,
+    surface: runtimeSurface,
+    platform: {
+      now: () => performance.now(),
+      console,
+      setTimeout,
+      clearTimeout,
+    },
+  });
 
   let endReadyLog: (() => void) | undefined;
   const disconnectLifecycle = lifecycle.start({
     getRoot: () => document.body,
     islandMap,
-    onDiscover: warnOnConflictingLoadGate,
-    onActivate: loadIsland,
+    onDiscover: (tagName, el) => session.discover(tagName, el),
+    onActivate: (tagName, el, loader) => {
+      void session.activate({ tagName, element: el, loader });
+    },
     onBeforeInitialWalk: () => {
-      endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, debug);
+      endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, opts.debug);
     },
     onInitialWalkComplete: () => {
       endReadyLog?.();
@@ -281,7 +97,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     if (root !== document.body) return;
     lifecycle.excludeRoot(document.body);
     disconnected = true;
-    clearTagState();
+    session.clear();
     endReadyLog?.();
     endReadyLog = undefined;
     disconnectLifecycle.disconnect();
@@ -299,7 +115,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     },
     unobserve(root = document.body) {
       if (root && root !== document.body) {
-        clearTagState(collectSubtreeTags(root));
+        session.clear(collectSubtreeTags(root));
         lifecycle.excludeRoot(root);
         return;
       }
