@@ -5,13 +5,20 @@ import { onIslandLoad, onIslandError } from "../events";
 import type { ClientDirective, ClientDirectiveLoader } from "../index";
 import type { ReviveOptions } from "../contract";
 
+const activeRuntimes: Array<{ disconnect: () => void }> = [];
+
+function trackRuntime<T extends { disconnect: () => void }>(runtime: T): T {
+  activeRuntimes.push(runtime);
+  return runtime;
+}
+
 /** Wraps revive so tests can keep using (islands, options?, customDirectives?) style. */
 function r(
   islands: Record<string, () => Promise<unknown>>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ) {
-  return revive({ islands, options, customDirectives });
+  return trackRuntime(revive({ islands, options, customDirectives }));
 }
 
 // Flush microtasks + a short timer tick so async directive chains resolve
@@ -37,6 +44,13 @@ describe("revive", () => {
     document.body.innerHTML = "";
   });
 
+  afterEach(() => {
+    while (activeRuntimes.length > 0) {
+      activeRuntimes.pop()?.disconnect();
+    }
+    document.body.innerHTML = "";
+  });
+
   describe("plugin–runtime contract boundary (tracer bullet)", () => {
     it("revive(payload) activates islands by tag and applies options when given payload shape the plugin emits", async () => {
       const loader = mock(async () => {});
@@ -48,15 +62,17 @@ describe("revive", () => {
         >,
         options: { directives: { idle: { timeout: 100 } } },
       };
-      revive(payload);
+      trackRuntime(revive(payload));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
     it("revive(payload) returns the singleton helper surface", () => {
-      const runtime = revive({
+      const runtime = trackRuntime(
+        revive({
         islands: { "/frontend/js/islands/product-form.ts": async () => {} },
-      });
+        }),
+      );
 
       expect(runtime).toEqual({
         disconnect: expect.any(Function),
