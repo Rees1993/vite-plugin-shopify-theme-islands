@@ -1,7 +1,20 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import { createRuntimeSurface } from "../runtime-surface";
 
+const cleanupCallbacks: Array<() => void> = [];
+
+function trackCleanup<T extends () => void>(cleanup: T): T {
+  cleanupCallbacks.push(cleanup);
+  return cleanup;
+}
+
 describe("runtime-surface", () => {
+  afterEach(() => {
+    while (cleanupCallbacks.length > 0) {
+      cleanupCallbacks.pop()?.();
+    }
+  });
+
   it("dispatches islands:load and islands:error through subscriptions", () => {
     const log = mock(() => {});
     const groupCollapsed = mock(() => {});
@@ -13,8 +26,8 @@ describe("runtime-surface", () => {
     const loadHandler = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
     const errorHandler = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
 
-    const offLoad = surface.onLoad(loadHandler);
-    const offError = surface.onError(errorHandler);
+    trackCleanup(surface.onLoad(loadHandler));
+    trackCleanup(surface.onError(errorHandler));
 
     surface.dispatchLoad({ tag: "alpha-island", duration: 12, attempt: 1 });
     surface.dispatchError({ tag: "beta-island", error: new Error("boom"), attempt: 2 });
@@ -29,9 +42,6 @@ describe("runtime-surface", () => {
       tag: "beta-island",
       attempt: 2,
     });
-
-    offLoad();
-    offError();
   });
 
   it("unsubscribe cleanup removes listeners", () => {
@@ -42,8 +52,8 @@ describe("runtime-surface", () => {
     const loadHandler = mock(() => {});
     const errorHandler = mock(() => {});
 
-    const offLoad = surface.onLoad(loadHandler);
-    const offError = surface.onError(errorHandler);
+    const offLoad = trackCleanup(surface.onLoad(loadHandler));
+    const offError = trackCleanup(surface.onError(errorHandler));
     offLoad();
     offError();
 

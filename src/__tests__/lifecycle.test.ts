@@ -3,9 +3,18 @@ import { describe, expect, it, mock, afterEach } from "bun:test";
 import { createIslandLifecycleCoordinator } from "../lifecycle";
 
 const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const activeDisconnectors: Array<() => void> = [];
+
+function trackDisconnect(disconnect: () => void): () => void {
+  activeDisconnectors.push(disconnect);
+  return disconnect;
+}
 
 describe("lifecycle", () => {
   afterEach(() => {
+    while (activeDisconnectors.length > 0) {
+      activeDisconnectors.pop()?.();
+    }
     document.body.innerHTML = "";
   });
 
@@ -26,13 +35,15 @@ describe("lifecycle", () => {
     const parent = document.querySelector("parent-island") as HTMLElement;
     const child = document.querySelector("child-island") as HTMLElement;
 
-    lifecycle.start({
+    trackDisconnect(
+      lifecycle.start({
       getRoot: () => document.body,
       islandMap,
       onActivate(tagName) {
         tags.push(tagName);
       },
-    });
+      }).disconnect,
+    );
 
     expect(tags).toEqual(["parent-island"]);
     expect(lifecycle.isQueued("parent-island")).toBe(true);
@@ -65,13 +76,15 @@ describe("lifecycle", () => {
     try {
       document.body.innerHTML = "<root-shell></root-shell>";
 
-      const { disconnect } = lifecycle.start({
+      const disconnect = trackDisconnect(
+        lifecycle.start({
         getRoot: () => document.body,
         islandMap,
         onActivate(tagName) {
           tags.push(tagName);
         },
-      });
+        }).disconnect,
+      );
 
       const el = document.createElement("dynamic-island");
       document.body.appendChild(el);
@@ -113,7 +126,8 @@ describe("lifecycle", () => {
     document.removeEventListener = removeSpy as typeof document.removeEventListener;
 
     try {
-      const { disconnect } = lifecycle.start({
+      const disconnect = trackDisconnect(
+        lifecycle.start({
         getRoot: () => {
           rootCalls.push("called");
           return document.body;
@@ -122,7 +136,8 @@ describe("lifecycle", () => {
         onActivate() {},
         onBeforeInitialWalk: beforeWalk,
         onInitialWalkComplete: afterWalk,
-      });
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual([]);
       expect(beforeWalk).not.toHaveBeenCalled();
@@ -136,7 +151,8 @@ describe("lifecycle", () => {
       expect(afterWalk).not.toHaveBeenCalled();
 
       readyState = "interactive";
-      lifecycle.start({
+      trackDisconnect(
+        lifecycle.start({
         getRoot: () => {
           rootCalls.push("called");
           return document.body;
@@ -145,7 +161,8 @@ describe("lifecycle", () => {
         onActivate() {},
         onBeforeInitialWalk: beforeWalk,
         onInitialWalkComplete: afterWalk,
-      });
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual(["called"]);
       expect(beforeWalk).toHaveBeenCalledTimes(1);

@@ -1,8 +1,22 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { connectShopifyLifecycle } from "../shopify-lifecycle";
+
+const cleanupCallbacks: Array<() => void> = [];
+
+function trackCleanup<T extends () => void>(cleanup: T): T {
+  cleanupCallbacks.push(cleanup);
+  return cleanup;
+}
 
 describe("connectShopifyLifecycle", () => {
   beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  afterEach(() => {
+    while (cleanupCallbacks.length > 0) {
+      cleanupCallbacks.pop()?.();
+    }
     document.body.innerHTML = "";
   });
 
@@ -12,7 +26,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -32,8 +46,6 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.observe).toHaveBeenCalledWith(section);
     expect(runtime.unobserve).toHaveBeenCalledWith(section);
-
-    disconnect();
   });
 
   it("normalizes bubbled section events to the owning section root", () => {
@@ -42,7 +54,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     const child = document.createElement("button");
@@ -58,8 +70,6 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.observe).toHaveBeenCalledTimes(1);
     expect(runtime.observe).toHaveBeenCalledWith(section);
-
-    disconnect();
   });
 
   it("scans section roots for Shopify section select and reorder events", () => {
@@ -68,7 +78,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -83,8 +93,6 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.scan).toHaveBeenCalledTimes(3);
     expect(runtime.scan).toHaveBeenCalledWith(section);
-
-    disconnect();
   });
 
   it("scans block roots for Shopify block selection events", () => {
@@ -93,7 +101,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const block = document.createElement("div");
     block.id = "shopify-block-main";
     document.body.appendChild(block);
@@ -104,8 +112,6 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.scan).toHaveBeenCalledTimes(2);
     expect(runtime.scan).toHaveBeenCalledWith(block);
-
-    disconnect();
   });
 
   it("normalizes bubbled block events to the owning block root", () => {
@@ -114,7 +120,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const block = document.createElement("div");
     block.id = "shopify-block-main";
     const child = document.createElement("button");
@@ -130,8 +136,6 @@ describe("connectShopifyLifecycle", () => {
 
     expect(runtime.scan).toHaveBeenCalledTimes(1);
     expect(runtime.scan).toHaveBeenCalledWith(block);
-
-    disconnect();
   });
 
   it("ignores Shopify block events that do not identify a block root", () => {
@@ -140,7 +144,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    trackCleanup(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -150,8 +154,6 @@ describe("connectShopifyLifecycle", () => {
     );
 
     expect(runtime.scan).not.toHaveBeenCalled();
-
-    disconnect();
   });
 
   it("removes Shopify event listeners on disconnect", () => {
@@ -160,7 +162,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = connectShopifyLifecycle(runtime);
+    const disconnect = trackCleanup(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
