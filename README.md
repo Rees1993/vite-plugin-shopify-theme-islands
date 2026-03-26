@@ -34,7 +34,7 @@ export default defineConfig({
 import "vite-plugin-shopify-theme-islands/revive";
 ```
 
-That's it. The plugin automatically scans your islands directory and wires everything up.
+That's it. The plugin automatically scans your configured island directories, includes mixin-marked island files, and wires everything up.
 
 The shared runtime also handles:
 
@@ -541,7 +541,7 @@ If you use an AI coding agent (Claude Code, Cursor, Copilot, etc.), run once aft
 npx @tanstack/intent@latest install
 ```
 
-This maps the bundled skills to your agent config so your agent gets accurate v1 API guidance. Skills update automatically with npm updates — no re-run needed.
+This maps the bundled skills to your agent config so your agent gets accurate current API guidance. Skills update automatically with npm updates — no re-run needed.
 
 ## License
 
