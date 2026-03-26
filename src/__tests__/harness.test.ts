@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import {
   createCleanupQueue,
   createRuntimeHarness,
+  installIdleDriver,
+  installMediaDriver,
+  installMutationDriver,
+  installTimerDriver,
+  installVisibilityDriver,
   flush,
   mockIntersectionObserver,
 } from "./harness";
@@ -29,7 +34,7 @@ describe("test harness", () => {
   it("disconnects tracked runtimes during cleanup", async () => {
     const loader = mock(async () => {});
     const runtime = createRuntimeHarness(cleanups);
-    runtime.revive({ "/islands/harness-idle.ts": loader });
+    runtime.start(runtime.payload({ "/islands/harness-idle.ts": loader }));
 
     await flush();
     expect(loader).not.toHaveBeenCalled();
@@ -58,5 +63,127 @@ describe("test harness", () => {
     cleanups.cleanup();
 
     expect(globalThis.IntersectionObserver).toBe(original);
+  });
+
+  it("builds a payload and starts a tracked runtime with the 2.0 contract", async () => {
+    const loader = mock(async () => {});
+    document.body.innerHTML = "<payload-island></payload-island>";
+
+    const runtime = createRuntimeHarness(cleanups);
+    const started = runtime.start(
+      runtime.payload(
+        { "/islands/payload-island.ts": loader },
+        { directives: { defer: { delay: 0 } } },
+      ),
+    );
+
+    await flush();
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(started.disconnect).toEqual(expect.any(Function));
+  });
+
+  it("drives idle callbacks explicitly", () => {
+    const idle = installIdleDriver(cleanups);
+    let called = 0;
+
+    window.requestIdleCallback?.(
+      () => {
+        called++;
+      },
+      { timeout: 25 },
+    );
+
+    expect(called).toBe(0);
+    expect(idle.lastOptions()).toEqual({ timeout: 25 });
+    idle.flush();
+    expect(called).toBe(1);
+  });
+
+  it("drives idle callbacks explicitly without options", () => {
+    const idle = installIdleDriver(cleanups);
+    let called = 0;
+
+    window.requestIdleCallback?.(() => {
+      called++;
+    });
+
+    expect(called).toBe(0);
+    expect(idle.lastOptions()).toBeUndefined();
+    idle.flush();
+    expect(called).toBe(1);
+  });
+
+  it("drives visibility callbacks explicitly", () => {
+    const visibility = installVisibilityDriver(cleanups);
+    let observed = false;
+    let visible = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      visible = entries[0]?.isIntersecting ?? false;
+    });
+    const target = document.createElement("visible-box");
+    observer.observe(target);
+    observed = true;
+
+    expect(observed).toBe(true);
+    expect(visibility.options?.rootMargin).toBeUndefined();
+
+    visibility.trigger(target, true);
+    expect(visible).toBe(true);
+    expect(visibility.disconnect).not.toHaveBeenCalled();
+  });
+
+  it("drives media query listeners explicitly", () => {
+    const media = installMediaDriver(cleanups);
+    let matched = false;
+    const query = "(max-width: 768px)";
+
+    const mql = window.matchMedia(query);
+    mql.addEventListener("change", (event) => {
+      matched = event.matches;
+    });
+
+    media.dispatchChange(query, true);
+    expect(matched).toBe(true);
+  });
+
+  it("primes media query match state before listeners fire", () => {
+    const media = installMediaDriver(cleanups);
+    const query = "(prefers-reduced-motion: reduce)";
+
+    media.setMatches(query, true);
+
+    expect(window.matchMedia(query).matches).toBe(true);
+  });
+
+  it("advances scheduled timers explicitly", () => {
+    const timers = installTimerDriver(cleanups);
+    const callback = mock(() => {});
+
+    setTimeout(callback, 25);
+    expect(timers.pendingCount()).toBe(1);
+
+    timers.advance(24);
+    expect(callback).not.toHaveBeenCalled();
+
+    timers.advance(1);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(timers.pendingCount()).toBe(0);
+  });
+
+  it("drives mutation callbacks explicitly", () => {
+    const mutations = installMutationDriver(cleanups);
+    const callback = mock((_records: MutationRecord[]) => {});
+    const observer = new MutationObserver((records) => {
+      callback(records);
+    });
+
+    observer.observe(document.body, { childList: true });
+
+    const node = document.createElement("late-island");
+    mutations.add(node);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback.mock.calls[0]?.[0][0]?.addedNodes[0]).toBe(node);
   });
 });

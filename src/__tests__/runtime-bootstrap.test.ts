@@ -8,12 +8,12 @@ import { createCleanupQueue, createRuntimeHarness, flush, mockMutationObserver }
 let cleanups = createCleanupQueue();
 let runtimeHarness = createRuntimeHarness(cleanups);
 
-function r(
+function payload(
   islands: Record<string, () => Promise<unknown>>,
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ) {
-  return runtimeHarness.revive(islands, options, customDirectives);
+  return runtimeHarness.payload(islands, options, customDirectives);
 }
 
 describe("runtime bootstrap", () => {
@@ -72,7 +72,7 @@ describe("runtime bootstrap", () => {
   describe("islandMap", () => {
     it("warns and skips non-hyphenated filenames", () => {
       const spy = spyOn(console, "warn");
-      r({ "/islands/myisland.ts": async () => {} });
+      runtimeHarness.start(payload({ "/islands/myisland.ts": async () => {} }));
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("must contain a hyphen"));
       spy.mockRestore();
     });
@@ -80,7 +80,7 @@ describe("runtime bootstrap", () => {
     it("loads an island that matches the tag name", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<my-island></my-island>";
-      r({ "/islands/my-island.ts": loader });
+      runtimeHarness.start(payload({ "/islands/my-island.ts": loader }));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -89,10 +89,12 @@ describe("runtime bootstrap", () => {
       const first = mock(async () => {});
       const second = mock(async () => {});
       document.body.innerHTML = "<my-island></my-island>";
-      r({
-        "/islands/my-island.ts": first,
-        "/components/my-island.ts": second,
-      });
+      runtimeHarness.start(
+        payload({
+          "/islands/my-island.ts": first,
+          "/components/my-island.ts": second,
+        }),
+      );
       await flush();
       expect(first).toHaveBeenCalledTimes(1);
       expect(second).not.toHaveBeenCalled();
@@ -103,7 +105,7 @@ describe("runtime bootstrap", () => {
     it("prevents loading the same tag twice even when multiple elements exist", async () => {
       const loader = mock(async () => {});
       document.body.innerHTML = "<my-counter></my-counter><my-counter></my-counter>";
-      r({ "/islands/my-counter.ts": loader });
+      runtimeHarness.start(payload({ "/islands/my-counter.ts": loader }));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
@@ -130,7 +132,7 @@ describe("runtime bootstrap", () => {
       });
 
       document.body.innerHTML = "<retry-island></retry-island>";
-      r({ "/islands/retry-island.ts": loader });
+      runtimeHarness.start(payload({ "/islands/retry-island.ts": loader }));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(
@@ -166,7 +168,7 @@ describe("runtime bootstrap", () => {
       const loader = mock(async () => {});
 
       document.body.innerHTML = "<no-retry-island></no-retry-island>";
-      r({ "/islands/no-retry-island.ts": loader });
+      runtimeHarness.start(payload({ "/islands/no-retry-island.ts": loader }));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
 
