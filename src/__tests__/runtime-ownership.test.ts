@@ -35,7 +35,6 @@ describe("runtime-ownership", () => {
       lifecycle,
       session,
       surface: { beginReadyLog: mock(() => () => {}) },
-      debug: false,
       connectShopify,
     });
 
@@ -67,7 +66,6 @@ describe("runtime-ownership", () => {
         activate: mock(async () => {}),
       },
       surface: { beginReadyLog: mock(() => () => {}) },
-      debug: true,
       connectShopify: mock(() => disconnectShopify),
     });
 

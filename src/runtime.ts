@@ -18,6 +18,7 @@ import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./co
 import { createActivationSession } from "./activation-session.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
+import { createRuntimeObservability } from "./runtime-observability.js";
 import { createRootOwnershipCoordinator } from "./runtime-ownership.js";
 
 function isRevivePayload(v: unknown): v is RevivePayload {
@@ -47,16 +48,23 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     retries: opts.retry.retries,
     retryDelay: opts.retry.delay,
   });
-  const session = createActivationSession({
+  const observability = createRuntimeObservability({
     directives: opts.directives,
     debug: opts.debug,
+    customDirectives: payload.customDirectives,
+    isObserved: (element) => lifecycle.isObserved(element),
+    surface: runtimeSurface,
+    console,
+  });
+  const session = createActivationSession({
+    directives: opts.directives,
     directiveTimeout: opts.directiveTimeout,
     customDirectives: payload.customDirectives,
     ownership: lifecycle,
-    surface: runtimeSurface,
+    observability,
     platform: {
       now: () => performance.now(),
-      console,
+      console: { error: console.error.bind(console) },
       setTimeout,
       clearTimeout,
     },
@@ -66,7 +74,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     islandMap,
     lifecycle,
     session,
-    surface: runtimeSurface,
-    debug: opts.debug,
+    surface: observability,
   });
 }

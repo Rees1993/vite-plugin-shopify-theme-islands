@@ -5,8 +5,6 @@ import { createActivationSession, type ActivationCandidate } from "../activation
 describe("activation-session", () => {
   it("activates an island and dispatches load through one boundary", async () => {
     const platformConsole = {
-      log: mock(() => {}),
-      warn: mock(() => {}),
       error: mock(() => {}),
     };
     const loader = mock<IslandLoader>(async () => {});
@@ -18,7 +16,6 @@ describe("activation-session", () => {
 
     const session = createActivationSession({
       directives: DEFAULT_DIRECTIVES,
-      debug: false,
       directiveTimeout: 0,
       orchestrator: {
         run: runBuiltIns,
@@ -32,10 +29,13 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk,
       },
-      surface: {
+      observability: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad,
         dispatchError: mock((_detail: { tag: string; error: unknown; attempt: number }) => {}),
+        noteInitialWaits: mock(() => {}),
+        warnOnConflictingLoadGate: mock(() => {}),
+        clear: mock(() => {}),
       },
       platform: {
         now: mock(() => 10),
@@ -68,8 +68,6 @@ describe("activation-session", () => {
 
     const timers: FakeTimer[] = [];
     const platformConsole = {
-      log: mock(() => {}),
-      warn: mock(() => {}),
       error: mock(() => {}),
     };
     const setTimeoutMock = mock((fn: () => void) => {
@@ -89,7 +87,6 @@ describe("activation-session", () => {
 
     const session = createActivationSession({
       directives: DEFAULT_DIRECTIVES,
-      debug: false,
       directiveTimeout: 0,
       orchestrator: {
         run: mock(async () => false),
@@ -103,10 +100,13 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
-      surface: {
+      observability: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad: mock(() => {}),
         dispatchError,
+        noteInitialWaits: mock(() => {}),
+        warnOnConflictingLoadGate: mock(() => {}),
+        clear: mock(() => {}),
       },
       platform: {
         now: mock(() => 10),
