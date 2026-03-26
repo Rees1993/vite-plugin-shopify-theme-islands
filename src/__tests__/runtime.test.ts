@@ -4,13 +4,18 @@ import { revive } from "../runtime";
 import { onIslandLoad, onIslandError } from "../events";
 import type { ClientDirective, ClientDirectiveLoader } from "../index";
 import type { ReviveOptions } from "../contract";
+import {
+  createCleanupQueue,
+  createRuntimeHarness,
+  flush,
+  mockIntersectionObserver,
+  mockMatchMedia,
+  mockMutationObserver,
+  mockRequestIdleCallback,
+} from "./harness";
 
-const activeRuntimes: Array<{ disconnect: () => void }> = [];
-
-function trackRuntime<T extends { disconnect: () => void }>(runtime: T): T {
-  activeRuntimes.push(runtime);
-  return runtime;
-}
+let cleanups = createCleanupQueue();
+let runtimeHarness = createRuntimeHarness(cleanups);
 
 /** Wraps revive so tests can keep using (islands, options?, customDirectives?) style. */
 function r(
@@ -18,37 +23,21 @@ function r(
   options?: ReviveOptions,
   customDirectives?: Map<string, ClientDirective>,
 ) {
-  return trackRuntime(revive({ islands, options, customDirectives }));
+  return runtimeHarness.revive(islands, options, customDirectives);
 }
-
-// Flush microtasks + a short timer tick so async directive chains resolve
-const flush = (ms = 50) => new Promise<void>((r) => setTimeout(r, ms));
 
 // A minimal IdleDeadline for triggering captured requestIdleCallback handlers
 const IDLE_DEADLINE: IdleDeadline = { timeRemaining: () => 0, didTimeout: false };
 
-// Helper to install a mock IntersectionObserver and return the real one for restoration
-function mockIntersectionObserver(
-  impl: new (
-    cb: IntersectionObserverCallback,
-    opts?: IntersectionObserverInit,
-  ) => Pick<IntersectionObserver, "observe" | "disconnect">,
-): typeof IntersectionObserver {
-  const original = globalThis.IntersectionObserver;
-  globalThis.IntersectionObserver = impl as unknown as typeof IntersectionObserver;
-  return original;
-}
-
 describe("revive", () => {
   beforeEach(() => {
+    cleanups = createCleanupQueue();
+    runtimeHarness = createRuntimeHarness(cleanups);
     document.body.innerHTML = "";
   });
 
   afterEach(() => {
-    while (activeRuntimes.length > 0) {
-      activeRuntimes.pop()?.disconnect();
-    }
-    document.body.innerHTML = "";
+    cleanups.cleanup({ resetDom: true });
   });
 
   describe("plugin–runtime contract boundary (tracer bullet)", () => {
@@ -62,15 +51,15 @@ describe("revive", () => {
         >,
         options: { directives: { idle: { timeout: 100 } } },
       };
-      trackRuntime(revive(payload));
+      runtimeHarness.track(revive(payload));
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
     });
 
     it("revive(payload) returns the singleton helper surface", () => {
-      const runtime = trackRuntime(
+      const runtime = runtimeHarness.track(
         revive({
-        islands: { "/frontend/js/islands/product-form.ts": async () => {} },
+          islands: { "/frontend/js/islands/product-form.ts": async () => {} },
         }),
       );
 
@@ -135,14 +124,17 @@ describe("revive", () => {
     it("removes tag from queued on load failure, allowing retry on re-insertion", async () => {
       const spy = spyOn(console, "error");
       let moCallback: MutationCallback | undefined;
-      const OriginalMO = globalThis.MutationObserver;
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       let callCount = 0;
       const loader = mock(async () => {
@@ -167,21 +159,22 @@ describe("revive", () => {
       );
       await flush();
       expect(loader).toHaveBeenCalledTimes(2);
-
-      globalThis.MutationObserver = OriginalMO;
       spy.mockRestore();
     });
 
     it("does not retry on re-insertion when load succeeds", async () => {
       let moCallback: MutationCallback | undefined;
-      const OriginalMO = globalThis.MutationObserver;
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       const loader = mock(async () => {});
 
@@ -198,30 +191,12 @@ describe("revive", () => {
       );
       await flush();
       expect(loader).toHaveBeenCalledTimes(1);
-
-      globalThis.MutationObserver = OriginalMO;
     });
   });
 
   describe("client:idle", () => {
-    type RIC = typeof window.requestIdleCallback;
-    let originalRIC: RIC | undefined;
-
-    beforeEach(() => {
-      // happy-dom doesn't implement requestIdleCallback, so it's undefined at runtime
-      originalRIC = "requestIdleCallback" in window ? window.requestIdleCallback : undefined;
-    });
-
-    afterEach(() => {
-      if (originalRIC !== undefined) {
-        window.requestIdleCallback = originalRIC;
-      } else {
-        Reflect.deleteProperty(window, "requestIdleCallback");
-      }
-    });
-
     it("calls loader after idle via setTimeout fallback when requestIdleCallback is absent", async () => {
-      // happy-dom does not implement requestIdleCallback, so the fallback (setTimeout) is used
+      cleanups.track(mockRequestIdleCallback());
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-widget client:idle></idle-widget>";
       r({ "/islands/idle-widget.ts": loader }, { directives: { idle: { timeout: 20 } } });
@@ -231,10 +206,12 @@ describe("revive", () => {
 
     it("calls loader via requestIdleCallback when available", async () => {
       let cb!: IdleRequestCallback;
-      window.requestIdleCallback = (fn) => {
-        cb = fn;
-        return 0;
-      };
+      cleanups.track(
+        mockRequestIdleCallback((fn) => {
+          cb = fn;
+          return 0;
+        }),
+      );
 
       const loader = mock(async () => {});
       document.body.innerHTML = "<idle-box client:idle></idle-box>";
@@ -248,10 +225,12 @@ describe("revive", () => {
 
     it("passes timeout option to requestIdleCallback", () => {
       let capturedOpts: IdleRequestOptions | undefined;
-      window.requestIdleCallback = (_fn, opts) => {
-        capturedOpts = opts;
-        return 0;
-      };
+      cleanups.track(
+        mockRequestIdleCallback((_fn, opts) => {
+          capturedOpts = opts;
+          return 0;
+        }),
+      );
 
       document.body.innerHTML = "<idle-opts client:idle></idle-opts>";
       r(
@@ -296,23 +275,20 @@ describe("revive", () => {
   describe("client:visible", () => {
     let trigger!: IntersectionObserverCallback;
     let ioOptions: IntersectionObserverInit | undefined;
-    let originalIO: typeof IntersectionObserver;
 
     beforeEach(() => {
-      originalIO = mockIntersectionObserver(
-        class {
-          observe = (): void => {};
-          disconnect = (): void => {};
-          constructor(cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) {
-            trigger = cb;
-            ioOptions = opts;
-          }
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            observe = (): void => {};
+            disconnect = (): void => {};
+            constructor(cb: IntersectionObserverCallback, opts?: IntersectionObserverInit) {
+              trigger = cb;
+              ioOptions = opts;
+            }
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
-    });
-
-    afterEach(() => {
-      globalThis.IntersectionObserver = originalIO;
     });
 
     it("does not load until the IntersectionObserver callback fires", async () => {
@@ -376,23 +352,28 @@ describe("revive", () => {
       let moCallback: MutationCallback | undefined;
       let triggerVisible: IntersectionObserverCallback | undefined;
       const disconnect = mock(() => {});
-      const OriginalMO = globalThis.MutationObserver;
-      const originalIO = mockIntersectionObserver(
-        class {
-          observe = (): void => {};
-          disconnect = disconnect;
-          constructor(cb: IntersectionObserverCallback) {
-            triggerVisible = cb;
-          }
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            observe = (): void => {};
+            disconnect = disconnect;
+            constructor(cb: IntersectionObserverCallback) {
+              triggerVisible = cb;
+            }
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       const loader = mock(async () => {});
       document.body.innerHTML = "<cleanup-visible client:visible></cleanup-visible>";
@@ -414,9 +395,6 @@ describe("revive", () => {
       );
       await flush();
       expect(disconnect).toHaveBeenCalledTimes(1);
-
-      globalThis.IntersectionObserver = originalIO;
-      globalThis.MutationObserver = OriginalMO;
     });
 
     it("attribute value overrides global rootMargin per element", () => {
@@ -439,19 +417,12 @@ describe("revive", () => {
   });
 
   describe("client:media", () => {
-    let originalMatchMedia: typeof window.matchMedia;
-
-    beforeEach(() => {
-      originalMatchMedia = window.matchMedia;
-    });
-
-    afterEach(() => {
-      window.matchMedia = originalMatchMedia;
-    });
-
     it("loads immediately when the media query already matches", async () => {
-      window.matchMedia = (_q) =>
-        ({ matches: true, addEventListener: () => {} }) as unknown as MediaQueryList;
+      cleanups.track(
+        mockMatchMedia(
+          (_q) => ({ matches: true, addEventListener: () => {} }) as unknown as MediaQueryList,
+        ),
+      );
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
@@ -462,14 +433,18 @@ describe("revive", () => {
 
     it("waits for a change event when the query does not initially match", async () => {
       let changeHandler!: () => void;
-      window.matchMedia = (_q) =>
-        ({
-          matches: false,
-          addEventListener: (_: string, h: () => void) => {
-            changeHandler = h;
-          },
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList;
+      cleanups.track(
+        mockMatchMedia(
+          (_q) =>
+            ({
+              matches: false,
+              addEventListener: (_: string, h: () => void) => {
+                changeHandler = h;
+              },
+              removeEventListener: () => {},
+            }) as unknown as MediaQueryList,
+        ),
+      );
 
       const loader = mock(async () => {});
       document.body.innerHTML = '<media-panel client:media="(max-width: 768px)"></media-panel>';
@@ -484,14 +459,18 @@ describe("revive", () => {
 
     it("does not load after subtree unobserve even if the media query later matches", async () => {
       let changeHandler!: () => void;
-      window.matchMedia = (_q) =>
-        ({
-          matches: false,
-          addEventListener: (_: string, h: () => void) => {
-            changeHandler = h;
-          },
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList;
+      cleanups.track(
+        mockMatchMedia(
+          (_q) =>
+            ({
+              matches: false,
+              addEventListener: (_: string, h: () => void) => {
+                changeHandler = h;
+              },
+              removeEventListener: () => {},
+            }) as unknown as MediaQueryList,
+        ),
+      );
 
       const loader = mock(async () => {});
       document.body.innerHTML =
@@ -597,12 +576,14 @@ describe("revive", () => {
     });
 
     it("cancels a pending-visible island and activates a newly added island in the same tick", async () => {
-      const originalIO = mockIntersectionObserver(
-        class {
-          constructor(_cb: IntersectionObserverCallback) {}
-          observe() {}
-          disconnect() {}
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            constructor(_cb: IntersectionObserverCallback) {}
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
 
       const pendingLoader = mock(async () => {});
@@ -627,8 +608,6 @@ describe("revive", () => {
 
       expect(pendingLoader).not.toHaveBeenCalled();
       expect(newLoader).toHaveBeenCalledTimes(1);
-
-      globalThis.IntersectionObserver = originalIO;
     });
   });
 
@@ -761,14 +740,16 @@ describe("revive", () => {
     it("disconnect() cancels pending built-in directive work for the document root", async () => {
       let trigger!: IntersectionObserverCallback;
       const visibleDisconnect = mock(() => {});
-      const originalIO = mockIntersectionObserver(
-        class {
-          observe = (): void => {};
-          disconnect = visibleDisconnect;
-          constructor(cb: IntersectionObserverCallback) {
-            trigger = cb;
-          }
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            observe = (): void => {};
+            disconnect = visibleDisconnect;
+            constructor(cb: IntersectionObserverCallback) {
+              trigger = cb;
+            }
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
 
       const loader = mock(async () => {});
@@ -791,8 +772,6 @@ describe("revive", () => {
 
       expect(loader).not.toHaveBeenCalled();
       expect(visibleDisconnect).toHaveBeenCalledTimes(1);
-
-      globalThis.IntersectionObserver = originalIO;
     });
 
     it("disconnect() aborts custom directive signals and runs cleanup", async () => {
@@ -882,34 +861,29 @@ describe("revive", () => {
 
     it("unobserve(root) cancels a pending visible directive inside that subtree", async () => {
       let trigger!: IntersectionObserverCallback;
-      const originalIO = mockIntersectionObserver(
-        class {
-          observe = (): void => {};
-          disconnect = (): void => {};
-          constructor(cb: IntersectionObserverCallback) {
-            trigger = cb;
-          }
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            observe = (): void => {};
+            disconnect = (): void => {};
+            constructor(cb: IntersectionObserverCallback) {
+              trigger = cb;
+            }
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
 
-      try {
-        const loader = mock(async () => {});
-        document.body.innerHTML =
-          '<div id="alpha"><visible-widget client:visible></visible-widget></div>';
-        const alphaRoot = document.getElementById("alpha") as HTMLElement;
-        const runtime = r({ "/islands/visible-widget.ts": loader });
+      const loader = mock(async () => {});
+      document.body.innerHTML =
+        '<div id="alpha"><visible-widget client:visible></visible-widget></div>';
+      const alphaRoot = document.getElementById("alpha") as HTMLElement;
+      const runtime = r({ "/islands/visible-widget.ts": loader });
 
-        runtime.unobserve(alphaRoot);
-        trigger(
-          [{ isIntersecting: true } as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        );
-        await flush();
+      runtime.unobserve(alphaRoot);
+      trigger([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      await flush();
 
-        expect(loader).not.toHaveBeenCalled();
-      } finally {
-        globalThis.IntersectionObserver = originalIO;
-      }
+      expect(loader).not.toHaveBeenCalled();
     });
 
     it("observe(root) re-enables activation for a previously unobserved subtree", async () => {
@@ -1317,14 +1291,16 @@ describe("revive", () => {
 
     it("built-ins gate before custom directive — client:visible must resolve first", async () => {
       let trigger!: IntersectionObserverCallback;
-      const originalIO = mockIntersectionObserver(
-        class {
-          observe = (): void => {};
-          disconnect = (): void => {};
-          constructor(cb: IntersectionObserverCallback) {
-            trigger = cb;
-          }
-        },
+      cleanups.track(
+        mockIntersectionObserver(
+          class {
+            observe = (): void => {};
+            disconnect = (): void => {};
+            constructor(cb: IntersectionObserverCallback) {
+              trigger = cb;
+            }
+          } as unknown as typeof IntersectionObserver,
+        ),
       );
 
       const directiveFn = mock<ClientDirective>(() => {});
@@ -1337,20 +1313,21 @@ describe("revive", () => {
       trigger([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
       await flush();
       expect(directiveFn).toHaveBeenCalledTimes(1);
-
-      globalThis.IntersectionObserver = originalIO;
     });
 
     it("catches sync custom directive errors and allows retry on re-insertion", async () => {
       let moCallback: MutationCallback | undefined;
-      const OriginalMO = globalThis.MutationObserver;
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       const loader = mock(async () => {});
       const errorSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -1386,7 +1363,6 @@ describe("revive", () => {
       expect(unhandledSpy).not.toHaveBeenCalled();
 
       process.off("unhandledRejection", unhandledSpy);
-      globalThis.MutationObserver = OriginalMO;
       errorSpy.mockRestore();
     });
 
@@ -1409,14 +1385,17 @@ describe("revive", () => {
 
     it("catches async custom directive rejections and allows retry on re-insertion", async () => {
       let moCallback: MutationCallback | undefined;
-      const OriginalMO = globalThis.MutationObserver;
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       const loader = mock(async () => {});
       const errorSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -1452,7 +1431,6 @@ describe("revive", () => {
       expect(unhandledSpy).not.toHaveBeenCalled();
 
       process.off("unhandledRejection", unhandledSpy);
-      globalThis.MutationObserver = OriginalMO;
       errorSpy.mockRestore();
     });
   });
@@ -1475,14 +1453,17 @@ describe("revive", () => {
     it("exhausting retries clears queued allowing manual re-insertion", async () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       let moCallback: MutationCallback | undefined;
-      const OriginalMO = globalThis.MutationObserver;
-      globalThis.MutationObserver = class {
-        constructor(cb: MutationCallback) {
-          moCallback = cb;
-        }
-        observe() {}
-        disconnect() {}
-      } as unknown as typeof MutationObserver;
+      cleanups.track(
+        mockMutationObserver(
+          class {
+            constructor(cb: MutationCallback) {
+              moCallback = cb;
+            }
+            observe() {}
+            disconnect() {}
+          } as unknown as typeof MutationObserver,
+        ),
+      );
 
       const loader = mock(async () => {
         throw new Error("always fails");
@@ -1500,8 +1481,6 @@ describe("revive", () => {
       );
       await flush(200);
       expect(loader).toHaveBeenCalledTimes(4); // 2 more (initial + 1 retry again)
-
-      globalThis.MutationObserver = OriginalMO;
       spy.mockRestore();
     });
 
@@ -1985,14 +1964,17 @@ describe("revive", () => {
 
       it("removes the interaction cancellation watcher after interaction fires", async () => {
         let moCallback: MutationCallback | undefined;
-        const OriginalMO = globalThis.MutationObserver;
-        globalThis.MutationObserver = class {
-          constructor(cb: MutationCallback) {
-            moCallback = cb;
-          }
-          observe() {}
-          disconnect() {}
-        } as unknown as typeof MutationObserver;
+        cleanups.track(
+          mockMutationObserver(
+            class {
+              constructor(cb: MutationCallback) {
+                moCallback = cb;
+              }
+              observe() {}
+              disconnect() {}
+            } as unknown as typeof MutationObserver,
+          ),
+        );
 
         const loader = mock(async () => {});
         document.body.innerHTML = "<cleanup-cancel client:interaction></cleanup-cancel>";
@@ -2016,19 +1998,21 @@ describe("revive", () => {
         expect(removeSpy).toHaveBeenCalledTimes(cleanupCalls);
 
         removeSpy.mockRestore();
-        globalThis.MutationObserver = OriginalMO;
       });
 
       it("does not load when element removed before interaction fires", async () => {
         let moCallback: MutationCallback | undefined;
-        const OriginalMO = globalThis.MutationObserver;
-        globalThis.MutationObserver = class {
-          constructor(cb: MutationCallback) {
-            moCallback = cb;
-          }
-          observe() {}
-          disconnect() {}
-        } as unknown as typeof MutationObserver;
+        cleanups.track(
+          mockMutationObserver(
+            class {
+              constructor(cb: MutationCallback) {
+                moCallback = cb;
+              }
+              observe() {}
+              disconnect() {}
+            } as unknown as typeof MutationObserver,
+          ),
+        );
 
         const loader = mock(async () => {});
         document.body.innerHTML = "<cancel-interact client:interaction></cancel-interact>";
@@ -2049,20 +2033,21 @@ describe("revive", () => {
         el.dispatchEvent(new Event("mouseenter"));
         await flush();
         expect(loader).not.toHaveBeenCalled();
-
-        globalThis.MutationObserver = OriginalMO;
       });
 
       it("combines with client:visible — interaction fires only after visible resolves", async () => {
         let ioCallback: IntersectionObserverCallback | undefined;
-        const origIO = globalThis.IntersectionObserver;
-        globalThis.IntersectionObserver = class {
-          observe = mock(() => {});
-          disconnect = mock(() => {});
-          constructor(cb: IntersectionObserverCallback) {
-            ioCallback = cb;
-          }
-        } as unknown as typeof IntersectionObserver;
+        cleanups.track(
+          mockIntersectionObserver(
+            class {
+              observe = mock(() => {});
+              disconnect = mock(() => {});
+              constructor(cb: IntersectionObserverCallback) {
+                ioCallback = cb;
+              }
+            } as unknown as typeof IntersectionObserver,
+          ),
+        );
 
         const loader = mock(async () => {});
         document.body.innerHTML = "<combo-island client:visible client:interaction></combo-island>";
@@ -2087,8 +2072,6 @@ describe("revive", () => {
         el.dispatchEvent(new Event("mouseenter"));
         await flush();
         expect(loader).toHaveBeenCalledTimes(1);
-
-        globalThis.IntersectionObserver = origIO;
       });
 
       it("custom attribute name via directives.interaction.attribute", async () => {

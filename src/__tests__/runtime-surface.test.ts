@@ -1,18 +1,12 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import { createRuntimeSurface } from "../runtime-surface";
-
-const cleanupCallbacks: Array<() => void> = [];
-
-function trackCleanup<T extends () => void>(cleanup: T): T {
-  cleanupCallbacks.push(cleanup);
-  return cleanup;
-}
+import { createCleanupQueue } from "./harness";
 
 describe("runtime-surface", () => {
+  const cleanups = createCleanupQueue();
+
   afterEach(() => {
-    while (cleanupCallbacks.length > 0) {
-      cleanupCallbacks.pop()?.();
-    }
+    cleanups.cleanup();
   });
 
   it("dispatches islands:load and islands:error through subscriptions", () => {
@@ -26,8 +20,8 @@ describe("runtime-surface", () => {
     const loadHandler = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
     const errorHandler = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
 
-    trackCleanup(surface.onLoad(loadHandler));
-    trackCleanup(surface.onError(errorHandler));
+    cleanups.track(surface.onLoad(loadHandler));
+    cleanups.track(surface.onError(errorHandler));
 
     surface.dispatchLoad({ tag: "alpha-island", duration: 12, attempt: 1 });
     surface.dispatchError({ tag: "beta-island", error: new Error("boom"), attempt: 2 });
@@ -52,8 +46,8 @@ describe("runtime-surface", () => {
     const loadHandler = mock(() => {});
     const errorHandler = mock(() => {});
 
-    const offLoad = trackCleanup(surface.onLoad(loadHandler));
-    const offError = trackCleanup(surface.onError(errorHandler));
+    const offLoad = cleanups.track(surface.onLoad(loadHandler));
+    const offError = cleanups.track(surface.onError(errorHandler));
     offLoad();
     offError();
 

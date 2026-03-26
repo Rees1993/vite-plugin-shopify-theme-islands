@@ -1,23 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { connectShopifyLifecycle } from "../shopify-lifecycle";
-
-const cleanupCallbacks: Array<() => void> = [];
-
-function trackCleanup<T extends () => void>(cleanup: T): T {
-  cleanupCallbacks.push(cleanup);
-  return cleanup;
-}
+import { createCleanupQueue } from "./harness";
 
 describe("connectShopifyLifecycle", () => {
+  const cleanups = createCleanupQueue();
+
   beforeEach(() => {
     document.body.innerHTML = "";
   });
 
   afterEach(() => {
-    while (cleanupCallbacks.length > 0) {
-      cleanupCallbacks.pop()?.();
-    }
-    document.body.innerHTML = "";
+    cleanups.cleanup({ resetDom: true });
   });
 
   it("observes and unobserves section roots for Shopify section load and unload events", () => {
@@ -26,7 +19,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -54,7 +47,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     const child = document.createElement("button");
@@ -78,7 +71,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -101,7 +94,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const block = document.createElement("div");
     block.id = "shopify-block-main";
     document.body.appendChild(block);
@@ -120,7 +113,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const block = document.createElement("div");
     block.id = "shopify-block-main";
     const child = document.createElement("button");
@@ -144,7 +137,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    trackCleanup(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -162,7 +155,7 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = trackCleanup(connectShopifyLifecycle(runtime));
+    const disconnect = cleanups.track(connectShopifyLifecycle(runtime));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);

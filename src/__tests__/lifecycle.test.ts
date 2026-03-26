@@ -1,21 +1,13 @@
 /// <reference lib="dom" />
 import { describe, expect, it, mock, afterEach } from "bun:test";
 import { createIslandLifecycleCoordinator } from "../lifecycle";
-
-const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-const activeDisconnectors: Array<() => void> = [];
-
-function trackDisconnect(disconnect: () => void): () => void {
-  activeDisconnectors.push(disconnect);
-  return disconnect;
-}
+import { createCleanupQueue, flush, mockMutationObserver } from "./harness";
 
 describe("lifecycle", () => {
+  const cleanups = createCleanupQueue();
+
   afterEach(() => {
-    while (activeDisconnectors.length > 0) {
-      activeDisconnectors.pop()?.();
-    }
-    document.body.innerHTML = "";
+    cleanups.cleanup({ resetDom: true });
   });
 
   it("walks initial DOM, defers children behind queued parents, and rewinds them after success", async () => {
@@ -35,13 +27,13 @@ describe("lifecycle", () => {
     const parent = document.querySelector("parent-island") as HTMLElement;
     const child = document.querySelector("child-island") as HTMLElement;
 
-    trackDisconnect(
+    cleanups.track(
       lifecycle.start({
-      getRoot: () => document.body,
-      islandMap,
-      onActivate(tagName) {
-        tags.push(tagName);
-      },
+        getRoot: () => document.body,
+        islandMap,
+        onActivate(tagName) {
+          tags.push(tagName);
+        },
       }).disconnect,
     );
 
@@ -64,43 +56,42 @@ describe("lifecycle", () => {
       ["dynamic-island", mock(async () => {})],
     ]);
     let moCallback: MutationCallback | undefined;
-    const OriginalMO = globalThis.MutationObserver;
-    globalThis.MutationObserver = class {
-      constructor(cb: MutationCallback) {
-        moCallback = cb;
-      }
-      observe() {}
-      disconnect() {}
-    } as unknown as typeof MutationObserver;
+    cleanups.track(
+      mockMutationObserver(
+        class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver,
+      ),
+    );
 
-    try {
-      document.body.innerHTML = "<root-shell></root-shell>";
+    document.body.innerHTML = "<root-shell></root-shell>";
 
-      const disconnect = trackDisconnect(
-        lifecycle.start({
+    const disconnect = cleanups.track(
+      lifecycle.start({
         getRoot: () => document.body,
         islandMap,
         onActivate(tagName) {
           tags.push(tagName);
         },
-        }).disconnect,
-      );
+      }).disconnect,
+    );
 
-      const el = document.createElement("dynamic-island");
-      document.body.appendChild(el);
-      moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
+    const el = document.createElement("dynamic-island");
+    document.body.appendChild(el);
+    moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
 
-      disconnect();
-      const later = document.createElement("dynamic-island");
-      document.body.appendChild(later);
-      moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
-    } finally {
-      globalThis.MutationObserver = OriginalMO;
-    }
+    disconnect();
+    const later = document.createElement("dynamic-island");
+    document.body.appendChild(later);
+    moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
   });
 
   it("resolves the root lazily and skips startup callbacks when disconnected before init", () => {
@@ -126,16 +117,16 @@ describe("lifecycle", () => {
     document.removeEventListener = removeSpy as typeof document.removeEventListener;
 
     try {
-      const disconnect = trackDisconnect(
+      const disconnect = cleanups.track(
         lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
         }).disconnect,
       );
 
@@ -151,16 +142,16 @@ describe("lifecycle", () => {
       expect(afterWalk).not.toHaveBeenCalled();
 
       readyState = "interactive";
-      trackDisconnect(
+      cleanups.track(
         lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
         }).disconnect,
       );
 
