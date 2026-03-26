@@ -10,13 +10,15 @@ description: >
   expiry. `./revive` now exports scan(), observe(), unobserve(), and disconnect().
   disconnect() prevents init from ever starting if called early. Startup, DOM walking, mutation observation, and
   parent/child activation gating are now owned by src/lifecycle.ts, while
-  runtime observability and event dispatch are routed through src/runtime-surface.ts.
+  runtime observability and event dispatch are now routed through
+  src/runtime-observability.ts and src/runtime-surface.ts.
   Shopify section and block lifecycle events are bridged into the shared runtime by default.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-observability.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
@@ -146,7 +148,6 @@ Source: src/events.ts
 Wrong:
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/runtime";
 import { disconnect } from "vite-plugin-shopify-theme-islands/island";
 ```
 
