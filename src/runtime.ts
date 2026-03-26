@@ -18,7 +18,7 @@ import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./co
 import { createActivationSession } from "./activation-session.js";
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
-import { connectShopifyLifecycle } from "./shopify-lifecycle.js";
+import { createRootOwnershipCoordinator } from "./runtime-ownership.js";
 
 function isRevivePayload(v: unknown): v is RevivePayload {
   return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
@@ -47,20 +47,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     retries: opts.retry.retries,
     retryDelay: opts.retry.delay,
   });
-  let disconnected = false;
-
-  const collectSubtreeTags = (root: HTMLElement): Set<string> => {
-    const tags = new Set<string>();
-    const collect = (el: Element) => {
-      const tagName = el.tagName.toLowerCase();
-      if (islandMap.has(tagName)) tags.add(tagName);
-    };
-
-    collect(root);
-    for (const el of root.querySelectorAll("*")) collect(el);
-    return tags;
-  };
-
   const session = createActivationSession({
     directives: opts.directives,
     debug: opts.debug,
@@ -76,63 +62,11 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     },
   });
 
-  let endReadyLog: (() => void) | undefined;
-  const disconnectLifecycle = lifecycle.start({
-    getRoot: () => document.body,
+  return createRootOwnershipCoordinator({
     islandMap,
-    onDiscover: (tagName, el) => session.discover(tagName, el),
-    onActivate: (tagName, el, loader) => {
-      void session.activate({ tagName, element: el, loader });
-    },
-    onBeforeInitialWalk: () => {
-      endReadyLog = runtimeSurface.beginReadyLog(islandMap.size, opts.debug);
-    },
-    onInitialWalkComplete: () => {
-      endReadyLog?.();
-      endReadyLog = undefined;
-    },
+    lifecycle,
+    session,
+    surface: runtimeSurface,
+    debug: opts.debug,
   });
-
-  const disconnectRoot = (root: HTMLElement | null = document.body): void => {
-    if (root !== document.body) return;
-    lifecycle.excludeRoot(document.body);
-    disconnected = true;
-    session.clear();
-    endReadyLog?.();
-    endReadyLog = undefined;
-    disconnectLifecycle.disconnect();
-  };
-
-  const runtime: ReviveRuntime = {
-    scan(root = document.body) {
-      if (disconnected || !root) return;
-      lifecycle.walk(root);
-    },
-    observe(root = document.body) {
-      if (disconnected || !root) return;
-      if (root !== document.body) lifecycle.includeRoot(root);
-      lifecycle.walk(root);
-    },
-    unobserve(root = document.body) {
-      if (root && root !== document.body) {
-        session.clear(collectSubtreeTags(root));
-        lifecycle.excludeRoot(root);
-        return;
-      }
-      disconnectRoot(root);
-    },
-    disconnect() {
-      disconnectRoot(document.body);
-    },
-  };
-
-  const disconnectShopifyLifecycle = connectShopifyLifecycle(runtime);
-
-  return {
-    ...runtime,
-    disconnect() {
-      disconnectShopifyLifecycle();
-      runtime.disconnect();
-    },
-  };
 }
