@@ -2,16 +2,15 @@
 name: setup
 description: >
   Getting-started journey and plugin configuration. Covers the full path from
-  install to first working island. shopifyThemeIslands() options: directories
-  (string | string[]), debug, directives deep-merge (visible, idle, media,
-  defer, interaction, custom), retry (retries, delay with exponential
-  backoff), directiveTimeout for hung custom directives, and the curated
-  interaction-event config policy (`mouseenter`, `touchstart`, `focusin`; empty
-  arrays rejected). Per-element `client:interaction` values are runtime-validated
-  against the same curated set: unsupported tokens warn and are ignored; if no
-  supported tokens remain, the runtime falls back to the configured default
-  events. Load when setting up the plugin, configuring island scan directories,
-  or enabling retry / directive timeout.
+  install to first working island. Shopify-first setup: shopifyThemeIslands()
+  options include directories (string | string[]), resolveTag(filePath), debug,
+  directives deep-merge (visible, idle, media, defer, interaction, custom),
+  retry (retries, delay with exponential backoff), directiveTimeout for hung
+  custom directives, and the curated interaction-event config policy
+  (`mouseenter`, `touchstart`, `focusin`; empty arrays rejected). Per-element
+  `client:interaction` values are runtime-validated against the same curated
+  set: unsupported tokens warn and are ignored; if no supported tokens remain,
+  the runtime falls back to the configured default events.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
@@ -25,8 +24,8 @@ sources:
 
 ## Setup
 
-This plugin is framework-agnostic but designed for Shopify themes. Most Shopify
-projects also use
+This plugin is Shopify-first and built for Liquid themes using custom elements.
+Most Shopify projects also use
 [vite-plugin-shopify](https://github.com/barrel/vite-plugin-shopify) to handle
 Shopify-specific asset serving — if the project uses it, add this plugin
 alongside it in the existing `plugins` array.
@@ -54,9 +53,10 @@ import "vite-plugin-shopify-theme-islands/revive";
 
 This activates the runtime — islands are never loaded without this import.
 
-For SPA teardown, the virtual `/revive` module also exports `disconnect()`.
-If it is called before `DOMContentLoaded`, the runtime cancels its pending
-startup listener so islands never initialize later against stale DOM.
+The same `/revive` module also exports `scan()`, `observe()`, `unobserve()`,
+and `disconnect()` for partial swaps and teardown. If `disconnect()` is called
+before `DOMContentLoaded`, the runtime cancels its pending startup listener so
+islands never initialize later against stale DOM.
 
 ### 3. Add directives to Liquid templates
 
@@ -78,6 +78,20 @@ shopifyThemeIslands({
 });
 ```
 
+### Override filename-to-tag mapping
+
+```ts
+shopifyThemeIslands({
+  resolveTag(filePath) {
+    if (filePath.endsWith("/legacy/widget.ts")) return "legacy-widget";
+    if (filePath.endsWith("/skip-me.ts")) return null;
+    return null;
+  },
+});
+```
+
+Use `resolveTag()` when filename-based tag derivation is not sufficient. Returning `null` excludes the file from the island map.
+
 ### Override built-in directive defaults
 
 ```ts
@@ -94,6 +108,7 @@ shopifyThemeIslands({
 Per-directive options are deep-merged — overriding `visible.rootMargin` preserves `visible.threshold` at its default of `0`.
 For config, `directives.interaction.events` is intentionally narrow and only accepts `mouseenter`, `touchstart`, and `focusin`.
 Per-element `client:interaction="..."` values are checked at runtime against that same set. Unsupported tokens warn and are ignored; if all tokens are unsupported, the runtime warns and falls back to the configured default events.
+Per-element `client:idle` and `client:defer` values now require strict integer strings. Invalid values warn and fall back to the configured default timeout or delay.
 
 ### Enable automatic retry with exponential backoff
 

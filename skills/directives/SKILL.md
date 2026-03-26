@@ -6,7 +6,8 @@ description: >
   client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
   Directives resolve sequentially — visible → media → idle → defer →
   interaction → custom. Per-element value overrides. Empty client:media
-  warning. `client:interaction` now validates per-element tokens at runtime:
+  warning. `client:idle` and `client:defer` now require strict integer values
+  and warn+fallback when invalid. `client:interaction` validates per-element tokens at runtime:
   whitespace-only values warn and fall back; mixed supported/unsupported values
   warn and ignore the unsupported tokens; fully unsupported values warn and fall
   back to default events. Global `directives.interaction.events` config is
@@ -82,6 +83,7 @@ Combined directives are AND-latched. The island loads only after every condition
 The attribute value overrides the globally configured default for that element. Other elements are unaffected.
 In config, `directives.interaction.events` is stricter and only accepts the curated package-owned list: `mouseenter`, `touchstart`, and `focusin`.
 At runtime, per-element `client:interaction` values use that same curated set. Unsupported tokens are ignored with a warning; if no supported tokens remain, the runtime warns and falls back to the default interaction events.
+For `client:idle` and `client:defer`, values like `"20ms"` are now invalid and fall back to the configured default timeout or delay.
 
 ### `client:defer` without a value uses the global default
 
@@ -161,6 +163,24 @@ Correct:
 An empty `client:media` value emits a console warning and skips the media check — the island loads immediately. Provide a valid media query string.
 
 Source: src/directive-orchestration.ts — `if (query === "")` branch
+
+### MEDIUM `client:idle` and `client:defer` do not accept suffix junk
+
+Wrong:
+
+```html
+<analytics-widget client:idle="2000ms"></analytics-widget>
+<chat-widget client:defer="3s"></chat-widget>
+```
+
+Correct:
+
+```html
+<analytics-widget client:idle="2000"></analytics-widget>
+<chat-widget client:defer="3000"></chat-widget>
+```
+
+These attributes now require strict integer strings. Invalid values warn and fall back to the configured default timeout or delay.
 
 ### MEDIUM Whitespace-only `client:interaction` value warns and falls back
 

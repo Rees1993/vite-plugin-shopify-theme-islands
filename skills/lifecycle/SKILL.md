@@ -1,17 +1,17 @@
 ---
 name: lifecycle
 description: >
-  Island lifecycle events and SPA teardown. onIslandLoad and onIslandError
+  Island lifecycle events, subtree helpers, and teardown. onIslandLoad and onIslandError
   helpers from vite-plugin-shopify-theme-islands/events — prefer these over
   raw document.addEventListener for guaranteed type safety. Raw DOM events
   islands:load and islands:error on document. islands:load detail includes tag,
   duration (ms), and attempt (1-based). islands:error detail includes tag,
   error, and attempt, including custom directive failures and directiveTimeout
-  expiry. disconnect() from the virtual module revive for SPA navigation
-  teardown, including before DOMContentLoaded — it now prevents init from ever
-  starting if called early. Startup, DOM walking, mutation observation, and
+  expiry. `./revive` now exports scan(), observe(), unobserve(), and disconnect().
+  disconnect() prevents init from ever starting if called early. Startup, DOM walking, mutation observation, and
   parent/child activation gating are now owned by src/lifecycle.ts, while
   runtime observability and event dispatch are routed through src/runtime-surface.ts.
+  Shopify section and block lifecycle events are bridged into the shared runtime by default.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
@@ -82,16 +82,20 @@ onIslandError(({ tag, error, attempt }) => {
 
 `onIslandError` fires on each retry attempt, on custom directive failures, and when `directiveTimeout` expires. `attempt` tells you which attempt failed — 1 is the initial load, 2 is the first retry, etc.
 
-### Teardown for SPA navigation
+### Subtree control and teardown
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
+import { disconnect, observe, scan, unobserve } from "vite-plugin-shopify-theme-islands/revive";
+
+scan(container);
+observe(container);
+unobserve(container);
 
 // Before navigating away / unmounting the page
 disconnect();
 ```
 
-`disconnect()` stops the MutationObserver and prevents new islands from activating. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
+`disconnect()` stops the shared runtime entirely. `unobserve(root)` is the narrower tool: it pauses one subtree and cancels pending built-in waits, retries, and custom directive cleanup inside it. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later.
 
 The startup walk itself is now lifecycle-owned. The runtime resolves the root lazily at init time, then the lifecycle coordinator performs the initial walk, begins observing subtree additions, and keeps child islands gated behind queued parents until the parent resolves.
 
@@ -137,7 +141,7 @@ onIslandLoad(({ tag }) => {
 
 Source: src/events.ts
 
-### CRITICAL `disconnect` imported from wrong entry point
+### CRITICAL lifecycle helpers imported from wrong entry point
 
 Wrong:
 
@@ -149,10 +153,10 @@ import { disconnect } from "vite-plugin-shopify-theme-islands/island";
 Correct:
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
+import { disconnect, scan, observe, unobserve } from "vite-plugin-shopify-theme-islands/revive";
 ```
 
-Only the virtual module (`/revive`) exports the `disconnect` bound to the plugin-managed `revive()` instance. Importing from other entry points references a different or nonexistent instance.
+Only the virtual module (`/revive`) exports the shared helper surface bound to the plugin-managed runtime instance.
 
 Source: src/revive-module.ts — buildReviveModuleSource() emits `export const { disconnect } = _islands(payload)`
 

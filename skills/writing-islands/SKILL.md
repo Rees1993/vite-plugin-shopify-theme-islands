@@ -5,8 +5,8 @@ description: >
   configured directories auto-discovered by tag name = filename) and Island
   mixin (import Island from vite-plugin-shopify-theme-islands/island to mark
   files anywhere in the project). Mixin islands added or removed during dev
-  trigger an automatic reload. Covers customElements.define, the Island
-  base class, and child island cascade behaviour now owned by
+  trigger an automatic revive-module restart. Covers customElements.define, the Island
+  base class, resolveTag overrides, and child island cascade behaviour now owned by
   src/lifecycle.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
@@ -62,7 +62,7 @@ if (!customElements.get("cart-drawer")) {
 }
 ```
 
-The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island file triggers an automatic reload — no Vite restart needed.
+The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island file triggers an automatic runtime refresh — no Vite restart needed.
 
 ## Core Patterns
 
@@ -100,6 +100,19 @@ export default defineConfig({
 ```
 
 The plugin resolves Vite aliases in `directories` during `configResolved`.
+
+### Override tag mapping when filename convention is not enough
+
+```ts
+shopifyThemeIslands({
+  resolveTag(filePath) {
+    if (filePath.endsWith("/frontend/js/legacy/widget.ts")) return "legacy-widget";
+    return null;
+  },
+});
+```
+
+Use `resolveTag()` to override the default filename-to-tag mapping or exclude a file entirely by returning `null`.
 
 ## Common Mistakes
 
