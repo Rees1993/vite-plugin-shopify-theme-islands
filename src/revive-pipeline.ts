@@ -33,6 +33,12 @@ export interface RevivePipeline {
 
 export function createRevivePipeline(options: RevivePipelineOptions): RevivePipeline {
   const inventory = createIslandInventory(options.rawDirectories);
+  const compiler = createReviveBootstrapCompiler(
+    {
+      toLoadPaths: getIslandPathsForLoad,
+    },
+    options.runtimePath,
+  );
 
   return {
     configure(config) {
@@ -52,20 +58,12 @@ export function createRevivePipeline(options: RevivePipelineOptions): RevivePipe
     },
 
     async compile(resolveEntrypoint) {
-      const compiler = createReviveBootstrapCompiler(
-        {
-          resolveEntrypoint,
-          toLoadPaths: getIslandPathsForLoad,
-        },
-        options.runtimePath,
-      );
-
       const plan = await compiler.plan({
         ...inventory.getBootstrapState(),
         resolveTag: options.resolveTag,
         customDirectives: options.customDirectives,
         reviveOptions: options.reviveOptions,
-      });
+      }, { resolveEntrypoint });
 
       return compiler.emit(plan);
     },

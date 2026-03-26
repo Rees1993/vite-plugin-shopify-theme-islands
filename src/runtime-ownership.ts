@@ -1,4 +1,3 @@
-import type { ActivationSession, ActivationCandidate } from "./activation-session.js";
 import type { IslandLoader } from "./contract.js";
 import type { IslandLifecycle } from "./lifecycle.js";
 import type { RuntimeObservability } from "./runtime-observability.js";
@@ -11,10 +10,22 @@ interface RuntimeOwnershipRuntime {
   unobserve(root?: HTMLElement | null): void;
 }
 
+interface OwnershipActivationCandidate {
+  tagName: string;
+  element: HTMLElement;
+  loader: IslandLoader;
+}
+
+interface OwnershipSession {
+  discover(tagName: string, element: HTMLElement): void;
+  activate(candidate: OwnershipActivationCandidate): Promise<void>;
+  clear(tagNames?: Iterable<string>): void;
+}
+
 export interface RootOwnershipCoordinatorDeps {
   islandMap: Map<string, IslandLoader>;
   lifecycle: Pick<IslandLifecycle, "start" | "includeRoot" | "excludeRoot" | "walk">;
-  session: Pick<ActivationSession, "discover" | "activate" | "clear">;
+  session: OwnershipSession;
   surface: Pick<RuntimeObservability, "beginReadyLog">;
   connectShopify?: (runtime: ShopifyLifecycleRuntime) => () => void;
 }
@@ -46,7 +57,7 @@ export function createRootOwnershipCoordinator(
         tagName,
         element,
         loader,
-      } satisfies ActivationCandidate);
+      } satisfies OwnershipActivationCandidate);
     },
     onBeforeInitialWalk: () => {
       endReadyLog = deps.surface.beginReadyLog(deps.islandMap.size);

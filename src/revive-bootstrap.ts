@@ -26,12 +26,18 @@ export interface ReviveBootstrapPlan {
 }
 
 export interface ReviveBootstrapCompilerPorts {
-  resolveEntrypoint(entrypoint: string): Promise<string>;
   toLoadPaths(islandFiles: Set<string>, root: string): string[];
 }
 
+export interface ReviveBootstrapResolvePorts {
+  resolveEntrypoint(entrypoint: string): Promise<string>;
+}
+
 export interface ReviveBootstrapCompiler {
-  plan(input: ReviveBootstrapInputs): Promise<ReviveBootstrapPlan>;
+  plan(
+    input: ReviveBootstrapInputs,
+    ports?: ReviveBootstrapResolvePorts,
+  ): Promise<ReviveBootstrapPlan>;
   emit(plan: ReviveBootstrapPlan): string;
 }
 
@@ -40,7 +46,7 @@ export function createReviveBootstrapCompiler(
   runtimePath: string,
 ): ReviveBootstrapCompiler {
   return {
-    async plan(input) {
+    async plan(input, resolvePorts) {
       const islandPaths =
         input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
       const resolvedTags = input.resolveTag
@@ -51,12 +57,19 @@ export function createReviveBootstrapCompiler(
           )
         : null;
       const customDirectives = input.customDirectives?.length
-        ? await Promise.all(
-            input.customDirectives.map(async ({ name, entrypoint }) => ({
-              name,
-              entrypoint: await ports.resolveEntrypoint(entrypoint),
-            })),
-          )
+        ? await (() => {
+            if (!resolvePorts) {
+              throw new Error(
+                "[vite-plugin-shopify-theme-islands] resolveEntrypoint is required when custom directives are configured",
+              );
+            }
+            return Promise.all(
+              input.customDirectives.map(async ({ name, entrypoint }) => ({
+                name,
+                entrypoint: await resolvePorts.resolveEntrypoint(entrypoint),
+              })),
+            );
+          })()
         : null;
       const directoryGlobs = input.directories.map((dir) => dir + "**/*.{ts,js}");
       return {

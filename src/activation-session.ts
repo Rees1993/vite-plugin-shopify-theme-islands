@@ -83,9 +83,10 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
 
   const clear = (tagNames?: Iterable<string>): void => {
     if (tagNames) {
-      for (const tagName of tagNames) {
-        clearRetryTimer(tagName);
-        deps.observability.clear([tagName]);
+      const tags = [...tagNames];
+      clearRetryTimers(tags);
+      deps.observability.clear(tags);
+      for (const tagName of tags) {
         deps.ownership.evict(tagName);
       }
       return;

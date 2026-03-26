@@ -6,28 +6,30 @@ describe("revive-bootstrap", () => {
   it("plans a semantic bootstrap artifact from resolved plugin state", async () => {
     const compiler = createReviveBootstrapCompiler(
       {
-        resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}`,
         toLoadPaths: getIslandPathsForLoad,
       },
       "/runtime.js",
     );
 
-    const plan = await compiler.plan({
-      root: "/project",
-      directories: ["/islands/", "/components/"],
-      directoryFiles: new Set(["/project/islands/productForm.ts"]),
-      islandFiles: new Set(["/project/src/widget.ts", "/project/src/other.js"]),
-      resolveTag: (filePath) => (filePath.endsWith("productForm.ts") ? "product-form" : null),
-      customDirectives: [
-        { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
-        { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
-      ],
-      reviveOptions: {
-        debug: true,
-        retry: { retries: 2, delay: 500 },
-        directiveTimeout: 100,
+    const plan = await compiler.plan(
+      {
+        root: "/project",
+        directories: ["/islands/", "/components/"],
+        directoryFiles: new Set(["/project/islands/productForm.ts"]),
+        islandFiles: new Set(["/project/src/widget.ts", "/project/src/other.js"]),
+        resolveTag: (filePath) => (filePath.endsWith("productForm.ts") ? "product-form" : null),
+        customDirectives: [
+          { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
+          { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
+        ],
+        reviveOptions: {
+          debug: true,
+          retry: { retries: 2, delay: 500 },
+          directiveTimeout: 100,
+        },
       },
-    });
+      { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
+    );
 
     expect(plan).toMatchObject({
       runtimePath: "/runtime.js",
@@ -66,19 +68,23 @@ describe("revive-bootstrap", () => {
   it("renders the bootstrap source from a semantic plan", async () => {
     const compiler = createReviveBootstrapCompiler(
       {
-        resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}`,
         toLoadPaths: getIslandPathsForLoad,
       },
       "/runtime.js",
     );
-    const plan = await compiler.plan({
-      root: "/project",
-      directories: ["/islands/"],
-      directoryFiles: new Set<string>(),
-      islandFiles: new Set(["/project/src/widget.ts"]),
-      customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
-      reviveOptions: { debug: false },
-    });
+    const plan = await compiler.plan(
+      {
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set<string>(),
+        islandFiles: new Set(["/project/src/widget.ts"]),
+        customDirectives: [
+          { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
+        ],
+        reviveOptions: { debug: false },
+      },
+      { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
+    );
 
     const source = compiler.emit(plan);
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
