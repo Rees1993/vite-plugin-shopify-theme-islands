@@ -1,32 +1,32 @@
 /// <reference lib="dom" />
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import {
-  createCleanupQueue,
-  createRuntimeHarness,
+  createRuntimeSuite,
   flush,
   installMutationDriver,
   installTimerDriver,
   installVisibilityDriver,
 } from "./harness";
 
-let cleanups = createCleanupQueue();
-let runtimeHarness = createRuntimeHarness(cleanups);
+const suite = createRuntimeSuite();
+let cleanups = suite.cleanups;
+let runtimeHarness = suite.runtime;
 
 describe("runtime lifecycle", () => {
   beforeEach(() => {
-    cleanups = createCleanupQueue();
-    runtimeHarness = createRuntimeHarness(cleanups);
-    document.body.innerHTML = "";
+    suite.reset();
+    cleanups = suite.cleanups;
+    runtimeHarness = suite.runtime;
   });
 
   afterEach(() => {
-    cleanups.cleanup({ resetDom: true });
+    suite.cleanup();
   });
 
   describe("MutationObserver", () => {
     it("activates islands added to the DOM after init", async () => {
       const loader = mock(async () => {});
-      runtimeHarness.start(runtimeHarness.payload({ "/islands/late-arrival.ts": loader }));
+      suite.runtime.start(suite.runtime.payload({ "/islands/late-arrival.ts": loader }));
 
       const el = document.createElement("late-arrival");
       document.body.appendChild(el);
@@ -35,8 +35,8 @@ describe("runtime lifecycle", () => {
     });
 
     it("cancels a pending-visible island and activates a newly added island in the same tick", async () => {
-      const mutations = installMutationDriver(cleanups);
-      installVisibilityDriver(cleanups);
+      const mutations = installMutationDriver(suite.cleanups);
+      installVisibilityDriver(suite.cleanups);
 
       const pendingLoader = mock(async () => {});
       const newLoader = mock(async () => {});
@@ -46,8 +46,8 @@ describe("runtime lifecycle", () => {
       document.body.appendChild(pendingEl);
       const newEl = document.createElement("new-conc");
 
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/pending-conc.ts": pendingLoader,
           "/islands/new-conc.ts": newLoader,
         }),
@@ -78,8 +78,8 @@ describe("runtime lifecycle", () => {
         </parent-widget>
       `;
 
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/parent-widget.ts": parentLoader,
           "/islands/child-widget.ts": childLoader,
         }),
@@ -106,8 +106,8 @@ describe("runtime lifecycle", () => {
         </parent-cascade>
       `;
 
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/parent-cascade.ts": parentLoader,
           "/islands/child-cascade.ts": childLoader,
         }),

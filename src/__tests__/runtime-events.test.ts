@@ -2,10 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { onIslandError, onIslandLoad } from "../events";
 import type { ClientDirective } from "../index";
-import { createCleanupQueue, createRuntimeHarness, flush, installTimerDriver } from "./harness";
+import { createRuntimeSuite, flush, installMutationDriver, installTimerDriver } from "./harness";
 
-let cleanups = createCleanupQueue();
-let runtimeHarness = createRuntimeHarness(cleanups);
+const suite = createRuntimeSuite();
 
 async function advanceRetryDelay(timers: ReturnType<typeof installTimerDriver>, ms: number) {
   await flush(0);
@@ -15,18 +14,16 @@ async function advanceRetryDelay(timers: ReturnType<typeof installTimerDriver>, 
 
 describe("runtime events and retries", () => {
   beforeEach(() => {
-    cleanups = createCleanupQueue();
-    runtimeHarness = createRuntimeHarness(cleanups);
-    document.body.innerHTML = "";
+    suite.reset();
   });
 
   afterEach(() => {
-    cleanups.cleanup({ resetDom: true });
+    suite.cleanup();
   });
 
   describe("retries", () => {
     it("retries specified number of times before succeeding", async () => {
-      const timers = installTimerDriver(cleanups);
+      const timers = installTimerDriver(suite.cleanups);
       const errorSpy = spyOn(console, "error").mockImplementation(() => {});
       let callCount = 0;
       const loader = mock(async () => {
@@ -35,8 +32,8 @@ describe("runtime events and retries", () => {
       });
 
       document.body.innerHTML = "<retry-success></retry-success>";
-      runtimeHarness.start(
-        runtimeHarness.payload(
+      suite.runtime.start(
+        suite.runtime.payload(
           { "/islands/retry-success.ts": loader },
           { retry: { retries: 2, delay: 10 } },
         ),
@@ -50,15 +47,16 @@ describe("runtime events and retries", () => {
     });
 
     it("exhausting retries clears queued allowing manual re-insertion", async () => {
-      const timers = installTimerDriver(cleanups);
+      const mutations = installMutationDriver(suite.cleanups);
+      const timers = installTimerDriver(suite.cleanups);
       const errorSpy = spyOn(console, "error").mockImplementation(() => {});
       const loader = mock(async () => {
         throw new Error("always fails");
       });
 
       document.body.innerHTML = "<retry-exhaust></retry-exhaust>";
-      runtimeHarness.start(
-        runtimeHarness.payload(
+      suite.runtime.start(
+        suite.runtime.payload(
           { "/islands/retry-exhaust.ts": loader },
           { retry: { retries: 1, delay: 10 } },
         ),
@@ -67,7 +65,9 @@ describe("runtime events and retries", () => {
       await advanceRetryDelay(timers, 10);
       expect(loader).toHaveBeenCalledTimes(2);
 
-      document.body.appendChild(document.createElement("retry-exhaust"));
+      const reinserted = document.createElement("retry-exhaust");
+      document.body.appendChild(reinserted);
+      mutations.add(reinserted);
       await flush(0);
       await advanceRetryDelay(timers, 10);
       expect(loader).toHaveBeenCalledTimes(4);
@@ -76,15 +76,15 @@ describe("runtime events and retries", () => {
     });
 
     it("islands:error fires on each retry attempt", async () => {
-      const timers = installTimerDriver(cleanups);
+      const timers = installTimerDriver(suite.cleanups);
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const handler = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:error", handler as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:error", handler);
 
       const loader = mock(() => Promise.reject(new Error("fail")));
       document.body.innerHTML = "<retry-ev></retry-ev>";
-      runtimeHarness.start(
-        runtimeHarness.payload(
+      suite.runtime.start(
+        suite.runtime.payload(
           { "/islands/retry-ev.ts": loader },
           { retry: { retries: 2, delay: 10 } },
         ),
@@ -102,10 +102,10 @@ describe("runtime events and retries", () => {
     });
 
     it("islands:load detail.attempt is 2 when first attempt fails and retry succeeds", async () => {
-      const timers = installTimerDriver(cleanups);
+      const timers = installTimerDriver(suite.cleanups);
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const loadHandler = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:load", loadHandler as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:load", loadHandler);
 
       let callCount = 0;
       const loader = mock(async () => {
@@ -114,8 +114,8 @@ describe("runtime events and retries", () => {
       });
 
       document.body.innerHTML = "<retry-attempt-load></retry-attempt-load>";
-      runtimeHarness.start(
-        runtimeHarness.payload(
+      suite.runtime.start(
+        suite.runtime.payload(
           { "/islands/retry-attempt-load.ts": loader },
           { retry: { retries: 1, delay: 10 } },
         ),
@@ -139,7 +139,7 @@ describe("runtime events and retries", () => {
       });
 
       document.body.innerHTML = "<no-retry-default></no-retry-default>";
-      runtimeHarness.start(runtimeHarness.payload({ "/islands/no-retry-default.ts": loader }));
+      suite.runtime.start(suite.runtime.payload({ "/islands/no-retry-default.ts": loader }));
       await flush();
 
       expect(loader).toHaveBeenCalledTimes(1);
@@ -150,10 +150,10 @@ describe("runtime events and retries", () => {
   describe("DOM events", () => {
     it("islands:load fires after the module resolves", async () => {
       const handler = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:load", handler as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:load", handler);
 
       document.body.innerHTML = "<load-ev></load-ev>";
-      runtimeHarness.start(runtimeHarness.payload({ "/islands/load-ev.ts": mock(async () => {}) }));
+      suite.runtime.start(suite.runtime.payload({ "/islands/load-ev.ts": mock(async () => {}) }));
       await flush();
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -166,12 +166,12 @@ describe("runtime events and retries", () => {
     it("islands:error fires on loader failure alongside console.error", async () => {
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const handler = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:error", handler as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:error", handler);
       const err = new Error("load failed");
 
       document.body.innerHTML = "<error-ev></error-ev>";
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/error-ev.ts": mock(async () => {
             throw err;
           }),
@@ -192,7 +192,7 @@ describe("runtime events and retries", () => {
     it("islands:error fires on custom directive failure", async () => {
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const handler = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:error", handler as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:error", handler);
       const err = new Error("directive failed");
 
       document.body.innerHTML = "<dir-err-ev client:on-click></dir-err-ev>";
@@ -205,8 +205,8 @@ describe("runtime events and retries", () => {
         ],
       ]);
 
-      runtimeHarness.start(
-        runtimeHarness.payload(
+      suite.runtime.start(
+        suite.runtime.payload(
           { "/islands/dir-err-ev.ts": mock(async () => {}) },
           {},
           customDirectives,
@@ -226,12 +226,12 @@ describe("runtime events and retries", () => {
     it("multiple independent listeners each receive the event", async () => {
       const handlerA = mock((event: CustomEvent) => event);
       const handlerB = mock((event: CustomEvent) => event);
-      cleanups.listen(document, "islands:load", handlerA as unknown as EventListener);
-      cleanups.listen(document, "islands:load", handlerB as unknown as EventListener);
+      suite.cleanups.listenCustomEvent(document, "islands:load", handlerA);
+      suite.cleanups.listenCustomEvent(document, "islands:load", handlerB);
 
       document.body.innerHTML = "<multi-listener></multi-listener>";
-      runtimeHarness.start(
-        runtimeHarness.payload({ "/islands/multi-listener.ts": mock(async () => {}) }),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/multi-listener.ts": mock(async () => {}) }),
       );
 
       await flush();
@@ -243,11 +243,11 @@ describe("runtime events and retries", () => {
   describe("onIslandLoad / onIslandError helpers", () => {
     it("onIslandLoad receives detail directly and returns a cleanup function", async () => {
       const handler = mock((_detail: { tag: string; duration: number; attempt: number }) => {});
-      cleanups.track(onIslandLoad(handler));
+      suite.cleanups.track(onIslandLoad(handler));
 
       document.body.innerHTML = "<helper-load></helper-load>";
-      runtimeHarness.start(
-        runtimeHarness.payload({ "/islands/helper-load.ts": mock(async () => {}) }),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/helper-load.ts": mock(async () => {}) }),
       );
       await flush();
 
@@ -258,12 +258,12 @@ describe("runtime events and retries", () => {
 
     it("onIslandLoad cleanup removes the listener", async () => {
       const handler = mock(() => {});
-      const off = cleanups.track(onIslandLoad(handler));
+      const off = suite.cleanups.track(onIslandLoad(handler));
       off();
 
       document.body.innerHTML = "<helper-off></helper-off>";
-      runtimeHarness.start(
-        runtimeHarness.payload({ "/islands/helper-off.ts": mock(async () => {}) }),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/helper-off.ts": mock(async () => {}) }),
       );
       await flush();
 
@@ -274,11 +274,11 @@ describe("runtime events and retries", () => {
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const handler = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
       const err = new Error("helper error");
-      cleanups.track(onIslandError(handler));
+      suite.cleanups.track(onIslandError(handler));
 
       document.body.innerHTML = "<helper-err></helper-err>";
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/helper-err.ts": mock(async () => {
             throw err;
           }),
@@ -298,12 +298,12 @@ describe("runtime events and retries", () => {
     it("onIslandError cleanup removes the listener", async () => {
       const consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const handler = mock(() => {});
-      const off = cleanups.track(onIslandError(handler));
+      const off = suite.cleanups.track(onIslandError(handler));
       off();
 
       document.body.innerHTML = "<helper-err-off></helper-err-off>";
-      runtimeHarness.start(
-        runtimeHarness.payload({
+      suite.runtime.start(
+        suite.runtime.payload({
           "/islands/helper-err-off.ts": mock(async () => {
             throw new Error("should not reach handler");
           }),

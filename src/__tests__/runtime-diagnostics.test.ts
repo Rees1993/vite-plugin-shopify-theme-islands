@@ -1,28 +1,27 @@
 /// <reference lib="dom" />
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import type { ClientDirective } from "../index";
-import { createCleanupQueue, createRuntimeHarness, flush } from "./harness";
+import { createRuntimeSuite, flush } from "./harness";
 
-let cleanups = createCleanupQueue();
-let runtimeHarness = createRuntimeHarness(cleanups);
+const suite = createRuntimeSuite();
+let runtimeHarness = suite.runtime;
 
 describe("runtime diagnostics", () => {
   beforeEach(() => {
-    cleanups = createCleanupQueue();
-    runtimeHarness = createRuntimeHarness(cleanups);
-    document.body.innerHTML = "";
+    suite.reset();
+    runtimeHarness = suite.runtime;
   });
 
   afterEach(() => {
-    cleanups.cleanup({ resetDom: true });
+    suite.cleanup();
   });
 
   describe("debug logging", () => {
     it("does not call console.groupCollapsed when debug is false", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       document.body.innerHTML = "<no-debug-island></no-debug-island>";
-      runtimeHarness.start(
-        runtimeHarness.payload({ "/islands/no-debug-island.ts": mock(async () => {}) }),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/no-debug-island.ts": mock(async () => {}) }),
       );
       expect(groupCollapsed).not.toHaveBeenCalled();
       groupCollapsed.mockRestore();
@@ -32,8 +31,8 @@ describe("runtime diagnostics", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<dbg-init></dbg-init>";
-      runtimeHarness.start(
-        runtimeHarness.payload({ "/islands/dbg-init.ts": mock(async () => {}) }, { debug: true }),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/dbg-init.ts": mock(async () => {}) }, { debug: true }),
       );
       expect(groupCollapsed).toHaveBeenCalledWith("[islands] ready — 1 island(s)");
       expect(groupEnd).toHaveBeenCalled();
@@ -46,11 +45,8 @@ describe("runtime diagnostics", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = '<dbg-waiting client:defer="500"></dbg-waiting>';
-      runtimeHarness.start(
-        runtimeHarness.payload(
-          { "/islands/dbg-waiting.ts": mock(async () => {}) },
-          { debug: true },
-        ),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/dbg-waiting.ts": mock(async () => {}) }, { debug: true }),
       );
       const waitingCalls = logSpy.mock.calls.filter((args) =>
         String(args[1]).includes("waiting ·"),
@@ -67,11 +63,8 @@ describe("runtime diagnostics", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = "<dbg-instant></dbg-instant>";
-      runtimeHarness.start(
-        runtimeHarness.payload(
-          { "/islands/dbg-instant.ts": mock(async () => {}) },
-          { debug: true },
-        ),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/dbg-instant.ts": mock(async () => {}) }, { debug: true }),
       );
       const waitingCalls = logSpy.mock.calls.filter((args) =>
         String(args[1]).includes("waiting ·"),
@@ -86,11 +79,8 @@ describe("runtime diagnostics", () => {
       const logSpy = spyOn(console, "log").mockImplementation(() => {});
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
-      runtimeHarness.start(
-        runtimeHarness.payload(
-          { "/islands/dbg-dynamic.ts": mock(async () => {}) },
-          { debug: true },
-        ),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/dbg-dynamic.ts": mock(async () => {}) }, { debug: true }),
       );
       logSpy.mockClear();
       const el = document.createElement("dbg-dynamic");
@@ -110,11 +100,8 @@ describe("runtime diagnostics", () => {
       const groupCollapsed = spyOn(console, "groupCollapsed").mockImplementation(() => {});
       const groupEnd = spyOn(console, "groupEnd").mockImplementation(() => {});
       document.body.innerHTML = '<dbg-outcome client:defer="20"></dbg-outcome>';
-      runtimeHarness.start(
-        runtimeHarness.payload(
-          { "/islands/dbg-outcome.ts": mock(async () => {}) },
-          { debug: true },
-        ),
+      suite.runtime.start(
+        suite.runtime.payload({ "/islands/dbg-outcome.ts": mock(async () => {}) }, { debug: true }),
       );
       await flush();
       const triggered = groupCollapsed.mock.calls.find((args) =>

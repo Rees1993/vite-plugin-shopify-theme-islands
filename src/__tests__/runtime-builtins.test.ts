@@ -2,8 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import type { ReviveOptions } from "../contract";
 import {
-  createCleanupQueue,
-  createRuntimeHarness,
+  createRuntimeSuite,
   flush,
   installIdleDriver,
   installMediaDriver,
@@ -13,34 +12,35 @@ import {
   mockRequestIdleCallback,
 } from "./harness";
 
-let cleanups = createCleanupQueue();
-let runtimeHarness = createRuntimeHarness(cleanups);
+const suite = createRuntimeSuite();
+let cleanups = suite.cleanups;
+let runtimeHarness = suite.runtime;
 
 const IDLE_DEADLINE: IdleDeadline = { timeRemaining: () => 0, didTimeout: false };
 
 function payload(islands: Record<string, () => Promise<unknown>>, options?: ReviveOptions) {
-  return runtimeHarness.payload(islands, options);
+  return suite.runtime.payload(islands, options);
 }
 
 describe("runtime built-in directives", () => {
   beforeEach(() => {
-    cleanups = createCleanupQueue();
-    runtimeHarness = createRuntimeHarness(cleanups);
-    document.body.innerHTML = "";
+    suite.reset();
+    cleanups = suite.cleanups;
+    runtimeHarness = suite.runtime;
   });
 
   afterEach(() => {
-    cleanups.cleanup({ resetDom: true });
+    suite.cleanup();
   });
 
   describe("client:idle", () => {
     it("calls loader after idle via setTimeout fallback when requestIdleCallback is absent", async () => {
-      const timers = installTimerDriver(cleanups);
-      cleanups.track(mockRequestIdleCallback());
+      const timers = installTimerDriver(suite.cleanups);
+      suite.cleanups.track(mockRequestIdleCallback());
       const loader = mock(async () => {});
 
       document.body.innerHTML = "<idle-widget client:idle></idle-widget>";
-      runtimeHarness.start(
+      suite.runtime.start(
         payload({ "/islands/idle-widget.ts": loader }, { directives: { idle: { timeout: 20 } } }),
       );
 
@@ -54,11 +54,11 @@ describe("runtime built-in directives", () => {
     });
 
     it("calls loader via requestIdleCallback when available", async () => {
-      const idle = installIdleDriver(cleanups);
+      const idle = installIdleDriver(suite.cleanups);
       const loader = mock(async () => {});
 
       document.body.innerHTML = "<idle-box client:idle></idle-box>";
-      runtimeHarness.start(payload({ "/islands/idle-box.ts": loader }));
+      suite.runtime.start(payload({ "/islands/idle-box.ts": loader }));
 
       expect(loader).not.toHaveBeenCalled();
       idle.flush(IDLE_DEADLINE);
@@ -67,26 +67,26 @@ describe("runtime built-in directives", () => {
     });
 
     it("passes timeout option to requestIdleCallback", () => {
-      const idle = installIdleDriver(cleanups);
+      const idle = installIdleDriver(suite.cleanups);
 
       document.body.innerHTML = "<idle-opts client:idle></idle-opts>";
-      runtimeHarness.start(
+      suite.runtime.start(
         payload(
           { "/islands/idle-opts.ts": mock(async () => {}) },
           { directives: { idle: { timeout: 300 } } },
         ),
       );
 
-      expect(idle.lastOptions()).toEqual({ timeout: 300 });
+      expect(idle.lastOptions).toEqual({ timeout: 300 });
     });
 
     it("attribute value overrides global timeout per element", async () => {
-      const timers = installTimerDriver(cleanups);
-      cleanups.track(mockRequestIdleCallback());
+      const timers = installTimerDriver(suite.cleanups);
+      suite.cleanups.track(mockRequestIdleCallback());
       const loader = mock(async () => {});
 
       document.body.innerHTML = '<idle-per-el client:idle="20"></idle-per-el>';
-      runtimeHarness.start(
+      suite.runtime.start(
         payload({ "/islands/idle-per-el.ts": loader }, { directives: { idle: { timeout: 5000 } } }),
       );
 
@@ -100,12 +100,12 @@ describe("runtime built-in directives", () => {
     });
 
     it("empty attribute value falls back to global timeout", async () => {
-      const timers = installTimerDriver(cleanups);
-      cleanups.track(mockRequestIdleCallback());
+      const timers = installTimerDriver(suite.cleanups);
+      suite.cleanups.track(mockRequestIdleCallback());
       const loader = mock(async () => {});
 
       document.body.innerHTML = "<idle-per-el-default client:idle></idle-per-el-default>";
-      runtimeHarness.start(
+      suite.runtime.start(
         payload(
           { "/islands/idle-per-el-default.ts": loader },
           { directives: { idle: { timeout: 20 } } },
@@ -122,13 +122,13 @@ describe("runtime built-in directives", () => {
     });
 
     it("falls back to configured timeout and warns when the attribute value is not a strict integer", async () => {
-      const timers = installTimerDriver(cleanups);
-      cleanups.track(mockRequestIdleCallback());
+      const timers = installTimerDriver(suite.cleanups);
+      suite.cleanups.track(mockRequestIdleCallback());
       const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
       const loader = mock(async () => {});
 
       document.body.innerHTML = '<idle-invalid client:idle="20ms"></idle-invalid>';
-      runtimeHarness.start(
+      suite.runtime.start(
         payload(
           { "/islands/idle-invalid.ts": loader },
           { directives: { idle: { timeout: 5000 } } },
