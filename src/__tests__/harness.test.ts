@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import {
   createCleanupQueue,
   createRuntimeHarness,
+  createRuntimeSuite,
   installIdleDriver,
   installMediaDriver,
   installMutationDriver,
@@ -27,6 +28,19 @@ describe("test harness", () => {
 
     cleanups.cleanup({ resetDom: true });
     document.dispatchEvent(new CustomEvent("islands:test"));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes tracked custom event listeners during cleanup", () => {
+    const handler = mock((event: CustomEvent<{ tag: string }>) => event.detail.tag);
+    cleanups.listenCustomEvent<{ tag: string }>(document, "islands:load", handler);
+
+    document.dispatchEvent(new CustomEvent("islands:load", { detail: { tag: "alpha" } }));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    cleanups.cleanup({ resetDom: true });
+    document.dispatchEvent(new CustomEvent("islands:load", { detail: { tag: "beta" } }));
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -94,7 +108,7 @@ describe("test harness", () => {
     );
 
     expect(called).toBe(0);
-    expect(idle.lastOptions()).toEqual({ timeout: 25 });
+    expect(idle.lastOptions).toEqual({ timeout: 25 });
     idle.flush();
     expect(called).toBe(1);
   });
@@ -108,7 +122,7 @@ describe("test harness", () => {
     });
 
     expect(called).toBe(0);
-    expect(idle.lastOptions()).toBeUndefined();
+    expect(idle.lastOptions).toBeUndefined();
     idle.flush();
     expect(called).toBe(1);
   });
@@ -185,5 +199,20 @@ describe("test harness", () => {
 
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback.mock.calls[0]?.[0][0]?.addedNodes[0]).toBe(node);
+  });
+
+  it("resets runtime suite state without repeating per-file boilerplate", async () => {
+    const suite = createRuntimeSuite();
+    suite.reset();
+
+    const loader = mock(async () => {});
+    document.body.innerHTML = "<suite-island></suite-island>";
+    suite.runtime.start(suite.runtime.payload({ "/islands/suite-island.ts": loader }));
+
+    await flush();
+    expect(loader).toHaveBeenCalledTimes(1);
+
+    suite.cleanup();
+    expect(document.body.innerHTML).toBe("");
   });
 });

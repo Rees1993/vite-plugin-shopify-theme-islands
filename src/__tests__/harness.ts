@@ -14,6 +14,12 @@ export interface CleanupQueue {
     listener: EventListenerOrEventListenerObject,
     options?: AddEventListenerOptions | boolean,
   ): EventListenerOrEventListenerObject;
+  listenCustomEvent<T>(
+    target: EventTarget,
+    type: string,
+    listener: (event: CustomEvent<T>) => void,
+    options?: AddEventListenerOptions | boolean,
+  ): (event: CustomEvent<T>) => void;
   cleanup(options?: { resetDom?: boolean }): void;
 }
 
@@ -39,6 +45,18 @@ export function createCleanupQueue(): CleanupQueue {
     ): EventListenerOrEventListenerObject {
       target.addEventListener(type, listener, options);
       cleanups.push(() => target.removeEventListener(type, listener, options));
+      return listener;
+    },
+
+    listenCustomEvent<T>(
+      target: EventTarget,
+      type: string,
+      listener: (event: CustomEvent<T>) => void,
+      options?: AddEventListenerOptions | boolean,
+    ): (event: CustomEvent<T>) => void {
+      const wrapped: EventListener = (event) => listener(event as CustomEvent<T>);
+      target.addEventListener(type, wrapped, options);
+      cleanups.push(() => target.removeEventListener(type, wrapped, options));
       return listener;
     },
 
@@ -73,11 +91,40 @@ export function createRuntimeHarness(cleanups: CleanupQueue) {
   };
 }
 
+export interface RuntimeSuite {
+  get cleanups(): CleanupQueue;
+  get runtime(): ReturnType<typeof createRuntimeHarness>;
+  reset(): void;
+  cleanup(): void;
+}
+
+export function createRuntimeSuite(): RuntimeSuite {
+  let cleanups = createCleanupQueue();
+  let runtime = createRuntimeHarness(cleanups);
+
+  return {
+    get cleanups(): CleanupQueue {
+      return cleanups;
+    },
+    get runtime(): ReturnType<typeof createRuntimeHarness> {
+      return runtime;
+    },
+    reset(): void {
+      cleanups = createCleanupQueue();
+      runtime = createRuntimeHarness(cleanups);
+      document.body.innerHTML = "";
+    },
+    cleanup(): void {
+      cleanups.cleanup({ resetDom: true });
+    },
+  };
+}
+
 export const flush = (ms = 20) => new Promise<void>((resolve) => REAL_SET_TIMEOUT(resolve, ms));
 
 export interface IdleDriver {
   flush(deadline?: IdleDeadline): void;
-  lastOptions(): IdleRequestOptions | undefined;
+  get lastOptions(): IdleRequestOptions | undefined;
   pendingCount(): number;
 }
 
@@ -98,7 +145,7 @@ export function installIdleDriver(cleanups: CleanupQueue): IdleDriver {
         callbacks.shift()?.(deadline);
       }
     },
-    lastOptions(): IdleRequestOptions | undefined {
+    get lastOptions(): IdleRequestOptions | undefined {
       return options;
     },
     pendingCount(): number {
@@ -213,19 +260,21 @@ export function installMutationDriver(cleanups: CleanupQueue): MutationDriver {
     ),
   );
 
-  return {
-    trigger(records: MutationRecord[]): void {
-      for (const callback of callbacks) {
-        callback(records, {} as MutationObserver);
-      }
-    },
-    add(node: Node): void {
-      this.trigger([{ addedNodes: [node], removedNodes: [] } as unknown as MutationRecord]);
-    },
-    remove(node: Node): void {
-      this.trigger([{ addedNodes: [], removedNodes: [node] } as unknown as MutationRecord]);
-    },
+  const trigger = (records: MutationRecord[]): void => {
+    for (const callback of callbacks) {
+      callback(records, {} as MutationObserver);
+    }
   };
+
+  const add = (node: Node): void => {
+    trigger([{ addedNodes: [node], removedNodes: [] } as unknown as MutationRecord]);
+  };
+
+  const remove = (node: Node): void => {
+    trigger([{ addedNodes: [], removedNodes: [node] } as unknown as MutationRecord]);
+  };
+
+  return { trigger, add, remove };
 }
 
 export interface TimerDriver {
