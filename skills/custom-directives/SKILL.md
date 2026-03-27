@@ -7,13 +7,15 @@ description: >
   the island activates. Error handling — thrown errors, rejected promises, and
   directiveTimeout expiry fire islands:error. Custom directives run after all
   built-in conditions resolve. Matched directives now receive teardown-aware
-  cleanup via ctx.signal and ctx.onCleanup(). Current matching, cleanup,
-  AND-latch, and timeout policy are owned by src/directive-orchestration.ts.
+  cleanup via ctx.signal and ctx.onCleanup(). Matching is resolved by
+  src/directive-spine.ts; cleanup, AND-latch, and timeout policy are owned by
+  src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
@@ -41,6 +43,7 @@ export default hashDirective;
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
@@ -105,7 +108,7 @@ const timedDirective: ClientDirective = (load, options, _el, ctx) => {
 ```ts
 const networkDirective: ClientDirective = async (load, _opts, _el, ctx) => {
   if (ctx.signal.aborted) return;
-  await fetch("/api/check-feature");
+  await fetch("/api/check-feature", { signal: ctx.signal });
   await load();
 };
 ```
@@ -166,7 +169,7 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 
 No immediate error is thrown by default, so the island is silently never loaded unless you configure `directiveTimeout`.
 
-Source: src/directive-orchestration.ts — matched custom directives own the `run()` call path
+Source: src/directive-spine.ts and src/directive-orchestration.ts — matched custom directives own the `run()` call path
 
 ### HIGH Directive creates side effects without cleanup
 

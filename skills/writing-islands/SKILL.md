@@ -7,13 +7,16 @@ description: >
   files anywhere in the project). Mixin islands added or removed during dev
   trigger an automatic revive-module restart. Covers customElements.define, the Island
   base class, resolveTag overrides, and child island cascade behaviour now owned by
-  src/lifecycle.ts.
+  src/lifecycle.ts. File-path-to-tag resolution and revive bootstrap planning
+  are now coordinated through src/revive-pipeline.ts and src/revive-bootstrap.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-bootstrap.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -105,14 +108,14 @@ The plugin resolves Vite aliases in `directories` during `configResolved`.
 
 ```ts
 shopifyThemeIslands({
-  resolveTag(filePath) {
+  resolveTag({ filePath, defaultTag }) {
     if (filePath.endsWith("/frontend/js/legacy/widget.ts")) return "legacy-widget";
-    return null;
+    return defaultTag;
   },
 });
 ```
 
-Use `resolveTag()` to override the default filename-to-tag mapping or exclude a file entirely by returning `null`.
+Use `resolveTag()` to override the default filename-to-tag mapping or exclude a file entirely by returning `false`. Returning `defaultTag` keeps the default derived tag.
 
 ## Common Mistakes
 

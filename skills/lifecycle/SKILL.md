@@ -10,17 +10,20 @@ description: >
   expiry. `./revive` now exports scan(), observe(), unobserve(), and disconnect().
   disconnect() prevents init from ever starting if called early. Startup, DOM walking, mutation observation, and
   parent/child activation gating are now owned by src/lifecycle.ts, while
-  runtime observability and event dispatch are now routed through
-  src/runtime-observability.ts and src/runtime-surface.ts.
-  Shopify section and block lifecycle events are bridged into the shared runtime by default.
+  subtree/runtime helper coordination is owned by src/runtime-ownership.ts.
+  Runtime observability and event dispatch are routed through
+  src/runtime-observability.ts and src/runtime-surface.ts. Shopify section and
+  block lifecycle events are bridged into the shared runtime by default.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-ownership.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-observability.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/shopify-lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
@@ -106,15 +109,15 @@ Load/error events and debug-ready groups are dispatched through the runtime surf
 ### Raw DOM events (when type augmentation is in scope)
 
 ```ts
-// DocumentEventMap augmentation is exported from the main package
-import type {} from "vite-plugin-shopify-theme-islands";
+// app/types/vite-plugin-shopify-theme-islands.d.ts
+import "vite-plugin-shopify-theme-islands";
 
 document.addEventListener("islands:load", (e) => {
   console.log(e.detail.tag, e.detail.duration, e.detail.attempt);
 });
 ```
 
-The `DocumentEventMap` augmentation is declared in `contract.ts` and re-exported via the main package entry. It is only in scope when the import is present in the same tsconfig compilation.
+The `DocumentEventMap` augmentation is declared in `contract.ts` and re-exported via the main package entry. Your app-side tsconfig has to include that import for the event typing to be available.
 
 ## Common Mistakes
 

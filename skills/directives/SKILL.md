@@ -12,12 +12,14 @@ description: >
   warn and ignore the unsupported tokens; fully unsupported values warn and fall
   back to default events. Global `directives.interaction.events` config is
   intentionally narrowed to the curated set `mouseenter`, `touchstart`, and
-  `focusin`. Current directive sequencing and custom-directive latching are
-  owned by src/directive-orchestration.ts.
+  `focusin`. Gate parsing and description are owned by src/directive-spine.ts;
+  wait ordering and custom-directive latching are owned by
+  src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "1.3.2"
 sources:
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
@@ -109,7 +111,7 @@ An empty `client:defer` attribute is NOT zero — it falls back to the configure
 
 An empty `client:interaction` attribute uses the configured default events with no warning. A whitespace-only value such as `client:interaction="   "` emits a warning and still falls back to the default events.
 
-Source: src/directive-orchestration.ts — interaction token parsing and fallback warning
+Source: src/directive-spine.ts and src/directive-orchestration.ts — interaction token parsing and fallback warning
 
 ### Mixed supported and unsupported interaction tokens
 
@@ -162,7 +164,7 @@ Correct:
 
 An empty `client:media` value emits a console warning and skips the media check — the island loads immediately. Provide a valid media query string.
 
-Source: src/directive-orchestration.ts — `if (query === "")` branch
+Source: src/directive-spine.ts and src/directive-orchestration.ts — empty media gate handling
 
 ### MEDIUM `client:idle` and `client:defer` do not accept suffix junk
 
@@ -202,7 +204,7 @@ Correct:
 
 Whitespace-only values are not treated the same as an empty attribute. The runtime warns and falls back to the configured default events.
 
-Source: src/directive-orchestration.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
+Source: src/directive-spine.ts — interaction gate parsing and whitespace fallback
 
 ### MEDIUM Unsupported per-element interaction tokens are warned and ignored
 
@@ -221,7 +223,7 @@ Correct:
 
 The runtime no longer attaches arbitrary listeners for unsupported per-element tokens. Supported tokens still work; unsupported ones are ignored with a warning. If no supported tokens remain, the runtime falls back to the configured default events.
 
-Source: src/directive-orchestration.ts — `partitionInteractionEventTokens()` handling
+Source: src/directive-spine.ts and src/directive-orchestration.ts — supported/unsupported interaction token handling
 
 ### HIGH Multiple directives are AND, not OR
 

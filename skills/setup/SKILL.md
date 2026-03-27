@@ -3,10 +3,11 @@ name: setup
 description: >
   Getting-started journey and plugin configuration. Covers the full path from
   install to first working island. Shopify-first setup: shopifyThemeIslands()
-  options include directories (string | string[]), resolveTag(filePath), debug,
-  directives deep-merge (visible, idle, media, defer, interaction, custom),
-  retry (retries, delay with exponential backoff), directiveTimeout for hung
-  custom directives, and the curated interaction-event config policy
+  options include directories (string | string[]),
+  resolveTag({ filePath, defaultTag }), debug, directives deep-merge
+  (visible, idle, media, defer, interaction, custom), retry (retries, delay
+  with exponential backoff), directiveTimeout for hung custom directives, and
+  the curated interaction-event config policy
   (`mouseenter`, `touchstart`, `focusin`; empty arrays rejected). Per-element
   `client:interaction` values are runtime-validated against the same curated
   set: unsupported tokens warn and are ignored; if no supported tokens remain,
@@ -19,6 +20,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 
@@ -57,6 +59,8 @@ The same `/revive` module also exports `scan()`, `observe()`, `unobserve()`,
 and `disconnect()` for partial swaps and teardown. If `disconnect()` is called
 before `DOMContentLoaded`, the runtime cancels its pending startup listener so
 islands never initialize later against stale DOM.
+`/revive` is a shared page-level singleton, so later named imports reuse the
+same runtime instance instead of creating a second one.
 
 ### 3. Add directives to Liquid templates
 
@@ -82,15 +86,17 @@ shopifyThemeIslands({
 
 ```ts
 shopifyThemeIslands({
-  resolveTag(filePath) {
+  resolveTag({ filePath, defaultTag }) {
     if (filePath.endsWith("/legacy/widget.ts")) return "legacy-widget";
-    if (filePath.endsWith("/skip-me.ts")) return null;
-    return null;
+    if (filePath.endsWith("/skip-me.ts")) return false;
+    return defaultTag;
   },
 });
 ```
 
-Use `resolveTag()` when filename-based tag derivation is not sufficient. Returning `null` excludes the file from the island map.
+Use `resolveTag()` when filename-based tag derivation is not sufficient.
+Returning `false` excludes the file from the island map. Returning
+`defaultTag` keeps the default derived tag.
 
 ### Override built-in directive defaults
 
