@@ -66,7 +66,7 @@ export function connectShopifyLifecycle(
 ): () => void {
   const removers = SHOPIFY_LIFECYCLE_ACTIONS.map(([type, action]) => {
     const listener = (event: Event): void => {
-      const root = ports.resolveRoot?.(event) ?? resolveLifecycleRoot(event);
+      const root = ports.resolveRoot ? ports.resolveRoot(event) : resolveLifecycleRoot(event);
       if (!root) return;
       runtime[action](root);
     };

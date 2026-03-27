@@ -209,6 +209,27 @@ describe("connectShopifyLifecycle", () => {
     expect(runtime.scan).not.toHaveBeenCalled();
   });
 
+  it("does not fall back to the built-in resolver when an injected resolver returns null", () => {
+    const runtime = {
+      scan: mock(() => {}),
+      observe: mock(() => {}),
+      unobserve: mock(() => {}),
+    };
+    cleanups.track(connectShopifyLifecycle(runtime, { resolveRoot: () => null }));
+
+    const section = document.createElement("section");
+    section.id = "shopify-section-main";
+    document.body.appendChild(section);
+
+    document.dispatchEvent(
+      new CustomEvent("shopify:section:load", {
+        detail: { sectionId: "main" },
+      }),
+    );
+
+    expect(runtime.observe).not.toHaveBeenCalled();
+  });
+
   it("removes Shopify event listeners on disconnect", () => {
     const runtime = {
       scan: mock(() => {}),
