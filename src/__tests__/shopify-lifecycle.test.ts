@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { connectShopifyLifecycle } from "../shopify-lifecycle";
+import { connectShopifyLifecycle, resolveLifecycleRoot } from "../shopify-lifecycle";
 import { createCleanupQueue } from "./harness";
 
 describe("connectShopifyLifecycle", () => {
@@ -13,13 +13,73 @@ describe("connectShopifyLifecycle", () => {
     cleanups.cleanup({ resetDom: true });
   });
 
+  it("resolves section roots by id and closest fallback", () => {
+    const section = document.createElement("section");
+    section.id = "shopify-section-main";
+    const child = document.createElement("button");
+    section.appendChild(child);
+    document.body.appendChild(section);
+
+    expect(
+      resolveLifecycleRoot(
+        new CustomEvent("shopify:section:load", {
+          bubbles: true,
+          detail: { sectionId: "main" },
+        }),
+      ),
+    ).toBe(section);
+    expect(
+      resolveLifecycleRoot(
+        new CustomEvent("shopify:section:load", {
+          bubbles: true,
+          detail: {},
+        }),
+      ),
+    ).toBeNull();
+
+    const fallback = new CustomEvent("shopify:section:load", {
+      bubbles: true,
+      detail: {},
+    });
+    Object.defineProperty(fallback, "target", { value: child });
+    expect(resolveLifecycleRoot(fallback)).toBe(section);
+  });
+
+  it("resolves block roots by id and closest fallback", () => {
+    const block = document.createElement("div");
+    block.id = "shopify-block-main";
+    const child = document.createElement("button");
+    block.appendChild(child);
+    document.body.appendChild(block);
+
+    expect(
+      resolveLifecycleRoot(
+        new CustomEvent("shopify:block:select", {
+          bubbles: true,
+          detail: { blockId: "main" },
+        }),
+      ),
+    ).toBe(block);
+
+    const fallback = new CustomEvent("shopify:block:select", {
+      bubbles: true,
+      detail: {},
+    });
+    Object.defineProperty(fallback, "target", { value: child });
+    expect(resolveLifecycleRoot(fallback)).toBe(block);
+  });
+
   it("observes and unobserves section roots for Shopify section load and unload events", () => {
     const runtime = {
       scan: mock(() => {}),
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
+    cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-section-main"),
+      }),
+    );
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -47,19 +107,16 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
-    const section = document.createElement("section");
-    section.id = "shopify-section-main";
-    const child = document.createElement("button");
-    section.appendChild(child);
-    document.body.appendChild(section);
-
-    child.dispatchEvent(
-      new CustomEvent("shopify:section:load", {
-        bubbles: true,
-        detail: { sectionId: "main" },
+    cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-section-main"),
       }),
     );
+    const section = document.createElement("section");
+    section.id = "shopify-section-main";
+    document.body.appendChild(section);
+
+    document.dispatchEvent(new Event("shopify:section:load", { bubbles: true }));
 
     expect(runtime.observe).toHaveBeenCalledTimes(1);
     expect(runtime.observe).toHaveBeenCalledWith(section);
@@ -71,7 +128,11 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
+    cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-section-main"),
+      }),
+    );
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
@@ -81,7 +142,7 @@ describe("connectShopifyLifecycle", () => {
       "shopify:section:select",
       "shopify:section:deselect",
     ]) {
-      document.dispatchEvent(new CustomEvent(type, { detail: { sectionId: "main" } }));
+      document.dispatchEvent(new Event(type));
     }
 
     expect(runtime.scan).toHaveBeenCalledTimes(3);
@@ -94,13 +155,17 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
+    cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-block-main"),
+      }),
+    );
     const block = document.createElement("div");
     block.id = "shopify-block-main";
     document.body.appendChild(block);
 
     for (const type of ["shopify:block:select", "shopify:block:deselect"]) {
-      block.dispatchEvent(new CustomEvent(type, { bubbles: true, detail: { blockId: "main" } }));
+      document.dispatchEvent(new Event(type));
     }
 
     expect(runtime.scan).toHaveBeenCalledTimes(2);
@@ -113,19 +178,16 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
-    const block = document.createElement("div");
-    block.id = "shopify-block-main";
-    const child = document.createElement("button");
-    block.appendChild(child);
-    document.body.appendChild(block);
-
-    child.dispatchEvent(
-      new CustomEvent("shopify:block:select", {
-        bubbles: true,
-        detail: { blockId: "main" },
+    cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-block-main"),
       }),
     );
+    const block = document.createElement("div");
+    block.id = "shopify-block-main";
+    document.body.appendChild(block);
+
+    document.dispatchEvent(new Event("shopify:block:select"));
 
     expect(runtime.scan).toHaveBeenCalledTimes(1);
     expect(runtime.scan).toHaveBeenCalledWith(block);
@@ -137,14 +199,12 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    cleanups.track(connectShopifyLifecycle(runtime));
+    cleanups.track(connectShopifyLifecycle(runtime, { resolveRoot: () => null }));
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
 
-    document.dispatchEvent(
-      new CustomEvent("shopify:block:select", { detail: { sectionId: "main" } }),
-    );
+    document.dispatchEvent(new Event("shopify:block:select"));
 
     expect(runtime.scan).not.toHaveBeenCalled();
   });
@@ -155,18 +215,17 @@ describe("connectShopifyLifecycle", () => {
       observe: mock(() => {}),
       unobserve: mock(() => {}),
     };
-    const disconnect = cleanups.track(connectShopifyLifecycle(runtime));
+    const disconnect = cleanups.track(
+      connectShopifyLifecycle(runtime, {
+        resolveRoot: () => document.getElementById("shopify-section-main"),
+      }),
+    );
     const section = document.createElement("section");
     section.id = "shopify-section-main";
     document.body.appendChild(section);
 
     disconnect();
-    section.dispatchEvent(
-      new CustomEvent("shopify:section:load", {
-        bubbles: true,
-        detail: { sectionId: "main" },
-      }),
-    );
+    document.dispatchEvent(new Event("shopify:section:load"));
 
     expect(runtime.observe).not.toHaveBeenCalled();
   });

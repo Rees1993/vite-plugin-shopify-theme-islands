@@ -4,6 +4,10 @@ export interface ShopifyLifecycleRuntime {
   unobserve(root?: HTMLElement | null): void;
 }
 
+export interface ShopifyLifecyclePorts {
+  resolveRoot(event: Event): HTMLElement | null;
+}
+
 type ShopifyLifecycleAction = "scan" | "observe" | "unobserve";
 
 const SHOPIFY_LIFECYCLE_ACTIONS: ReadonlyArray<[type: string, action: ShopifyLifecycleAction]> = [
@@ -28,7 +32,7 @@ function findClosestLifecycleRoot(
   return root instanceof HTMLElement ? root : null;
 }
 
-function resolveLifecycleRoot(event: Event): HTMLElement | null {
+export function resolveLifecycleRoot(event: Event): HTMLElement | null {
   if (!(event instanceof CustomEvent)) return null;
   const detail = event.detail;
   if (!detail || typeof detail !== "object") return null;
@@ -56,10 +60,13 @@ function resolveLifecycleRoot(event: Event): HTMLElement | null {
   return null;
 }
 
-export function connectShopifyLifecycle(runtime: ShopifyLifecycleRuntime): () => void {
+export function connectShopifyLifecycle(
+  runtime: ShopifyLifecycleRuntime,
+  ports: Partial<ShopifyLifecyclePorts> = {},
+): () => void {
   const removers = SHOPIFY_LIFECYCLE_ACTIONS.map(([type, action]) => {
     const listener = (event: Event): void => {
-      const root = resolveLifecycleRoot(event);
+      const root = ports.resolveRoot?.(event) ?? resolveLifecycleRoot(event);
       if (!root) return;
       runtime[action](root);
     };
