@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { DEFAULT_DIRECTIVES } from "../contract";
+import { DEFAULT_DIRECTIVE_SPINE } from "../directive-spine";
 import { createRuntimeObservability } from "../runtime-observability";
 
 describe("runtime-observability", () => {
@@ -12,9 +12,8 @@ describe("runtime-observability", () => {
     document.body.append(alpha, beta);
 
     const observability = createRuntimeObservability({
-      directives: DEFAULT_DIRECTIVES,
+      spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
-      customDirectives: undefined,
       isObserved: () => true,
       surface: {
         createLogger: mock(() => ({ note() {}, flush() {} })),
@@ -47,9 +46,8 @@ describe("runtime-observability", () => {
     element.setAttribute("client:defer", "200");
 
     const observability = createRuntimeObservability({
-      directives: DEFAULT_DIRECTIVES,
+      spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
-      customDirectives: undefined,
       isObserved: () => true,
       surface: {
         createLogger: mock(() => ({ note() {}, flush() {} })),

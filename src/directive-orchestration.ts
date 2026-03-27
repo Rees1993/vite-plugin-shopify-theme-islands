@@ -1,13 +1,8 @@
 import type {
-  ClientDirective,
   ClientDirectiveContext,
-  NormalizedReviveOptions,
 } from "./contract.js";
-import {
-  INTERACTION_EVENT_NAMES_LABEL,
-  partitionInteractionEventTokens,
-} from "./interaction-events.js";
-import { getBuiltInLoadGateState } from "./load-gates.js";
+import { INTERACTION_EVENT_NAMES_LABEL } from "./interaction-events.js";
+import type { DirectiveSpine, GateResult } from "./directive-spine.js";
 import type { RuntimeLogger } from "./runtime-surface.js";
 
 export interface DirectiveWaiters {
@@ -26,8 +21,7 @@ export interface DirectiveWaiters {
 export interface DirectiveRunContext {
   tagName: string;
   element: HTMLElement;
-  directives: NormalizedReviveOptions["directives"];
-  customDirectives?: Map<string, ClientDirective>;
+  spine: DirectiveSpine;
   directiveTimeout: number;
   watchCancellable: (el: Element, cancel: () => void) => () => void;
   log: RuntimeLogger;
@@ -166,79 +160,68 @@ export function createDirectiveOrchestrator(
   },
 ): DirectiveOrchestrator {
   async function runBuiltIns(ctx: DirectiveRunContext): Promise<void> {
-    const { tagName, element: el, directives, log, watchCancellable } = ctx;
+    const { tagName, element: el, log, watchCancellable } = ctx;
     const controller = new AbortController();
     const unwatch = watchCancellable(el, () => controller.abort());
-    const builtIns = getBuiltInLoadGateState(el, directives);
+    const gates = ctx.spine.readGates(el);
 
     try {
-      const visibleAttr = directives.visible.attribute;
-      if (builtIns.visible !== null) {
-        log.note(`waiting for ${visibleAttr}`);
-        await waiters.waitVisible(
-          el,
-          builtIns.visible,
-          directives.visible.threshold,
-          controller.signal,
-        );
-      }
-
-      const query = el.getAttribute(directives.media.attribute);
-      if (query === "") {
-        console.warn(
-          `[islands] <${tagName}> ${directives.media.attribute} has no value — media check skipped, island will load immediately`,
-        );
-      } else if (builtIns.media) {
-        log.note(`waiting for ${directives.media.attribute}="${builtIns.media}"`);
-        await waiters.waitMedia(builtIns.media, controller.signal);
-      }
-
-      if (builtIns.idle !== null) {
-        if (builtIns.idleInvalid) {
-          console.warn(
-            `[islands] <${tagName}> invalid ${directives.idle.attribute} value "${el.getAttribute(directives.idle.attribute)}" — using default ${directives.idle.timeout}ms`,
-          );
-        }
-        log.note(`waiting for ${directives.idle.attribute} (${builtIns.idle}ms)`);
-        await waiters.waitIdle(builtIns.idle, controller.signal);
-      }
-
-      if (builtIns.defer !== null) {
-        if (builtIns.deferInvalid) {
-          console.warn(
-            `[islands] <${tagName}> invalid ${directives.defer.attribute} value "${el.getAttribute(directives.defer.attribute)}" — using default ${directives.defer.delay}ms`,
-          );
-        }
-        log.note(`waiting for ${directives.defer.attribute} (${builtIns.defer}ms)`);
-        await waiters.waitDelay(builtIns.defer, controller.signal);
-      }
-
-      const interactionAttr = el.getAttribute(directives.interaction.attribute);
-      if (builtIns.interaction !== null) {
-        let events: string[] = builtIns.interaction;
-        if (interactionAttr) {
-          const tokens = interactionAttr.split(/\s+/).filter(Boolean);
-          if (tokens.length === 0) {
-            console.warn(
-              `[islands] <${tagName}> ${directives.interaction.attribute} has no valid event tokens — using default events`,
-            );
-          } else {
-            const { valid, invalid } = partitionInteractionEventTokens(tokens);
-            if (invalid.length > 0) {
-              if (valid.length > 0) {
+      for (const gate of gates) {
+        switch (gate.kind) {
+          case "visible":
+            log.note(`waiting for ${gate.attribute}`);
+            await waiters.waitVisible(el, gate.rootMargin, gate.threshold, controller.signal);
+            break;
+          case "media":
+            if (gate.query === null) {
+              console.warn(
+                `[islands] <${tagName}> ${gate.attribute} has no value — media check skipped, island will load immediately`,
+              );
+              break;
+            }
+            log.note(`waiting for ${gate.attribute}="${gate.query}"`);
+            await waiters.waitMedia(gate.query, controller.signal);
+            break;
+          case "idle":
+            if (gate.invalid) {
+              console.warn(
+                `[islands] <${tagName}> invalid ${gate.attribute} value "${gate.rawValue}" — using default ${gate.timeout}ms`,
+              );
+            }
+            log.note(`waiting for ${gate.attribute} (${gate.timeout}ms)`);
+            await waiters.waitIdle(gate.timeout, controller.signal);
+            break;
+          case "defer":
+            if (gate.invalid) {
+              console.warn(
+                `[islands] <${tagName}> invalid ${gate.attribute} value "${gate.rawValue}" — using default ${gate.delay}ms`,
+              );
+            }
+            log.note(`waiting for ${gate.attribute} (${gate.delay}ms)`);
+            await waiters.waitDelay(gate.delay, controller.signal);
+            break;
+          case "interaction":
+            if (gate.emptyTokens) {
+              console.warn(
+                `[islands] <${tagName}> ${gate.attribute} has no valid event tokens — using default events`,
+              );
+            } else if (gate.invalidTokens.length > 0) {
+              if (!gate.usedDefaultEvents) {
                 console.warn(
-                  `[islands] <${tagName}> ${directives.interaction.attribute} contains unsupported event token${invalid.length === 1 ? "" : "s"} (${invalid.join(", ")}) — ignoring invalid token${invalid.length === 1 ? "" : "s"}; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
+                  `[islands] <${tagName}> ${gate.attribute} contains unsupported event token${gate.invalidTokens.length === 1 ? "" : "s"} (${gate.invalidTokens.join(", ")}) — ignoring invalid token${gate.invalidTokens.length === 1 ? "" : "s"}; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
                 );
               } else {
                 console.warn(
-                  `[islands] <${tagName}> ${directives.interaction.attribute} contains no supported event tokens (${invalid.join(", ")}) — using default events; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
+                  `[islands] <${tagName}> ${gate.attribute} contains no supported event tokens (${gate.invalidTokens.join(", ")}) — using default events; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`,
                 );
               }
             }
-          }
+            log.note(`waiting for ${gate.attribute} (${gate.events.join(", ")})`);
+            await waiters.waitInteraction(el, gate.events, controller.signal);
+            break;
+          case "custom":
+            break;
         }
-        log.note(`waiting for ${directives.interaction.attribute} (${events.join(", ")})`);
-        await waiters.waitInteraction(el, events, controller.signal);
       }
     } finally {
       unwatch();
@@ -246,13 +229,10 @@ export function createDirectiveOrchestrator(
   }
 
   function runCustomDirectives(ctx: DirectiveRunContext): boolean {
-    const matched: [string, ClientDirective, string][] = [];
-    if (ctx.customDirectives) {
-      for (const [attrName, directiveFn] of ctx.customDirectives) {
-        const value = ctx.element.getAttribute(attrName);
-        if (value !== null) matched.push([attrName, directiveFn, value] as const);
-      }
-    }
+    const matched = ctx.spine
+      .readGates(ctx.element)
+      .filter((gate): gate is Extract<GateResult, { kind: "custom" }> => gate.kind === "custom")
+      .map((gate) => [gate.attribute, gate.directive, gate.value] as const);
 
     if (matched.length === 0) return false;
 

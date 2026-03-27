@@ -1,10 +1,9 @@
 import type {
-  ClientDirective,
   IslandErrorDetail,
   IslandLoadDetail,
   IslandLoader,
-  NormalizedReviveOptions,
 } from "./contract.js";
+import type { DirectiveSpine } from "./directive-spine.js";
 import {
   createDirectiveOrchestrator,
   DirectiveCancelledError,
@@ -36,9 +35,8 @@ export interface ActivationPlatform {
 }
 
 export interface ActivationSessionDeps {
-  directives: NormalizedReviveOptions["directives"];
+  spine: DirectiveSpine;
   directiveTimeout: number;
-  customDirectives?: Map<string, ClientDirective>;
   orchestrator?: DirectiveOrchestrator;
   ownership: ActivationOwnership;
   observability: Pick<
@@ -145,8 +143,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
       const delegatedToCustomDirectives = await orchestrator.run({
         tagName,
         element,
-        directives: deps.directives,
-        customDirectives: deps.customDirectives,
+        spine: deps.spine,
         directiveTimeout: deps.directiveTimeout,
         watchCancellable: deps.ownership.watchCancellable,
         log,

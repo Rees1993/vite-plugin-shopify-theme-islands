@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
-import { DEFAULT_DIRECTIVES, type IslandLoader } from "../contract";
+import type { IslandLoader } from "../contract";
 import { createActivationSession, type ActivationCandidate } from "../activation-session";
+import { DEFAULT_DIRECTIVE_SPINE } from "../directive-spine";
 
 describe("activation-session", () => {
   it("activates an island and dispatches load through one boundary", async () => {
@@ -15,7 +16,7 @@ describe("activation-session", () => {
     candidateEl.appendChild(document.createElement("x-child"));
 
     const session = createActivationSession({
-      directives: DEFAULT_DIRECTIVES,
+      spine: DEFAULT_DIRECTIVE_SPINE,
       directiveTimeout: 0,
       orchestrator: {
         run: runBuiltIns,
@@ -74,7 +75,7 @@ describe("activation-session", () => {
     const dispatchError = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
 
     const session = createActivationSession({
-      directives: DEFAULT_DIRECTIVES,
+      spine: DEFAULT_DIRECTIVE_SPINE,
       directiveTimeout: 0,
       orchestrator: {
         run: mock(async () => false),

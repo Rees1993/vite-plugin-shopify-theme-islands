@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import { DEFAULT_DIRECTIVES } from "../contract";
+import { createDirectiveSpine, extendDirectiveSpine } from "../directive-spine";
 import { createDirectiveOrchestrator } from "../directive-orchestration";
 
 const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -37,7 +38,7 @@ describe("directive-orchestration", () => {
     const matched = await orchestrator.run({
       tagName: "x-orchestrated",
       element,
-      directives: DEFAULT_DIRECTIVES,
+      spine: createDirectiveSpine(DEFAULT_DIRECTIVES),
       directiveTimeout: 0,
       watchCancellable: mock(() => () => {}),
       log: SILENT_LOGGER,
@@ -78,8 +79,7 @@ describe("directive-orchestration", () => {
     const matched = await orchestrator.run({
       tagName: "x-and-latch",
       element,
-      directives: DEFAULT_DIRECTIVES,
-      customDirectives,
+      spine: extendDirectiveSpine(createDirectiveSpine(DEFAULT_DIRECTIVES), customDirectives),
       directiveTimeout: 0,
       watchCancellable: mock(() => () => {}),
       log: SILENT_LOGGER,
@@ -118,8 +118,7 @@ describe("directive-orchestration", () => {
     const matched = await orchestrator.run({
       tagName: "x-timeout",
       element,
-      directives: DEFAULT_DIRECTIVES,
-      customDirectives,
+      spine: extendDirectiveSpine(createDirectiveSpine(DEFAULT_DIRECTIVES), customDirectives),
       directiveTimeout: 1,
       watchCancellable: mock(() => () => {}),
       log: SILENT_LOGGER,

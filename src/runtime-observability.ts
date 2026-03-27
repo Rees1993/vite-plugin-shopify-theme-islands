@@ -1,10 +1,8 @@
 import type {
-  ClientDirective,
   IslandErrorDetail,
   IslandLoadDetail,
-  NormalizedReviveOptions,
 } from "./contract.js";
-import { describeEffectiveLoadGate } from "./load-gates.js";
+import type { DirectiveSpine, GateResult } from "./directive-spine.js";
 import type { RuntimeLogger, RuntimeSurface } from "./runtime-surface.js";
 
 export interface RuntimeObservability {
@@ -18,9 +16,8 @@ export interface RuntimeObservability {
 }
 
 export interface RuntimeObservabilityDeps {
-  directives: NormalizedReviveOptions["directives"];
+  spine: DirectiveSpine;
   debug: boolean;
-  customDirectives?: Map<string, ClientDirective>;
   isObserved(element: Element): boolean;
   surface: Pick<
     RuntimeSurface,
@@ -46,6 +43,21 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
     warnedLoadGateSignatures.clear();
   };
 
+  const describeInitialGate = (gate: GateResult): string | null => {
+    switch (gate.kind) {
+      case "visible":
+        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+      case "media":
+        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : null;
+      case "idle":
+      case "defer":
+      case "interaction":
+        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+      case "custom":
+        return gate.value ? `${gate.attribute}="${gate.value}"` : gate.attribute;
+    }
+  };
+
   return {
     beginReadyLog(islandCount) {
       return deps.surface.beginReadyLog(islandCount, deps.debug);
@@ -58,37 +70,10 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
     noteInitialWaits(tagName, element, initialWalkComplete) {
       if (!deps.debug || initialWalkComplete) return;
 
-      const parts: string[] = [];
-      const pushAttr = (attr: string, value: string | null) => {
-        if (value !== null) parts.push(value ? `${attr}="${value}"` : attr);
-      };
-
-      pushAttr(
-        deps.directives.visible.attribute,
-        element.getAttribute(deps.directives.visible.attribute),
-      );
-
-      const mediaValue = element.getAttribute(deps.directives.media.attribute);
-      if (mediaValue) parts.push(`${deps.directives.media.attribute}="${mediaValue}"`);
-
-      pushAttr(
-        deps.directives.idle.attribute,
-        element.getAttribute(deps.directives.idle.attribute),
-      );
-      pushAttr(
-        deps.directives.defer.attribute,
-        element.getAttribute(deps.directives.defer.attribute),
-      );
-      pushAttr(
-        deps.directives.interaction.attribute,
-        element.getAttribute(deps.directives.interaction.attribute),
-      );
-
-      if (deps.customDirectives?.size) {
-        for (const attrName of deps.customDirectives.keys()) {
-          if (element.hasAttribute(attrName)) parts.push(attrName);
-        }
-      }
+      const parts = deps.spine
+        .readGates(element)
+        .map(describeInitialGate)
+        .filter((part): part is string => part !== null);
 
       if (parts.length > 0)
         deps.console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
@@ -107,7 +92,7 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
           elements.delete(candidate);
           continue;
         }
-        gates.add(describeEffectiveLoadGate(candidate, deps.directives, deps.customDirectives));
+        gates.add(deps.spine.describe(candidate));
       }
 
       if (elements.size === 0) {
