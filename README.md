@@ -15,6 +15,49 @@ pnpm add -D vite-plugin-shopify-theme-islands
 yarn add -D vite-plugin-shopify-theme-islands
 ```
 
+## Quick start
+
+Minimal end-to-end setup:
+
+1. Add the plugin in `vite.config.ts`
+2. Import `vite-plugin-shopify-theme-islands/revive` in your client entrypoint
+3. Create a web component file whose filename matches the tag name
+4. Use that tag in Liquid, with a directive if you want lazy loading
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
+
+export default defineConfig({
+  plugins: [shopifyThemeIslands()],
+});
+```
+
+```ts
+// frontend/entrypoints/theme.ts
+import "vite-plugin-shopify-theme-islands/revive";
+```
+
+```ts
+// frontend/js/islands/product-form.ts
+class ProductForm extends HTMLElement {
+  connectedCallback() {
+    // ...
+  }
+}
+
+if (!customElements.get("product-form")) {
+  customElements.define("product-form", ProductForm);
+}
+```
+
+```liquid
+<product-form client:visible></product-form>
+```
+
+That is enough to get a lazily loaded island working.
+
 ## Setup
 
 ### 1. Add the plugin to `vite.config.ts`
@@ -324,6 +367,7 @@ Use `ctx.signal` with APIs that accept `AbortSignal`; otherwise register explici
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
@@ -390,7 +434,7 @@ This is useful during development to surface directives that hang due to bugs, o
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
-| `resolveTag`       | `({ filePath, defaultTag }) => string \| null \| undefined` | —          | Override file-path-to-tag mapping. Return `null` to exclude a file and `undefined` to keep the default derived tag. |
+| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override file-path-to-tag mapping. Return `defaultTag` to keep the default derived tag or `false` to exclude a file. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
 | `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
@@ -469,15 +513,15 @@ By default, the plugin derives the tag name from the filename. Use `resolveTag()
 Important:
 
 - `resolveTag()` is authoritative for the files it handles
-- returning `null` excludes that file from the island map
-- if you want to keep default filename-based behavior for other files, return the derived tag explicitly rather than `null`
+- returning `false` excludes that file from the island map
+- if you want to keep default filename-based behavior for other files, return `defaultTag`
 
 ```ts
 shopifyThemeIslands({
   resolveTag({ filePath, defaultTag }) {
     if (filePath.endsWith("productForm.ts")) return "product-form";
-    if (filePath.endsWith("legacy-widget.ts")) return null;
-    return undefined;
+    if (filePath.endsWith("legacy-widget.ts")) return false;
+    return defaultTag;
   },
 });
 ```
@@ -488,8 +532,7 @@ That means:
 - `legacy-widget.ts` is skipped entirely
 - everything else falls back to its filename-derived tag
 
-If you want to keep the default derived tag for most files, return `undefined`.
-If you want to keep the same tag explicitly, return `defaultTag`.
+If you want to keep the default derived tag for most files, return `defaultTag`.
 
 ## Retries
 
@@ -535,7 +578,16 @@ The same module also exports `scan()`, `observe()`, and `unobserve()` for subtre
 
 ### Raw DOM events
 
-The events are also available via the standard `document.addEventListener` API. Event types are fully typed via `DocumentEventMap` augmentation — available automatically when `vite-plugin-shopify-theme-islands` is present in your TypeScript compilation (e.g. via `vite.config.ts` or a directive type import).
+The events are also available via the standard `document.addEventListener` API. The package augments `DocumentEventMap`, but your app-side TypeScript program needs to see the package types for that augmentation to apply.
+
+If your browser/client TS config does not already include the package types, add a small `.d.ts` file in your app code:
+
+```ts
+// app/types/vite-plugin-shopify-theme-islands.d.ts
+import "vite-plugin-shopify-theme-islands";
+```
+
+After that, `document.addEventListener("islands:load", ...)` and `document.addEventListener("islands:error", ...)` will be typed in client-side code.
 
 ```ts
 document.addEventListener("islands:load", (e) => {
