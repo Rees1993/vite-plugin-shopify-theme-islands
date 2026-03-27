@@ -166,4 +166,93 @@ describe("lifecycle", () => {
       document.removeEventListener = originalRemove;
     }
   });
+
+  it("schedules retry callbacks with exponential backoff from the lifecycle boundary", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 100,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+    const retry = mock(() => {});
+
+    const first = lifecycle.settleFailure("retry-island", retry);
+    const second = lifecycle.settleFailure("retry-island", retry);
+
+    expect(first).toEqual({ attempt: 1, willRetry: true });
+    expect(second).toEqual({ attempt: 2, willRetry: true });
+    expect(timers.map((timer) => timer.delay)).toEqual([100, 200]);
+
+    timers[0].fn();
+    timers[1].fn();
+    expect(retry).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears pending retry timers on success and targeted clear", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    lifecycle.settleFailure("alpha-island", mock(() => {}));
+    lifecycle.settleFailure("beta-island", mock(() => {}));
+    expect(timers).toHaveLength(2);
+
+    const attempt = lifecycle.settleSuccess("alpha-island");
+    expect(attempt).toBe(2);
+    expect(timers[0].cleared).toBe(true);
+
+    lifecycle.clear(["beta-island"]);
+    expect(timers[1].cleared).toBe(true);
+  });
+
+  it("can clear all pending retries at once", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    lifecycle.settleFailure("alpha-island", mock(() => {}));
+    lifecycle.settleFailure("beta-island", mock(() => {}));
+    lifecycle.clear();
+
+    expect(timers.every((timer) => timer.cleared)).toBe(true);
+  });
 });

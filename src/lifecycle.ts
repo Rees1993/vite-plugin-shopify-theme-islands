@@ -14,8 +14,9 @@ export interface IslandLifecycle {
   includeRoot(root: HTMLElement): void;
   isObserved(el: Element): boolean;
   settleSuccess(tag: string): number;
-  settleFailure(tag: string): { retryDelayMs: number | null; attempt: number };
+  settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
   evict(tag: string): void;
+  clear(tags?: Iterable<string>): void;
   isQueued(tag: string): boolean;
   readonly initialWalkComplete: boolean;
   watchCancellable(el: Element, cancel: () => void): () => void;
@@ -23,15 +24,23 @@ export interface IslandLifecycle {
   start(input: IslandLifecycleStartInput): { disconnect: () => void };
 }
 
+export interface IslandLifecyclePlatform {
+  setTimeout(fn: () => void, delay: number): ReturnType<typeof setTimeout>;
+  clearTimeout(timer: ReturnType<typeof setTimeout>): void;
+}
+
 export function createIslandLifecycleCoordinator(opts: {
   retries: number;
   retryDelay: number;
+  platform?: IslandLifecyclePlatform;
 }): IslandLifecycle {
   const queued = new Set<string>();
   const loaded = new Set<string>();
   const retryCount = new Map<string, number>();
+  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const cancellableElements = new Map<Element, Set<() => void>>();
   const excludedRoots = new Set<HTMLElement>();
+  const platform = opts.platform ?? globalThis;
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
@@ -48,29 +57,57 @@ export function createIslandLifecycleCoordinator(opts: {
     return true;
   };
 
+  const clearRetryTimer = (tag: string): void => {
+    const timer = retryTimers.get(tag);
+    if (timer === undefined) return;
+    platform.clearTimeout(timer);
+    retryTimers.delete(tag);
+  };
+
   const settleSuccess = (tag: string): number => {
     const attempt = (retryCount.get(tag) ?? 0) + 1;
+    clearRetryTimer(tag);
     queued.delete(tag);
     loaded.add(tag);
     retryCount.delete(tag);
     return attempt;
   };
 
-  const settleFailure = (tag: string): { retryDelayMs: number | null; attempt: number } => {
+  const settleFailure = (tag: string, retry: () => void): { willRetry: boolean; attempt: number } => {
     const attempt = (retryCount.get(tag) ?? 0) + 1;
     if (attempt <= opts.retries) {
       retryCount.set(tag, attempt);
-      return { retryDelayMs: opts.retryDelay * 2 ** (attempt - 1), attempt };
+      clearRetryTimer(tag);
+      const timer = platform.setTimeout(() => {
+        retryTimers.delete(tag);
+        retry();
+      }, opts.retryDelay * 2 ** (attempt - 1));
+      retryTimers.set(tag, timer);
+      return { willRetry: true, attempt };
     }
 
+    clearRetryTimer(tag);
     retryCount.delete(tag);
     queued.delete(tag);
-    return { retryDelayMs: null, attempt };
+    return { willRetry: false, attempt };
   };
 
   const evict = (tag: string): void => {
+    clearRetryTimer(tag);
     retryCount.delete(tag);
     queued.delete(tag);
+  };
+
+  const clear = (tags?: Iterable<string>): void => {
+    if (tags) {
+      for (const tag of tags) evict(tag);
+      return;
+    }
+
+    for (const timer of retryTimers.values()) platform.clearTimeout(timer);
+    retryTimers.clear();
+    retryCount.clear();
+    queued.clear();
   };
 
   const isQueued = (tag: string): boolean => queued.has(tag);
@@ -195,6 +232,7 @@ export function createIslandLifecycleCoordinator(opts: {
     settleSuccess,
     settleFailure,
     evict,
+    clear,
     isQueued,
     get initialWalkComplete() {
       return initialWalkComplete;

@@ -24,8 +24,9 @@ describe("activation-session", () => {
         initialWalkComplete: true,
         isObserved: () => true,
         settleSuccess: () => 1,
-        settleFailure: () => ({ retryDelayMs: null, attempt: 1 }),
+        settleFailure: () => ({ willRetry: false, attempt: 1 }),
         evict: mock((_tag: string) => {}),
+        clear: mock((_tags?: Iterable<string>) => {}),
         watchCancellable: mock(() => () => {}),
         walk,
       },
@@ -40,8 +41,6 @@ describe("activation-session", () => {
       platform: {
         now: mock(() => 10),
         console: platformConsole,
-        setTimeout,
-        clearTimeout,
       },
     });
 
@@ -63,26 +62,15 @@ describe("activation-session", () => {
     expect(walk).toHaveBeenCalledWith(candidateEl);
   });
 
-  it("clears pending retries for a tag when the subtree is unobserved", async () => {
-    type FakeTimer = { fn: () => void; cleared: boolean };
-
-    const timers: FakeTimer[] = [];
+  it("delegates subtree clear to the ownership boundary", async () => {
     const platformConsole = {
       error: mock(() => {}),
     };
-    const setTimeoutMock = mock((fn: () => void) => {
-      const timer: FakeTimer = { fn, cleared: false };
-      timers.push(timer);
-      return timer as unknown as ReturnType<typeof setTimeout>;
-    });
-    const clearTimeoutMock = mock((timer: ReturnType<typeof setTimeout>) => {
-      (timer as unknown as FakeTimer).cleared = true;
-    });
-
     const loader = mock<IslandLoader>(async () => {
       throw new Error("retry me");
     });
     const evict = mock((_tag: string) => {});
+    const clear = mock((_tags?: Iterable<string>) => {});
     const dispatchError = mock((_detail: { tag: string; error: unknown; attempt: number }) => {});
 
     const session = createActivationSession({
@@ -95,8 +83,9 @@ describe("activation-session", () => {
         initialWalkComplete: true,
         isObserved: () => true,
         settleSuccess: () => 1,
-        settleFailure: () => ({ retryDelayMs: 25, attempt: 1 }),
+        settleFailure: () => ({ willRetry: true, attempt: 1 }),
         evict,
+        clear,
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
@@ -111,8 +100,6 @@ describe("activation-session", () => {
       platform: {
         now: mock(() => 10),
         console: platformConsole,
-        setTimeout: setTimeoutMock as unknown as typeof setTimeout,
-        clearTimeout: clearTimeoutMock as unknown as typeof clearTimeout,
       },
     });
 
@@ -124,14 +111,12 @@ describe("activation-session", () => {
 
     expect(loader).toHaveBeenCalledTimes(1);
     expect(dispatchError).toHaveBeenCalledTimes(1);
-    expect(timers).toHaveLength(1);
 
     session.clear(["x-retry"]);
 
-    expect(evict).toHaveBeenCalledWith("x-retry");
-    expect(clearTimeoutMock).toHaveBeenCalledTimes(1);
-
-    if (!timers[0].cleared) timers[0].fn();
-    expect(loader).toHaveBeenCalledTimes(1);
+    expect(clear).toHaveBeenCalledTimes(1);
+    const tags = clear.mock.calls[0]?.[0];
+    expect(tags ? [...tags] : []).toEqual(["x-retry"]);
+    expect(evict).not.toHaveBeenCalled();
   });
 });

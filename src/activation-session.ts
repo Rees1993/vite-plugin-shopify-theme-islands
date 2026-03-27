@@ -23,8 +23,9 @@ export interface ActivationOwnership {
   readonly initialWalkComplete: boolean;
   isObserved(el: Element): boolean;
   settleSuccess(tag: string): number;
-  settleFailure(tag: string): { retryDelayMs: number | null; attempt: number };
+  settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
   evict(tag: string): void;
+  clear(tags?: Iterable<string>): void;
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
 }
@@ -32,8 +33,6 @@ export interface ActivationOwnership {
 export interface ActivationPlatform {
   now(): number;
   console: Pick<Console, "error">;
-  setTimeout: typeof setTimeout;
-  clearTimeout: typeof clearTimeout;
 }
 
 export interface ActivationSessionDeps {
@@ -62,37 +61,16 @@ export interface ActivationSession {
 
 export function createActivationSession(deps: ActivationSessionDeps): ActivationSession {
   const orchestrator = deps.orchestrator ?? createDirectiveOrchestrator();
-  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  const clearRetryTimer = (tagName: string): void => {
-    const timer = retryTimers.get(tagName);
-    if (timer === undefined) return;
-    deps.platform.clearTimeout(timer);
-    retryTimers.delete(tagName);
-  };
-
-  const clearRetryTimers = (tagNames?: Iterable<string>): void => {
-    if (tagNames) {
-      for (const tagName of tagNames) clearRetryTimer(tagName);
-      return;
-    }
-
-    for (const timer of retryTimers.values()) deps.platform.clearTimeout(timer);
-    retryTimers.clear();
-  };
 
   const clear = (tagNames?: Iterable<string>): void => {
     if (tagNames) {
       const tags = [...tagNames];
-      clearRetryTimers(tags);
+      deps.ownership.clear(tags);
       deps.observability.clear(tags);
-      for (const tagName of tags) {
-        deps.ownership.evict(tagName);
-      }
       return;
     }
 
-    clearRetryTimers();
+    deps.ownership.clear();
     deps.observability.clear();
   };
 
@@ -117,7 +95,6 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     }
 
     deps.observability.dispatchError({ tag: tagName, error, attempt: 1 });
-    clearRetryTimer(tagName);
     deps.ownership.evict(tagName);
     log.flush(attrName === null ? "aborted (directive error)" : "aborted (custom directive error)");
   };
@@ -132,7 +109,6 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
 
     const abortIfInactive = (): boolean => {
       if (deps.ownership.isObserved(element)) return false;
-      clearRetryTimer(tagName);
       deps.ownership.evict(tagName);
       return true;
     };
@@ -143,7 +119,6 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
       return loader()
         .then(() => {
           if (abortIfInactive()) return;
-          clearRetryTimer(tagName);
           const attempt = deps.ownership.settleSuccess(tagName);
           deps.observability.dispatchLoad({
             tag: tagName,
@@ -154,20 +129,15 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
         })
         .catch((error) => {
           deps.platform.console.error(`[islands] Failed to load <${tagName}>:`, error);
-          const { retryDelayMs, attempt } = deps.ownership.settleFailure(tagName);
+          const { willRetry, attempt } = deps.ownership.settleFailure(tagName, () => {
+            void runLoader();
+          });
           deps.observability.dispatchError({
             tag: tagName,
             error,
             attempt,
           } satisfies IslandErrorDetail);
-          if (retryDelayMs !== null) {
-            clearRetryTimer(tagName);
-            const timer = deps.platform.setTimeout(() => {
-              retryTimers.delete(tagName);
-              void runLoader();
-            }, retryDelayMs);
-            retryTimers.set(tagName, timer);
-          }
+          if (!willRetry) deps.ownership.evict(tagName);
         });
     };
 

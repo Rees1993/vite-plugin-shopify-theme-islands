@@ -65,8 +65,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     platform: {
       now: () => performance.now(),
       console: { error: console.error.bind(console) },
-      setTimeout,
-      clearTimeout,
     },
   });
 
