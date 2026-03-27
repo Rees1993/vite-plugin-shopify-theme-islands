@@ -6,7 +6,7 @@ export interface ResolveTagInput {
   defaultTag: string;
 }
 
-export type ResolveTagFn = (input: ResolveTagInput) => string | null | undefined;
+export type ResolveTagFn = (input: ResolveTagInput) => string | false;
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -62,7 +62,7 @@ export interface ShopifyThemeIslandsOptions {
   directories?: string | string[];
   /**
    * Override file-path-to-tag resolution.
-   * Return null to exclude a file, undefined to keep the default derived tag.
+   * Return `defaultTag` to keep default behavior, or `false` to exclude a file.
    */
   resolveTag?: ResolveTagFn;
   /** Log discovered islands and generated virtual module. Default: `false` */

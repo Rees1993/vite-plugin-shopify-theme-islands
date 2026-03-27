@@ -151,14 +151,14 @@ describe("contract", () => {
       expect(map.get("product-form")).toBe(loader);
     });
 
-    it("skips entries whose resolvedTags override is null", () => {
+    it("skips entries whose resolvedTags override is false", () => {
       const loader = async () => ({});
       const payload: RevivePayload = {
         islands: {
           "/islands/product-form.ts": loader,
         },
         resolvedTags: {
-          "/islands/product-form.ts": null,
+          "/islands/product-form.ts": false,
         },
         options: {},
       };

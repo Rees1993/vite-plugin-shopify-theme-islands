@@ -38,7 +38,7 @@ describe("revive-pipeline", () => {
           ? "product-form"
           : filePath.endsWith("upsell-card.ts")
             ? defaultTag
-            : undefined,
+            : defaultTag,
       customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
       reviveOptions: { debug: true },
     });

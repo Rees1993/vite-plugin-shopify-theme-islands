@@ -21,7 +21,7 @@ export interface ReviveBootstrapPlan {
   runtimePath: string;
   directoryGlobs: string[];
   islandPaths: string[] | null;
-  resolvedTags: Record<string, string | null> | null;
+  resolvedTags: Record<string, string | false> | null;
   customDirectives: ResolvedCustomDirective[] | null;
   reviveOptions: ReviveOptions;
 }
@@ -52,14 +52,14 @@ export function createReviveBootstrapCompiler(
         input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
       const resolvedTags = input.resolveTag
         ? (() => {
-            const entries: Array<[string, string | null]> = [];
+            const entries: Array<[string, string | false]> = [];
             for (const filePath of ports.toLoadPaths(
               new Set([...input.directoryFiles, ...input.islandFiles]),
               input.root,
             )) {
               const defaultTag = deriveDefaultTag(filePath);
               const resolvedTag = input.resolveTag({ filePath, defaultTag });
-              if (resolvedTag === undefined || resolvedTag === defaultTag) continue;
+              if (resolvedTag === defaultTag) continue;
               entries.push([filePath, resolvedTag]);
             }
             return entries.length > 0 ? Object.fromEntries(entries) : null;

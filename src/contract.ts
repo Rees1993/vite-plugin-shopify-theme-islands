@@ -102,7 +102,7 @@ export interface RevivePayload {
   islands: Record<string, IslandLoader>;
   options?: ReviveOptions;
   customDirectives?: Map<string, ClientDirective>;
-  resolvedTags?: Record<string, string | null>;
+  resolvedTags?: Record<string, string | false>;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +206,9 @@ export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader
     const resolvedTag = payload.resolvedTags?.[key];
     const { tag, skip } =
       resolvedTag !== undefined
-        ? { tag: resolvedTag ?? "", skip: resolvedTag === null }
+        ? resolvedTag === false
+          ? { tag: "", skip: true }
+          : { tag: resolvedTag }
         : defaultKeyToTag(key);
     if (skip) continue;
     if (!map.has(tag)) map.set(tag, loader);

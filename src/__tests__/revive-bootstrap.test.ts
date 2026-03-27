@@ -21,8 +21,8 @@ describe("revive-bootstrap", () => {
         resolveTag: ({ filePath, defaultTag }) => {
           seen.push({ filePath, defaultTag });
           if (filePath.endsWith("productForm.ts")) return "product-form";
-          if (filePath.endsWith("other.js")) return null;
-          return undefined;
+          if (filePath.endsWith("other.js")) return false;
+          return defaultTag;
         },
         customDirectives: [
           { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
@@ -48,7 +48,7 @@ describe("revive-bootstrap", () => {
       islandPaths: ["/src/widget.ts", "/src/other.js"],
       resolvedTags: {
         "/islands/productForm.ts": "product-form",
-        "/src/other.js": null,
+        "/src/other.js": false,
       },
       customDirectives: [
         { name: "client:on-click", entrypoint: "/resolved/./src/directives/on-click.ts" },
@@ -67,7 +67,7 @@ describe("revive-bootstrap", () => {
       "const payload = { islands, options, customDirectives, resolvedTags };",
     );
     expect(source).toContain(
-      'const resolvedTags = {"/islands/productForm.ts":"product-form","/src/other.js":null};',
+      'const resolvedTags = {"/islands/productForm.ts":"product-form","/src/other.js":false};',
     );
     expect(source).toContain('const runtimeKey = "__shopify_theme_islands_runtime__";');
     expect(source).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
@@ -100,7 +100,7 @@ describe("revive-bootstrap", () => {
     expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 
-  it("omits default-tag mappings when resolveTag returns undefined", async () => {
+  it("omits default-tag mappings when resolveTag returns defaultTag", async () => {
     const compiler = createReviveBootstrapCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,

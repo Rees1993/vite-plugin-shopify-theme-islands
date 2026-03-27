@@ -277,6 +277,27 @@ describe("plugin", () => {
       expect(output).toContain("const payload = { islands, options, resolvedTags };");
     });
 
+    it("emits false resolvedTags entries when resolveTag excludes a file", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "legacy-widget.ts"),
+        "export default class LegacyWidget extends HTMLElement {}",
+      );
+
+      const plugin = makePlugin({
+        directories: ["/islands/"],
+        resolveTag: ({ filePath, defaultTag }) =>
+          filePath.endsWith("legacy-widget.ts") ? false : defaultTag,
+      });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+
+      expect(output).toContain('const resolvedTags = {"/islands/legacy-widget.ts":false};');
+      expect(output).toContain("const payload = { islands, options, resolvedTags };");
+    });
+
     it("excludes mixin files already covered by a scanned directory", async () => {
       const islandsDir = join(tmp, "islands");
       mkdirSync(islandsDir);

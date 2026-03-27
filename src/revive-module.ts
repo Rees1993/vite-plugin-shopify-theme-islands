@@ -12,7 +12,7 @@ export interface BuildReviveModuleSourceParams {
   /** Additional discovered island paths outside the configured directories. */
   islandPaths?: string[] | null;
   /** Explicit file-path-to-tag overrides emitted by the plugin. */
-  resolvedTags?: Record<string, string | null>;
+  resolvedTags?: Record<string, string | false>;
   /** Resolved custom directive modules keyed by attribute name. */
   customDirectives?: Array<{ name: string; entrypoint: string }>;
   /** Options object passed to revive (JSON-serialized in output). */
