@@ -383,14 +383,16 @@ shopifyThemeIslands({
 
 This is useful during development to surface directives that hang due to bugs, or in production to ensure broken directives don't silently degrade the experience.
 
-## Configuration
+## Configuration reference
+
+### Top-level options
 
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
 | `resolveTag`       | `(filePath: string) => string \| null` | —          | Override file-path-to-tag mapping. Return `null` to exclude a file from the island map. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
-| `retry`            | `object`             | —                           | Automatic retry behaviour for failed island loads. See [Retries](#retries).        |
+| `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
 | `directiveTimeout` | `number`             | `0` (disabled)              | Milliseconds before a custom directive that never calls `load()` is considered timed out. Fires `islands:error` and abandons the island. |
 
@@ -462,7 +464,13 @@ export default defineConfig({
 
 ### Overriding tag resolution
 
-By default, the plugin derives the tag name from the filename. Use `resolveTag()` when you need an escape hatch without changing the file name:
+By default, the plugin derives the tag name from the filename. Use `resolveTag()` when you need an escape hatch without changing the file name.
+
+Important:
+
+- `resolveTag()` is authoritative for the files it handles
+- returning `null` excludes that file from the island map
+- if you want to keep default filename-based behavior for other files, return the derived tag explicitly rather than `null`
 
 ```ts
 shopifyThemeIslands({
@@ -473,6 +481,12 @@ shopifyThemeIslands({
   },
 });
 ```
+
+That means:
+
+- `productForm.ts` becomes `<product-form>`
+- `legacy-widget.ts` is skipped entirely
+- everything else falls back to its filename-derived tag
 
 ## Retries
 
