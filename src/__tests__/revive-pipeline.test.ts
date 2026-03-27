@@ -33,12 +33,12 @@ describe("revive-pipeline", () => {
     const pipeline = createRevivePipeline({
       rawDirectories: ["/frontend/js/islands/"],
       runtimePath: "/runtime.js",
-      resolveTag: (filePath) =>
+      resolveTag: ({ filePath, defaultTag }) =>
         filePath.endsWith("product-form.ts")
           ? "product-form"
           : filePath.endsWith("upsell-card.ts")
-            ? "upsell-card"
-            : null,
+            ? defaultTag
+            : undefined,
       customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
       reviveOptions: { debug: true },
     });
@@ -50,13 +50,9 @@ describe("revive-pipeline", () => {
 
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
-    expect(source).toContain(
-      'const resolvedTags = {"/frontend/js/islands/product-form.ts":"product-form","/src/upsell-card.ts":"upsell-card"};',
-    );
     expect(source).toContain('import.meta.glob("/frontend/js/islands/**/*.{ts,js}")');
     expect(source).toContain('import.meta.glob(["/src/upsell-card.ts"])');
-    expect(source).toContain(
-      "const payload = { islands, options, customDirectives, resolvedTags };",
-    );
+    expect(source).not.toContain("const resolvedTags = ");
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 });

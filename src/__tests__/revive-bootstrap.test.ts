@@ -4,6 +4,7 @@ import { getIslandPathsForLoad } from "../discovery";
 
 describe("revive-bootstrap", () => {
   it("plans a semantic bootstrap artifact from resolved plugin state", async () => {
+    const seen: Array<{ filePath: string; defaultTag: string }> = [];
     const compiler = createReviveBootstrapCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
@@ -17,7 +18,12 @@ describe("revive-bootstrap", () => {
         directories: ["/islands/", "/components/"],
         directoryFiles: new Set(["/project/islands/productForm.ts"]),
         islandFiles: new Set(["/project/src/widget.ts", "/project/src/other.js"]),
-        resolveTag: (filePath) => (filePath.endsWith("productForm.ts") ? "product-form" : null),
+        resolveTag: ({ filePath, defaultTag }) => {
+          seen.push({ filePath, defaultTag });
+          if (filePath.endsWith("productForm.ts")) return "product-form";
+          if (filePath.endsWith("other.js")) return null;
+          return undefined;
+        },
         customDirectives: [
           { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
           { name: "client:hover", entrypoint: "./src/directives/hover.ts" },
@@ -31,13 +37,17 @@ describe("revive-bootstrap", () => {
       { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
     );
 
+    expect(seen).toEqual([
+      { filePath: "/islands/productForm.ts", defaultTag: "productForm" },
+      { filePath: "/src/widget.ts", defaultTag: "widget" },
+      { filePath: "/src/other.js", defaultTag: "other" },
+    ]);
     expect(plan).toMatchObject({
       runtimePath: "/runtime.js",
       directoryGlobs: ["/islands/**/*.{ts,js}", "/components/**/*.{ts,js}"],
       islandPaths: ["/src/widget.ts", "/src/other.js"],
       resolvedTags: {
         "/islands/productForm.ts": "product-form",
-        "/src/widget.ts": null,
         "/src/other.js": null,
       },
       customDirectives: [
@@ -57,7 +67,7 @@ describe("revive-bootstrap", () => {
       "const payload = { islands, options, customDirectives, resolvedTags };",
     );
     expect(source).toContain(
-      'const resolvedTags = {"/islands/productForm.ts":"product-form","/src/widget.ts":null,"/src/other.js":null};',
+      'const resolvedTags = {"/islands/productForm.ts":"product-form","/src/other.js":null};',
     );
     expect(source).toContain('const runtimeKey = "__shopify_theme_islands_runtime__";');
     expect(source).toContain("const runtime = runtimeState.runtime ?? _islands(payload);");
@@ -78,9 +88,7 @@ describe("revive-bootstrap", () => {
         directories: ["/islands/"],
         directoryFiles: new Set<string>(),
         islandFiles: new Set(["/project/src/widget.ts"]),
-        customDirectives: [
-          { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
-        ],
+        customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
         reviveOptions: { debug: false },
       },
       { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
@@ -90,5 +98,28 @@ describe("revive-bootstrap", () => {
     expect(source).toContain('import { revive as _islands } from "/runtime.js"');
     expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
     expect(source).toContain("const payload = { islands, options, customDirectives };");
+  });
+
+  it("omits default-tag mappings when resolveTag returns undefined", async () => {
+    const compiler = createReviveBootstrapCompiler(
+      {
+        toLoadPaths: getIslandPathsForLoad,
+      },
+      "/runtime.js",
+    );
+
+    const plan = await compiler.plan(
+      {
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/productForm.ts"]),
+        islandFiles: new Set(["/project/src/widget.ts"]),
+        resolveTag: ({ defaultTag }) => defaultTag,
+        reviveOptions: { debug: false },
+      },
+      { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
+    );
+
+    expect(plan.resolvedTags).toBeNull();
   });
 });

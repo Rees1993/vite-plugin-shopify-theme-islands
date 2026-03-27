@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from "bun:test";
 import {
+  deriveDefaultTag,
   defaultKeyToTag,
   buildIslandMap,
   normalizeReviveOptions,
@@ -17,6 +18,11 @@ import { DEFAULT_INTERACTION_EVENTS } from "../interaction-events";
 
 describe("contract", () => {
   describe("key→tag (path-like keys become tag names)", () => {
+    it("deriveDefaultTag strips the extension without warning or skip logic", () => {
+      expect(deriveDefaultTag("/frontend/js/islands/product-form.ts")).toBe("product-form");
+      expect(deriveDefaultTag("/islands/myisland.ts")).toBe("myisland");
+    });
+
     it("path-like keys yield tag = last segment with extension stripped", () => {
       expect(defaultKeyToTag("/frontend/js/islands/product-form.ts").tag).toBe("product-form");
       expect(defaultKeyToTag("/islands/my-counter.js").tag).toBe("my-counter");

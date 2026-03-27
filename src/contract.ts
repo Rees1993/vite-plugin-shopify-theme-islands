@@ -174,10 +174,16 @@ export type KeyToTagFn = (key: string) => KeyToTagResult;
 
 const basename = (key: string) => key.split("/").pop() ?? key;
 
+/** Derives the default tag name from a glob key without warning or skipping. */
+export function deriveDefaultTag(key: string): string {
+  const filename = basename(key);
+  return filename.replace(/\.(ts|js)$/, "");
+}
+
 /** Default: last path segment, extension stripped; skip (and warn) when tag has no hyphen. */
 export function defaultKeyToTag(key: string): KeyToTagResult {
   const filename = basename(key);
-  const tag = filename.replace(/\.(ts|js)$/, "");
+  const tag = deriveDefaultTag(key);
   const skip = !tag.includes("-");
   if (skip && tag)
     console.warn(

@@ -1,5 +1,6 @@
-import type { ReviveOptions } from "./contract.js";
+import { deriveDefaultTag, type ReviveOptions } from "./contract.js";
 import { buildReviveModuleSource } from "./revive-module.js";
+import type { ResolveTagFn } from "./options.js";
 
 export interface ResolvedCustomDirective {
   name: string;
@@ -11,7 +12,7 @@ export interface ReviveBootstrapInputs {
   directories: string[];
   directoryFiles: Set<string>;
   islandFiles: Set<string>;
-  resolveTag?: (filePath: string) => string | null;
+  resolveTag?: ResolveTagFn;
   customDirectives?: Array<{ name: string; entrypoint: string }>;
   reviveOptions: ReviveOptions;
 }
@@ -50,11 +51,19 @@ export function createReviveBootstrapCompiler(
       const islandPaths =
         input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
       const resolvedTags = input.resolveTag
-        ? Object.fromEntries(
-            ports
-              .toLoadPaths(new Set([...input.directoryFiles, ...input.islandFiles]), input.root)
-              .map((filePath) => [filePath, input.resolveTag!(filePath)]),
-          )
+        ? (() => {
+            const entries: Array<[string, string | null]> = [];
+            for (const filePath of ports.toLoadPaths(
+              new Set([...input.directoryFiles, ...input.islandFiles]),
+              input.root,
+            )) {
+              const defaultTag = deriveDefaultTag(filePath);
+              const resolvedTag = input.resolveTag({ filePath, defaultTag });
+              if (resolvedTag === undefined || resolvedTag === defaultTag) continue;
+              entries.push([filePath, resolvedTag]);
+            }
+            return entries.length > 0 ? Object.fromEntries(entries) : null;
+          })()
         : null;
       const customDirectives = input.customDirectives?.length
         ? await (() => {

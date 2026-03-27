@@ -390,7 +390,7 @@ This is useful during development to surface directives that hang due to bugs, o
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
-| `resolveTag`       | `(filePath: string) => string \| null` | —          | Override file-path-to-tag mapping. Return `null` to exclude a file from the island map. |
+| `resolveTag`       | `({ filePath, defaultTag }) => string \| null \| undefined` | —          | Override file-path-to-tag mapping. Return `null` to exclude a file and `undefined` to keep the default derived tag. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
 | `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
@@ -474,10 +474,10 @@ Important:
 
 ```ts
 shopifyThemeIslands({
-  resolveTag(filePath) {
+  resolveTag({ filePath, defaultTag }) {
     if (filePath.endsWith("productForm.ts")) return "product-form";
     if (filePath.endsWith("legacy-widget.ts")) return null;
-    return filePath.split("/").pop()?.replace(/\\.(ts|js)$/u, "") ?? null;
+    return undefined;
   },
 });
 ```
@@ -487,6 +487,9 @@ That means:
 - `productForm.ts` becomes `<product-form>`
 - `legacy-widget.ts` is skipped entirely
 - everything else falls back to its filename-derived tag
+
+If you want to keep the default derived tag for most files, return `undefined`.
+If you want to keep the same tag explicitly, return `defaultTag`.
 
 ## Retries
 

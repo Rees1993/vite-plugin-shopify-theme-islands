@@ -266,7 +266,8 @@ describe("plugin", () => {
 
       const plugin = makePlugin({
         directories: ["/islands/"],
-        resolveTag: (filePath) => (filePath.endsWith("productForm.ts") ? "product-form" : null),
+        resolveTag: ({ filePath, defaultTag }) =>
+          filePath.endsWith("productForm.ts") ? "product-form" : defaultTag,
       });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();

@@ -1,6 +1,13 @@
 import type { RetryConfig } from "./contract.js";
 import type { InteractionEventName } from "./interaction-events.js";
 
+export interface ResolveTagInput {
+  filePath: string;
+  defaultTag: string;
+}
+
+export type ResolveTagFn = (input: ResolveTagInput) => string | null | undefined;
+
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
   /** HTML attribute name, e.g. `'client:on-click'` */
@@ -53,8 +60,11 @@ export interface DirectivesConfig {
 export interface ShopifyThemeIslandsOptions {
   /** Directories to scan for island files. Accepts paths or Vite aliases. Default: `['/frontend/js/islands/']` */
   directories?: string | string[];
-  /** Override file-path-to-tag resolution. Return null to exclude a file from the island map. */
-  resolveTag?: (filePath: string) => string | null;
+  /**
+   * Override file-path-to-tag resolution.
+   * Return null to exclude a file, undefined to keep the default derived tag.
+   */
+  resolveTag?: ResolveTagFn;
   /** Log discovered islands and generated virtual module. Default: `false` */
   debug?: boolean;
   /** Per-directive configuration. */
