@@ -1,4 +1,8 @@
-import { DEFAULT_DIRECTIVES, type ClientDirective, type NormalizedReviveOptions } from "./contract.js";
+import {
+  DEFAULT_DIRECTIVES,
+  type ClientDirective,
+  type NormalizedReviveOptions,
+} from "./contract.js";
 import { partitionInteractionEventTokens } from "./interaction-events.js";
 
 export type GateResult =
@@ -83,7 +87,10 @@ function formatEffectiveGate(gate: GateResult): string | null {
 
 function describeGates(gates: GateResult[]): string {
   if (gates.length === 0) return "immediate";
-  return gates.map(formatEffectiveGate).filter((part): part is string => part !== null).join(", ");
+  return gates
+    .map(formatEffectiveGate)
+    .filter((part): part is string => part !== null)
+    .join(", ");
 }
 
 export function createDirectiveSpine(

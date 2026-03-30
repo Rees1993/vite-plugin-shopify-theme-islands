@@ -1,7 +1,4 @@
-import type {
-  IslandErrorDetail,
-  IslandLoadDetail,
-} from "./contract.js";
+import type { IslandErrorDetail, IslandLoadDetail } from "./contract.js";
 import type { DirectiveSpine, GateResult } from "./directive-spine.js";
 import type { RuntimeLogger, RuntimeSurface } from "./runtime-surface.js";
 

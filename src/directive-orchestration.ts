@@ -1,6 +1,4 @@
-import type {
-  ClientDirectiveContext,
-} from "./contract.js";
+import type { ClientDirectiveContext } from "./contract.js";
 import { INTERACTION_EVENT_NAMES_LABEL } from "./interaction-events.js";
 import type { DirectiveSpine, GateResult } from "./directive-spine.js";
 import type { RuntimeLogger } from "./runtime-surface.js";

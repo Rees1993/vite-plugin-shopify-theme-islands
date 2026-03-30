@@ -73,15 +73,21 @@ export function createIslandLifecycleCoordinator(opts: {
     return attempt;
   };
 
-  const settleFailure = (tag: string, retry: () => void): { willRetry: boolean; attempt: number } => {
+  const settleFailure = (
+    tag: string,
+    retry: () => void,
+  ): { willRetry: boolean; attempt: number } => {
     const attempt = (retryCount.get(tag) ?? 0) + 1;
     if (attempt <= opts.retries) {
       retryCount.set(tag, attempt);
       clearRetryTimer(tag);
-      const timer = platform.setTimeout(() => {
-        retryTimers.delete(tag);
-        retry();
-      }, opts.retryDelay * 2 ** (attempt - 1));
+      const timer = platform.setTimeout(
+        () => {
+          retryTimers.delete(tag);
+          retry();
+        },
+        opts.retryDelay * 2 ** (attempt - 1),
+      );
       retryTimers.set(tag, timer);
       return { willRetry: true, attempt };
     }

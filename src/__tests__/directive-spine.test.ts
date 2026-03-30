@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 
 import { DEFAULT_DIRECTIVES } from "../contract";
-import { createDirectiveSpine, DEFAULT_DIRECTIVE_SPINE, extendDirectiveSpine } from "../directive-spine";
+import {
+  createDirectiveSpine,
+  DEFAULT_DIRECTIVE_SPINE,
+  extendDirectiveSpine,
+} from "../directive-spine";
 
 describe("directive-spine", () => {
   it("reads no gates for an element with no directive attributes", () => {

@@ -23,9 +23,7 @@ export interface ResolvedThemeIslandsPolicy {
   runtime: ReviveOptions;
 }
 
-function mergeDirectives(
-  directives?: DirectivesConfig,
-): NormalizedReviveOptions["directives"] {
+function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
   return {
     visible: { ...DEFAULT_DIRECTIVES.visible, ...directives?.visible },
     idle: { ...DEFAULT_DIRECTIVES.idle, ...directives?.idle },

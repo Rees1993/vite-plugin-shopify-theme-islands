@@ -218,8 +218,14 @@ describe("lifecycle", () => {
       },
     });
 
-    lifecycle.settleFailure("alpha-island", mock(() => {}));
-    lifecycle.settleFailure("beta-island", mock(() => {}));
+    lifecycle.settleFailure(
+      "alpha-island",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "beta-island",
+      mock(() => {}),
+    );
     expect(timers).toHaveLength(2);
 
     const attempt = lifecycle.settleSuccess("alpha-island");
@@ -249,8 +255,14 @@ describe("lifecycle", () => {
       },
     });
 
-    lifecycle.settleFailure("alpha-island", mock(() => {}));
-    lifecycle.settleFailure("beta-island", mock(() => {}));
+    lifecycle.settleFailure(
+      "alpha-island",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "beta-island",
+      mock(() => {}),
+    );
     lifecycle.clear();
 
     expect(timers.every((timer) => timer.cleared)).toBe(true);

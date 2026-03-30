@@ -1,8 +1,4 @@
-import type {
-  IslandErrorDetail,
-  IslandLoadDetail,
-  IslandLoader,
-} from "./contract.js";
+import type { IslandErrorDetail, IslandLoadDetail, IslandLoader } from "./contract.js";
 import type { DirectiveSpine } from "./directive-spine.js";
 import {
   createDirectiveOrchestrator,
