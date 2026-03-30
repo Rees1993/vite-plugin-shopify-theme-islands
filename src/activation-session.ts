@@ -9,7 +9,8 @@ import {
   DEFAULT_DIRECTIVE_WAITERS,
   DirectiveCancelledError,
   type DirectiveWaiters,
-} from "./directive-orchestration.js";
+} from "./directive-waiters.js";
+import { formatUnsupportedInteractionTokenWarning } from "./interaction-events.js";
 import type { RuntimeLogger } from "./runtime-surface.js";
 import type { RuntimeObservability } from "./runtime-observability.js";
 
@@ -125,16 +126,13 @@ async function runBuiltInDirectives(ctx: BuiltInDirectiveContext): Promise<void>
               `[islands] <${tagName}> ${gate.attribute} has no valid event tokens — using default events`,
             );
           } else if (gate.invalidTokens.length > 0) {
-            const countSuffix = gate.invalidTokens.length === 1 ? "" : "s";
-            if (!gate.usedDefaultEvents) {
-              warn.warn(
-                `[islands] <${tagName}> ${gate.attribute} contains unsupported event token${countSuffix} (${gate.invalidTokens.join(", ")}) — ignoring invalid token${countSuffix}; supported tokens: mouseenter, touchstart, focusin`,
-              );
-            } else {
-              warn.warn(
-                `[islands] <${tagName}> ${gate.attribute} contains no supported event tokens (${gate.invalidTokens.join(", ")}) — using default events; supported tokens: mouseenter, touchstart, focusin`,
-              );
-            }
+            warn.warn(
+              `[islands] <${tagName}> ${formatUnsupportedInteractionTokenWarning({
+                attribute: gate.attribute,
+                invalidTokens: gate.invalidTokens,
+                usedDefaultEvents: gate.usedDefaultEvents,
+              })}`,
+            );
           }
           log.note(`waiting for ${gate.attribute} (${gate.events.join(", ")})`);
           await waiters.waitInteraction(element, gate.events, controller.signal);

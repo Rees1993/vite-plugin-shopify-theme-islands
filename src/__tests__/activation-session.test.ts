@@ -6,7 +6,7 @@ import {
   DEFAULT_DIRECTIVE_SPINE,
   extendDirectiveSpine,
 } from "../directive-spine";
-import { DirectiveCancelledError } from "../directive-orchestration";
+import { DirectiveCancelledError } from "../directive-waiters";
 
 describe("activation-session", () => {
   it("runs built-in gates in order through the activation-session boundary", async () => {
