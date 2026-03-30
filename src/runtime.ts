@@ -71,7 +71,10 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     observability,
     platform: {
       now: () => performance.now(),
-      console: { error: console.error.bind(console) },
+      console: {
+        error: console.error.bind(console),
+        warn: console.warn.bind(console),
+      },
     },
   });
 
