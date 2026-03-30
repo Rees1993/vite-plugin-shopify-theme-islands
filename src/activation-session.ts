@@ -59,6 +59,8 @@ export interface ActivationSession {
   clear(tagNames?: Iterable<string>): void;
 }
 
+type CustomDirectiveGate = Extract<GateResult, { kind: "custom" }>;
+
 interface BuiltInDirectiveContext {
   tagName: string;
   element: HTMLElement;
@@ -72,12 +74,24 @@ interface BuiltInDirectiveContext {
 interface CustomDirectiveExecutionContext {
   tagName: string;
   element: HTMLElement;
-  gates: GateResult[];
+  gates: CustomDirectiveGate[];
   directiveTimeout: number;
   watchCancellable: (el: Element, cancel: () => void) => () => void;
   log: RuntimeLogger;
   run: () => Promise<void>;
   onError(attrName: string, err: unknown): void;
+}
+
+interface LoaderRunContext {
+  tagName: string;
+  element: HTMLElement;
+  loader: IslandLoader;
+  ownership: Pick<
+    ActivationOwnership,
+    "isObserved" | "evict" | "settleSuccess" | "settleFailure" | "walk"
+  >;
+  observability: Pick<RuntimeObservability, "dispatchLoad" | "dispatchError">;
+  platform: ActivationPlatform;
 }
 
 async function runBuiltInDirectives(ctx: BuiltInDirectiveContext): Promise<void> {
@@ -146,10 +160,12 @@ async function runBuiltInDirectives(ctx: BuiltInDirectiveContext): Promise<void>
   }
 }
 
+function getMatchedCustomDirectiveGates(gates: GateResult[]): CustomDirectiveGate[] {
+  return gates.filter((gate): gate is CustomDirectiveGate => gate.kind === "custom");
+}
+
 function runCustomDirectives(ctx: CustomDirectiveExecutionContext): boolean {
-  const matched = ctx.gates
-    .filter((gate): gate is Extract<GateResult, { kind: "custom" }> => gate.kind === "custom")
-    .map((gate) => [gate.attribute, gate.directive, gate.value] as const);
+  const matched = ctx.gates.map((gate) => [gate.attribute, gate.directive, gate.value] as const);
 
   if (matched.length === 0) return false;
 
@@ -237,6 +253,46 @@ function runCustomDirectives(ctx: CustomDirectiveExecutionContext): boolean {
   return true;
 }
 
+function createLoaderRunner(ctx: LoaderRunContext): () => Promise<void> {
+  const { tagName, element, loader, ownership, observability, platform } = ctx;
+
+  const abortIfInactive = (): boolean => {
+    if (ownership.isObserved(element)) return false;
+    ownership.evict(tagName);
+    return true;
+  };
+
+  const runLoader = (): Promise<void> => {
+    if (abortIfInactive()) return Promise.resolve();
+    const startedAt = platform.now();
+    return loader()
+      .then(() => {
+        if (abortIfInactive()) return;
+        const attempt = ownership.settleSuccess(tagName);
+        observability.dispatchLoad({
+          tag: tagName,
+          duration: platform.now() - startedAt,
+          attempt,
+        } satisfies IslandLoadDetail);
+        if (element.children.length > 0) ownership.walk(element);
+      })
+      .catch((error) => {
+        platform.console.error(`[islands] Failed to load <${tagName}>:`, error);
+        const { willRetry, attempt } = ownership.settleFailure(tagName, () => {
+          void runLoader();
+        });
+        observability.dispatchError({
+          tag: tagName,
+          error,
+          attempt,
+        } satisfies IslandErrorDetail);
+        if (!willRetry) ownership.evict(tagName);
+      });
+  };
+
+  return runLoader;
+}
+
 export function createActivationSession(deps: ActivationSessionDeps): ActivationSession {
   const waiters = deps.waiters ?? DEFAULT_DIRECTIVE_WAITERS;
 
@@ -285,40 +341,14 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     deps.observability.noteInitialWaits(tagName, element, deps.ownership.initialWalkComplete);
     const log = deps.observability.createLogger(tagName);
     const gates = deps.spine.readGates(element);
-
-    const abortIfInactive = (): boolean => {
-      if (deps.ownership.isObserved(element)) return false;
-      deps.ownership.evict(tagName);
-      return true;
-    };
-
-    const runLoader = (): Promise<void> => {
-      if (abortIfInactive()) return Promise.resolve();
-      const startedAt = deps.platform.now();
-      return loader()
-        .then(() => {
-          if (abortIfInactive()) return;
-          const attempt = deps.ownership.settleSuccess(tagName);
-          deps.observability.dispatchLoad({
-            tag: tagName,
-            duration: deps.platform.now() - startedAt,
-            attempt,
-          } satisfies IslandLoadDetail);
-          if (element.children.length > 0) deps.ownership.walk(element);
-        })
-        .catch((error) => {
-          deps.platform.console.error(`[islands] Failed to load <${tagName}>:`, error);
-          const { willRetry, attempt } = deps.ownership.settleFailure(tagName, () => {
-            void runLoader();
-          });
-          deps.observability.dispatchError({
-            tag: tagName,
-            error,
-            attempt,
-          } satisfies IslandErrorDetail);
-          if (!willRetry) deps.ownership.evict(tagName);
-        });
-    };
+    const runLoader = createLoaderRunner({
+      tagName,
+      element,
+      loader,
+      ownership: deps.ownership,
+      observability: deps.observability,
+      platform: deps.platform,
+    });
 
     try {
       await runBuiltInDirectives({
@@ -338,7 +368,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     const delegatedToCustomDirectives = runCustomDirectives({
       tagName,
       element,
-      gates,
+      gates: getMatchedCustomDirectiveGates(gates),
       directiveTimeout: deps.directiveTimeout,
       watchCancellable: deps.ownership.watchCancellable,
       log,
