@@ -5,8 +5,7 @@ import {
   type IslandInventoryChange,
   type IslandInventorySnapshot,
 } from "./discovery.js";
-import type { ReviveOptions } from "./contract.js";
-import type { ClientDirectiveDefinition, ResolveTagFn } from "./options.js";
+import type { ResolvedThemeIslandsPolicy } from "./config-policy.js";
 import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
 
 export interface RevivePipelineConfig {
@@ -17,9 +16,7 @@ export interface RevivePipelineConfig {
 export interface RevivePipelineOptions {
   rawDirectories: string[];
   runtimePath: string;
-  resolveTag?: ResolveTagFn;
-  customDirectives?: ClientDirectiveDefinition[];
-  reviveOptions: ReviveOptions;
+  bootstrap: ResolvedThemeIslandsPolicy["bootstrap"];
 }
 
 export interface RevivePipeline {
@@ -61,9 +58,9 @@ export function createRevivePipeline(options: RevivePipelineOptions): RevivePipe
       const plan = await compiler.plan(
         {
           ...inventory.getBootstrapState(),
-          resolveTag: options.resolveTag,
-          customDirectives: options.customDirectives,
-          reviveOptions: options.reviveOptions,
+          resolveTag: options.bootstrap.resolveTag,
+          customDirectives: options.bootstrap.customDirectives,
+          reviveOptions: options.bootstrap.reviveOptions,
         },
         { resolveEntrypoint },
       );

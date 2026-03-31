@@ -21,6 +21,11 @@ export interface ResolvedThemeIslandsPolicy {
     resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
   };
   runtime: ReviveOptions;
+  bootstrap: {
+    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
+    customDirectives: ClientDirectiveDefinition[];
+    reviveOptions: ReviveOptions;
+  };
 }
 
 function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
@@ -102,5 +107,10 @@ export function resolveThemeIslandsPolicy(
       resolveTag: options.resolveTag,
     },
     runtime,
+    bootstrap: {
+      resolveTag: options.resolveTag,
+      customDirectives,
+      reviveOptions: runtime,
+    },
   };
 }

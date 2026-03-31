@@ -33,14 +33,18 @@ describe("revive-pipeline", () => {
     const pipeline = createRevivePipeline({
       rawDirectories: ["/frontend/js/islands/"],
       runtimePath: "/runtime.js",
-      resolveTag: ({ filePath, defaultTag }) =>
-        filePath.endsWith("product-form.ts")
-          ? "product-form"
-          : filePath.endsWith("upsell-card.ts")
-            ? defaultTag
-            : defaultTag,
-      customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
-      reviveOptions: { debug: true },
+      bootstrap: {
+        resolveTag: ({ filePath, defaultTag }) =>
+          filePath.endsWith("product-form.ts")
+            ? "product-form"
+            : filePath.endsWith("upsell-card.ts")
+              ? defaultTag
+              : defaultTag,
+        customDirectives: [
+          { name: "client:on-click", entrypoint: "./src/directives/on-click.ts" },
+        ],
+        reviveOptions: { debug: true },
+      },
     });
 
     pipeline.configure({ root: tmp, aliases: [] });

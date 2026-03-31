@@ -51,18 +51,13 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const policy = resolveThemeIslandsPolicy(options);
   const {
     directives,
-    customDirectives: clientDirectiveDefinitions,
     debug,
-    resolveTag,
   } = policy.plugin;
-  const { runtime: reviveOptions } = policy;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const revivePipeline = createRevivePipeline({
     rawDirectories: rawDirs,
     runtimePath,
-    resolveTag,
-    customDirectives: clientDirectiveDefinitions,
-    reviveOptions,
+    bootstrap: policy.bootstrap,
   });
   let devServer: ViteDevServer | null = null;
 
