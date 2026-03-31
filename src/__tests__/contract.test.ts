@@ -5,7 +5,7 @@
  * key→tag semantics, options normalization, and payload → island map.
  * No Vite or DOM required.
  */
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import {
   deriveDefaultTag,
   defaultKeyToTag,
@@ -124,6 +124,7 @@ describe("contract", () => {
     it("first key wins when multiple keys yield the same tag name", () => {
       const first = async () => ({});
       const second = async () => ({});
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
       const payload: RevivePayload = {
         islands: {
           "/islands/my-island.ts": first,
@@ -133,6 +134,13 @@ describe("contract", () => {
       };
       const map = buildIslandMap(payload);
       expect(map.get("my-island")).toBe(first);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Multiple island entrypoints resolve to <my-island>'),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/my-island.ts"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/components/my-island.js"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("resolveTag({ filePath, defaultTag })"));
+      warn.mockRestore();
     });
 
     it("uses resolvedTags overrides when provided", () => {
@@ -165,6 +173,32 @@ describe("contract", () => {
 
       const map = buildIslandMap(payload);
       expect(map.size).toBe(0);
+    });
+
+    it("warns when resolvedTags overrides collide on the same final tag", () => {
+      const first = async () => ({});
+      const second = async () => ({});
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/legacy-widget.ts": first,
+          "/islands/new-widget.ts": second,
+        },
+        resolvedTags: {
+          "/islands/legacy-widget.ts": "shared-widget",
+          "/islands/new-widget.ts": "shared-widget",
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.get("shared-widget")).toBe(first);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Multiple island entrypoints resolve to <shared-widget>'),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/legacy-widget.ts"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/new-widget.ts"));
+      warn.mockRestore();
     });
   });
 });

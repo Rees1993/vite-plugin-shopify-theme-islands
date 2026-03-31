@@ -85,6 +85,7 @@ describe("runtime bootstrap", () => {
     it("first matching loader wins for duplicate tag names", async () => {
       const first = mock(async () => {});
       const second = mock(async () => {});
+      const warn = spyOn(console, "warn");
       document.body.innerHTML = "<my-island></my-island>";
       suite.runtime.start(
         payload({
@@ -95,6 +96,10 @@ describe("runtime bootstrap", () => {
       await flush();
       expect(first).toHaveBeenCalledTimes(1);
       expect(second).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Multiple island entrypoints resolve to <my-island>'),
+      );
+      warn.mockRestore();
     });
   });
 

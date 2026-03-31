@@ -192,6 +192,12 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
   return { tag, skip };
 }
 
+function warnDuplicateTagOwnership(tag: string, firstKey: string, duplicateKey: string): void {
+  console.warn(
+    `[islands] Multiple island entrypoints resolve to <${tag}>. Using the first discovered entrypoint and ignoring the others:\n- ${firstKey}\n- ${duplicateKey}\nUse resolveTag({ filePath, defaultTag }) to disambiguate or return false to exclude one file.`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 4. Build island map (internal complexity hidden by contract consumer)
 // ---------------------------------------------------------------------------
@@ -202,6 +208,7 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
  */
 export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
+  const sourceKeys = new Map<string, string>();
   for (const [key, loader] of Object.entries(payload.islands)) {
     const resolvedTag = payload.resolvedTags?.[key];
     const { tag, skip } =
@@ -211,7 +218,12 @@ export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader
           : { tag: resolvedTag }
         : defaultKeyToTag(key);
     if (skip) continue;
-    if (!map.has(tag)) map.set(tag, loader);
+    if (!map.has(tag)) {
+      map.set(tag, loader);
+      sourceKeys.set(tag, key);
+      continue;
+    }
+    warnDuplicateTagOwnership(tag, sourceKeys.get(tag) ?? key, key);
   }
   return map;
 }
