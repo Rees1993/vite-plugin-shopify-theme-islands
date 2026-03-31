@@ -1,8 +1,7 @@
 import { relative } from "node:path";
-import { createIslandInventory, getIslandPathsForLoad } from "./discovery.js";
 import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
-import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
+import { createRevivePipeline } from "./revive-pipeline.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -15,13 +14,18 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 /** A function that triggers the load of an island module. */
 export type ClientDirectiveLoader = () => Promise<void>;
 
-export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
+export type {
+  ClientDirective,
+  ClientDirectiveContext,
+  ClientDirectiveOptions,
+} from "./contract.js";
 
 export type {
   ClientDirectiveDefinition,
   DirectivesConfig,
   ShopifyThemeIslandsOptions,
 } from "./options.js";
+
 export type {
   IslandLoadDetail,
   IslandErrorDetail,
@@ -29,7 +33,9 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
+
 export type { InteractionEventName } from "./interaction-events.js";
+
 export {
   DEFAULT_INTERACTION_EVENTS,
   INTERACTION_EVENT_NAMES,
@@ -50,10 +56,13 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   ).map(normalizeDir);
 
   const policy = resolveThemeIslandsPolicy(options);
-  const { directives, customDirectives: clientDirectiveDefinitions, debug } = policy.plugin;
-  const { runtime: reviveOptions } = policy;
+  const { directives, debug } = policy.plugin;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
-  const inventory = createIslandInventory(rawDirs);
+  const revivePipeline = createRevivePipeline({
+    rawDirectories: rawDirs,
+    runtimePath,
+    bootstrap: policy.bootstrap,
+  });
   let devServer: ViteDevServer | null = null;
 
   const invalidateReviveModule = (): void => {
@@ -61,6 +70,10 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     const mod = devServer.moduleGraph.getModuleById(RESOLVED_ID);
     if (!mod) return;
     devServer.moduleGraph.invalidateModule(mod);
+    if (typeof devServer.reloadModule === "function") {
+      void devServer.reloadModule(mod);
+      return;
+    }
     devServer.ws.send({ type: "full-reload" });
   };
 
@@ -69,7 +82,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     enforce: "pre",
 
     configResolved(config) {
-      inventory.configure({
+      revivePipeline.configure({
         root: config.root,
         aliases: config.resolve.alias,
       });
@@ -81,7 +94,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     buildStart() {
       const t0 = performance.now();
-      const snapshot = inventory.scan();
+      const snapshot = revivePipeline.scan();
       if (!snapshot) return;
       if (debug) {
         const scanMs = (performance.now() - t0).toFixed(1);
@@ -96,7 +109,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
           );
         }
         if (snapshot.islandFiles.length) {
-          const root = inventory.getRoot();
+          const root = revivePipeline.getRoot();
           log(`Found ${snapshot.islandFiles.length} island file(s) via mixin import:`);
           for (const file of snapshot.islandFiles) log(" ", relative(root, file));
         }
@@ -106,9 +119,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
-      const change = inventory.applyTransform(id, code);
+      const change = revivePipeline.applyTransform(id, code);
       if (!change) return;
-      const root = inventory.getRoot();
+      const root = revivePipeline.getRoot();
       log(
         change.type === "detected" ? "Detected island:" : "Removed island:",
         relative(root, change.file),
@@ -116,9 +129,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     },
 
     watchChange(id, { event }) {
-      const change = inventory.applyWatchChange(id, event);
+      const change = revivePipeline.applyWatchChange(id, event);
       if (!change) return;
-      const root = inventory.getRoot();
+      const root = revivePipeline.getRoot();
       const prefix =
         event === "delete"
           ? "Removed island (deleted):"
@@ -137,29 +150,15 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const compiler = createReviveBootstrapCompiler(
-        {
-          resolveEntrypoint: async (entrypoint: string) => {
-            const resolved = await this.resolve(entrypoint);
-            if (!resolved) {
-              throw new Error(
-                `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
-              );
-            }
-            return resolved.id;
-          },
-          toLoadPaths: getIslandPathsForLoad,
-        },
-        runtimePath,
-      );
-
-      const plan = await compiler.plan({
-        ...inventory.getBootstrapState(),
-        customDirectives: clientDirectiveDefinitions,
-        reviveOptions,
+      return revivePipeline.compile(async (entrypoint: string) => {
+        const resolved = await this.resolve(entrypoint);
+        if (!resolved) {
+          throw new Error(
+            `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
+          );
+        }
+        return resolved.id;
       });
-
-      return compiler.emit(plan);
     },
   };
 }

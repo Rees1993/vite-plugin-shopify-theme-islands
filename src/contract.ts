@@ -50,11 +50,19 @@ export interface ClientDirectiveOptions {
   value: string;
 }
 
-/** Custom directive function at runtime (load, opts, element). */
+export interface ClientDirectiveContext {
+  /** Aborted when the directive should stop waiting and clean up any side effects. */
+  signal: AbortSignal;
+  /** Registers cleanup work that should run when the directive is aborted or resolves. */
+  onCleanup(cleanup: () => void): void;
+}
+
+/** Custom directive function at runtime (load, opts, element, ctx). */
 export type ClientDirective = (
   load: () => Promise<void>,
   options: ClientDirectiveOptions,
   el: HTMLElement,
+  ctx: ClientDirectiveContext,
 ) => void | Promise<void>;
 
 /** Event detail for the `islands:load` DOM event. */
@@ -94,6 +102,7 @@ export interface RevivePayload {
   islands: Record<string, IslandLoader>;
   options?: ReviveOptions;
   customDirectives?: Map<string, ClientDirective>;
+  resolvedTags?: Record<string, string | false>;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,16 +174,28 @@ export type KeyToTagFn = (key: string) => KeyToTagResult;
 
 const basename = (key: string) => key.split("/").pop() ?? key;
 
+/** Derives the default tag name from a glob key without warning or skipping. */
+export function deriveDefaultTag(key: string): string {
+  const filename = basename(key);
+  return filename.replace(/\.(ts|js)$/, "");
+}
+
 /** Default: last path segment, extension stripped; skip (and warn) when tag has no hyphen. */
 export function defaultKeyToTag(key: string): KeyToTagResult {
   const filename = basename(key);
-  const tag = filename.replace(/\.(ts|js)$/, "");
+  const tag = deriveDefaultTag(key);
   const skip = !tag.includes("-");
   if (skip && tag)
     console.warn(
       `[islands] Skipping "${filename}" — filename must contain a hyphen to match a valid custom element tag (e.g. rename to "${tag}-island.ts")`,
     );
   return { tag, skip };
+}
+
+function warnDuplicateTagOwnership(tag: string, firstKey: string, duplicateKey: string): void {
+  console.warn(
+    `[islands] Multiple island entrypoints resolve to <${tag}>. Using the first discovered entrypoint and ignoring the others:\n- ${firstKey}\n- ${duplicateKey}\nUse resolveTag({ filePath, defaultTag }) to disambiguate or return false to exclude one file.`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -187,10 +208,22 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
  */
 export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
+  const sourceKeys = new Map<string, string>();
   for (const [key, loader] of Object.entries(payload.islands)) {
-    const { tag, skip } = defaultKeyToTag(key);
+    const resolvedTag = payload.resolvedTags?.[key];
+    const { tag, skip } =
+      resolvedTag !== undefined
+        ? resolvedTag === false
+          ? { tag: "", skip: true }
+          : { tag: resolvedTag }
+        : defaultKeyToTag(key);
     if (skip) continue;
-    if (!map.has(tag)) map.set(tag, loader);
+    if (!map.has(tag)) {
+      map.set(tag, loader);
+      sourceKeys.set(tag, key);
+      continue;
+    }
+    warnDuplicateTagOwnership(tag, sourceKeys.get(tag) ?? key, key);
   }
   return map;
 }

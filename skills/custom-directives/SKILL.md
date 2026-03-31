@@ -2,18 +2,21 @@
 name: custom-directives
 description: >
   Custom client directives registered via directives.custom in vite.config.ts.
-  ClientDirective function signature (load, options, el). AND-latch: when
+  ClientDirective function signature (load, options, el, ctx). AND-latch: when
   multiple custom directives match the same element, all must call load() before
   the island activates. Error handling — thrown errors, rejected promises, and
   directiveTimeout expiry fire islands:error. Custom directives run after all
-  built-in conditions resolve. Current matching, AND-latch, and timeout policy
-  are owned by src/directive-orchestration.ts.
+  built-in conditions resolve. Matched directives now receive teardown-aware
+  cleanup via ctx.signal and ctx.onCleanup(). Matching is resolved by
+  src/directive-spine.ts; cleanup, AND-latch, and timeout policy are owned by
+  src/activation-session.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -25,12 +28,14 @@ sources:
 // src/directives/hash.ts
 import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
 
-const hashDirective: ClientDirective = (load, opts) => {
+const hashDirective: ClientDirective = (load, opts, _el, ctx) => {
   const target = opts.value;
   if (location.hash === target) { load(); return; }
-  window.addEventListener("hashchange", () => {
+  const onHashChange = () => {
     if (location.hash === target) load();
-  });
+  };
+  window.addEventListener("hashchange", onHashChange);
+  ctx.onCleanup(() => window.removeEventListener("hashchange", onHashChange));
 };
 
 export default hashDirective;
@@ -38,6 +43,7 @@ export default hashDirective;
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
@@ -67,6 +73,7 @@ export default defineConfig({
 ```ts
 import type {
   ClientDirective,
+  ClientDirectiveContext,
   ClientDirectiveLoader,
   ClientDirectiveOptions,
 } from "vite-plugin-shopify-theme-islands";
@@ -75,18 +82,22 @@ const myDirective: ClientDirective = (
   load: ClientDirectiveLoader,   // call this to trigger the island load
   options: ClientDirectiveOptions, // { name: "client:my-attr", value: "..." }
   el: HTMLElement,               // the island element
+  ctx: ClientDirectiveContext,   // teardown-aware cleanup + cancellation
 ) => {
   // Set up your condition, then call load() when ready
-  el.addEventListener("click", load, { once: true });
+  const onClick = () => void load();
+  el.addEventListener("click", onClick, { once: true });
+  ctx.onCleanup(() => el.removeEventListener("click", onClick));
 };
 ```
 
 ### Read the attribute value
 
 ```ts
-const timedDirective: ClientDirective = (load, options, el) => {
+const timedDirective: ClientDirective = (load, options, _el, ctx) => {
   const ms = parseInt(options.value, 10) || 2000;
-  setTimeout(load, ms);
+  const timer = setTimeout(() => void load(), ms);
+  ctx.onCleanup(() => clearTimeout(timer));
 };
 ```
 
@@ -95,9 +106,10 @@ const timedDirective: ClientDirective = (load, options, el) => {
 ### Async directive
 
 ```ts
-const networkDirective: ClientDirective = async (load, _opts, el) => {
-  await fetch("/api/check-feature");
-  load();
+const networkDirective: ClientDirective = async (load, _opts, _el, ctx) => {
+  if (ctx.signal.aborted) return;
+  await fetch("/api/check-feature", { signal: ctx.signal });
+  await load();
 };
 ```
 
@@ -112,6 +124,18 @@ shopifyThemeIslands({
 ```
 
 If a matched custom directive never calls `load()`, the runtime normally waits forever. Setting `directiveTimeout` turns that hang into an `islands:error` event and abandons the activation attempt after the configured delay.
+
+### Cleanup-aware directives
+
+```ts
+const mediaDirective: ClientDirective = (load, _opts, el, ctx) => {
+  const onFocus = () => void load();
+  el.addEventListener("focusin", onFocus, { once: true });
+  ctx.onCleanup(() => el.removeEventListener("focusin", onFocus));
+};
+```
+
+Use `ctx.onCleanup()` for any listener, timer, observer, or subscription the directive creates. The runtime calls those cleanups when the directive resolves, the subtree is `unobserve()`d, the shared runtime `disconnect()`s, or the element is removed before the directive resolves.
 
 ### AND-latch with multiple matching directives
 
@@ -145,7 +169,33 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 
 No immediate error is thrown by default, so the island is silently never loaded unless you configure `directiveTimeout`.
 
-Source: src/directive-orchestration.ts — matched custom directives own the `run()` call path
+Source: src/directive-spine.ts and src/activation-session.ts — matched custom directives own the `run()` call path
+
+### HIGH Directive creates side effects without cleanup
+
+Wrong:
+
+```ts
+const myDirective: ClientDirective = (load) => {
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 1200) load();
+  });
+};
+```
+
+Correct:
+
+```ts
+const myDirective: ClientDirective = (load, _opts, _el, ctx) => {
+  const onResize = () => {
+    if (window.innerWidth > 1200) void load();
+  };
+  window.addEventListener("resize", onResize);
+  ctx.onCleanup(() => window.removeEventListener("resize", onResize));
+};
+```
+
+Without cleanup, the directive can keep listeners or timers alive after subtree teardown.
 
 ### HIGH Writing a custom directive for mouseenter/touchstart/focusin — use `client:interaction` instead
 
@@ -170,7 +220,7 @@ Correct:
 
 `client:interaction` is a built-in directive that handles `mouseenter`, `touchstart`, and `focusin`. Custom directives are for conditions the built-ins cannot express (e.g. URL hash matching, network conditions, feature flags).
 
-Source: src/directive-orchestration.ts — built-in interaction handling covers the hover/touch/focus pattern
+Source: src/activation-session.ts — built-in interaction handling covers the hover/touch/focus pattern
 
 ### HIGH AND-latch: both matched directives must call `load()`
 
@@ -193,7 +243,7 @@ Correct:
 
 With two matching custom directives, `remaining = 2`. Each `load()` call decrements it. The island activates only when `remaining === 0`.
 
-Source: src/directive-orchestration.ts — `let remaining = matched.length`
+Source: src/activation-session.ts — `let remaining = matched.length`
 
 ### HIGH Duplicate custom directive names or collisions with built-ins fail plugin setup
 
@@ -262,7 +312,7 @@ Wrong expectation:
 
 The runtime awaits built-ins in order (`visible → media → idle → defer → interaction`) first, then passes control to matched custom directives. Custom directives cannot short-circuit or replace built-in awaits.
 
-Source: src/directive-orchestration.ts — runBuiltIns() completes before runCustomDirectives()
+Source: src/activation-session.ts — `runBuiltInDirectives()` completes before `runCustomDirectives()`
 
 ### MEDIUM Calling `load()` multiple times has no effect after the first
 
@@ -284,4 +334,4 @@ const retryDirective: ClientDirective = (load, _opts, el) => {
 
 The `loadOnce` wrapper ignores all calls after the first (`fired` guard). Use `{ once: true }` on event listeners to avoid unnecessary calls.
 
-Source: src/directive-orchestration.ts — `if (fired || aborted) return Promise.resolve()`
+Source: src/activation-session.ts — `loadOnce` guard (`if (fired || aborted) return Promise.resolve()`)

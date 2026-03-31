@@ -2,34 +2,38 @@
 name: setup
 description: >
   Getting-started journey and plugin configuration. Covers the full path from
-  install to first working island. shopifyThemeIslands() options: directories
-  (string | string[]), debug, directives deep-merge (visible, idle, media,
-  defer, interaction, custom), retry (retries, delay with exponential
-  backoff), directiveTimeout for hung custom directives, and the curated
-  interaction-event config policy (`mouseenter`, `touchstart`, `focusin`; empty
-  arrays rejected). Per-element `client:interaction` values are runtime-validated
-  against the same curated set: unsupported tokens warn and are ignored; if no
-  supported tokens remain, the runtime falls back to the configured default
-  events. Load when setting up the plugin, configuring island scan directories,
-  or enabling retry / directive timeout.
+  install to first working island. Shopify-first setup: shopifyThemeIslands()
+  options include directories (string | string[]),
+  resolveTag({ filePath, defaultTag }), debug, directives deep-merge
+  (visible, idle, media, defer, interaction, custom), retry (retries, delay
+  with exponential backoff), directiveTimeout for hung custom directives, and
+  the curated interaction-event config policy
+  (`mouseenter`, `touchstart`, `focusin`; empty arrays rejected). Per-element
+  `client:interaction` values are runtime-validated against the same curated
+  set: unsupported tokens warn and are ignored; if no supported tokens remain,
+  the runtime falls back to the configured default events.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 
 ## Setup
 
-This plugin is framework-agnostic but designed for Shopify themes. Most Shopify
-projects also use
+This plugin is Shopify-first and built for Liquid themes using custom elements.
+Most Shopify projects also use
 [vite-plugin-shopify](https://github.com/barrel/vite-plugin-shopify) to handle
 Shopify-specific asset serving — if the project uses it, add this plugin
 alongside it in the existing `plugins` array.
+
+The package targets **Node.js 22+** and declares **Vite 6+** as a peer dependency.
 
 ### 1. Add the plugin to `vite.config.ts`
 
@@ -54,9 +58,12 @@ import "vite-plugin-shopify-theme-islands/revive";
 
 This activates the runtime — islands are never loaded without this import.
 
-For SPA teardown, the virtual `/revive` module also exports `disconnect()`.
-If it is called before `DOMContentLoaded`, the runtime cancels its pending
-startup listener so islands never initialize later against stale DOM.
+The same `/revive` module also exports `scan()`, `observe()`, `unobserve()`,
+and `disconnect()` for partial swaps and teardown. If `disconnect()` is called
+before `DOMContentLoaded`, the runtime cancels its pending startup listener so
+islands never initialize later against stale DOM.
+`/revive` is a shared page-level singleton, so later named imports reuse the
+same runtime instance instead of creating a second one.
 
 ### 3. Add directives to Liquid templates
 
@@ -78,6 +85,24 @@ shopifyThemeIslands({
 });
 ```
 
+### Override filename-to-tag mapping
+
+```ts
+shopifyThemeIslands({
+  resolveTag({ filePath, defaultTag }) {
+    if (filePath.endsWith("/legacy/widget.ts")) return "legacy-widget";
+    if (filePath.endsWith("/skip-me.ts")) return false;
+    return defaultTag;
+  },
+});
+```
+
+Use `resolveTag()` when filename-based tag derivation is not sufficient.
+Returning `false` excludes the file from the island map. Returning
+`defaultTag` keeps the default derived tag.
+
+If two different source files still resolve to the same tag, the runtime keeps the first discovered entrypoint and warns — adjust `resolveTag` or exclude one file to fix it.
+
 ### Override built-in directive defaults
 
 ```ts
@@ -94,6 +119,7 @@ shopifyThemeIslands({
 Per-directive options are deep-merged — overriding `visible.rootMargin` preserves `visible.threshold` at its default of `0`.
 For config, `directives.interaction.events` is intentionally narrow and only accepts `mouseenter`, `touchstart`, and `focusin`.
 Per-element `client:interaction="..."` values are checked at runtime against that same set. Unsupported tokens warn and are ignored; if all tokens are unsupported, the runtime warns and falls back to the configured default events.
+Per-element `client:idle` and `client:defer` values now require strict integer strings. Invalid values warn and fall back to the configured default timeout or delay.
 
 ### Enable automatic retry with exponential backoff
 
@@ -296,3 +322,49 @@ shopifyThemeIslands({
 The typed config surface only supports the package-owned interaction events `mouseenter`, `touchstart`, and `focusin`. An empty array is rejected because it would otherwise create an interaction gate that never resolves.
 
 Source: src/interaction-events.ts — validateInteractionEvents()
+
+### HIGH `directories: []` fails plugin validation
+
+Wrong:
+
+```ts
+shopifyThemeIslands({ directories: [] });
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands();
+// or at least one path:
+shopifyThemeIslands({ directories: ["/frontend/js/islands/"] });
+```
+
+An empty `directories` array is rejected at config resolution.
+
+Source: src/config-policy.ts — validateOptions()
+
+### HIGH `directives.visible.threshold` outside 0–1 fails plugin validation
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { threshold: 1.5 },
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { threshold: 0.5 },
+  },
+});
+```
+
+`threshold` must be between `0` and `1` inclusive.
+
+Source: src/config-policy.ts — validateOptions()

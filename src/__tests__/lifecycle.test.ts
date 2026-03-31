@@ -1,12 +1,13 @@
 /// <reference lib="dom" />
 import { describe, expect, it, mock, afterEach } from "bun:test";
 import { createIslandLifecycleCoordinator } from "../lifecycle";
-
-const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+import { createCleanupQueue, flush, mockMutationObserver } from "./harness";
 
 describe("lifecycle", () => {
+  const cleanups = createCleanupQueue();
+
   afterEach(() => {
-    document.body.innerHTML = "";
+    cleanups.cleanup({ resetDom: true });
   });
 
   it("walks initial DOM, defers children behind queued parents, and rewinds them after success", async () => {
@@ -26,13 +27,15 @@ describe("lifecycle", () => {
     const parent = document.querySelector("parent-island") as HTMLElement;
     const child = document.querySelector("child-island") as HTMLElement;
 
-    lifecycle.start({
-      getRoot: () => document.body,
-      islandMap,
-      onActivate(tagName) {
-        tags.push(tagName);
-      },
-    });
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate(tagName) {
+          tags.push(tagName);
+        },
+      }).disconnect,
+    );
 
     expect(tags).toEqual(["parent-island"]);
     expect(lifecycle.isQueued("parent-island")).toBe(true);
@@ -53,41 +56,42 @@ describe("lifecycle", () => {
       ["dynamic-island", mock(async () => {})],
     ]);
     let moCallback: MutationCallback | undefined;
-    const OriginalMO = globalThis.MutationObserver;
-    globalThis.MutationObserver = class {
-      constructor(cb: MutationCallback) {
-        moCallback = cb;
-      }
-      observe() {}
-      disconnect() {}
-    } as unknown as typeof MutationObserver;
+    cleanups.track(
+      mockMutationObserver(
+        class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver,
+      ),
+    );
 
-    try {
-      document.body.innerHTML = "<root-shell></root-shell>";
+    document.body.innerHTML = "<root-shell></root-shell>";
 
-      const { disconnect } = lifecycle.start({
+    const disconnect = cleanups.track(
+      lifecycle.start({
         getRoot: () => document.body,
         islandMap,
         onActivate(tagName) {
           tags.push(tagName);
         },
-      });
+      }).disconnect,
+    );
 
-      const el = document.createElement("dynamic-island");
-      document.body.appendChild(el);
-      moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
+    const el = document.createElement("dynamic-island");
+    document.body.appendChild(el);
+    moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
 
-      disconnect();
-      const later = document.createElement("dynamic-island");
-      document.body.appendChild(later);
-      moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
-    } finally {
-      globalThis.MutationObserver = OriginalMO;
-    }
+    disconnect();
+    const later = document.createElement("dynamic-island");
+    document.body.appendChild(later);
+    moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
   });
 
   it("resolves the root lazily and skips startup callbacks when disconnected before init", () => {
@@ -113,16 +117,18 @@ describe("lifecycle", () => {
     document.removeEventListener = removeSpy as typeof document.removeEventListener;
 
     try {
-      const { disconnect } = lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
-      });
+      const disconnect = cleanups.track(
+        lifecycle.start({
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual([]);
       expect(beforeWalk).not.toHaveBeenCalled();
@@ -136,16 +142,18 @@ describe("lifecycle", () => {
       expect(afterWalk).not.toHaveBeenCalled();
 
       readyState = "interactive";
-      lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
-      });
+      cleanups.track(
+        lifecycle.start({
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual(["called"]);
       expect(beforeWalk).toHaveBeenCalledTimes(1);
@@ -157,5 +165,106 @@ describe("lifecycle", () => {
       document.addEventListener = originalAdd;
       document.removeEventListener = originalRemove;
     }
+  });
+
+  it("schedules retry callbacks with exponential backoff from the lifecycle boundary", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 100,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+    const retry = mock(() => {});
+
+    const first = lifecycle.settleFailure("retry-island", retry);
+    const second = lifecycle.settleFailure("retry-island", retry);
+
+    expect(first).toEqual({ attempt: 1, willRetry: true });
+    expect(second).toEqual({ attempt: 2, willRetry: true });
+    expect(timers.map((timer) => timer.delay)).toEqual([100, 200]);
+
+    timers[0].fn();
+    timers[1].fn();
+    expect(retry).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears pending retry timers on success and targeted clear", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    lifecycle.settleFailure(
+      "alpha-island",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "beta-island",
+      mock(() => {}),
+    );
+    expect(timers).toHaveLength(2);
+
+    const attempt = lifecycle.settleSuccess("alpha-island");
+    expect(attempt).toBe(2);
+    expect(timers[0].cleared).toBe(true);
+
+    lifecycle.clear(["beta-island"]);
+    expect(timers[1].cleared).toBe(true);
+  });
+
+  it("can clear all pending retries at once", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    lifecycle.settleFailure(
+      "alpha-island",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "beta-island",
+      mock(() => {}),
+    );
+    lifecycle.clear();
+
+    expect(timers.every((timer) => timer.cleared)).toBe(true);
   });
 });

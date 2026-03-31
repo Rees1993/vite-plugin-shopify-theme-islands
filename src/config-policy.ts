@@ -1,4 +1,9 @@
-import { DEFAULT_DIRECTIVES, type ReviveOptions } from "./contract.js";
+import {
+  DEFAULT_DIRECTIVES,
+  type NormalizedReviveOptions,
+  type ReviveOptions,
+} from "./contract.js";
+import { createDirectiveSpine } from "./directive-spine.js";
 import { validateInteractionEvents } from "./interaction-events.js";
 import type {
   ClientDirectiveDefinition,
@@ -13,11 +18,17 @@ export interface ResolvedThemeIslandsPolicy {
     directives: DirectivesConfig;
     customDirectives: ClientDirectiveDefinition[];
     debug: boolean;
+    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
   };
   runtime: ReviveOptions;
+  bootstrap: {
+    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
+    customDirectives: ClientDirectiveDefinition[];
+    reviveOptions: ReviveOptions;
+  };
 }
 
-function mergeDirectives(directives?: DirectivesConfig): DirectivesConfig {
+function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
   return {
     visible: { ...DEFAULT_DIRECTIVES.visible, ...directives?.visible },
     idle: { ...DEFAULT_DIRECTIVES.idle, ...directives?.idle },
@@ -27,7 +38,10 @@ function mergeDirectives(directives?: DirectivesConfig): DirectivesConfig {
   };
 }
 
-function validateOptions(options: ShopifyThemeIslandsOptions, directives: DirectivesConfig): void {
+function validateOptions(
+  options: ShopifyThemeIslandsOptions,
+  directives: NormalizedReviveOptions["directives"],
+): void {
   const customDefs = options.directives?.custom ?? [];
   if (Array.isArray(options.directories) && options.directories.length === 0) {
     throw new Error(`${PREFIX} "directories" must not be empty`);
@@ -53,13 +67,7 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
     }
   }
 
-  const builtinAttributes = new Set([
-    directives.visible!.attribute!,
-    directives.idle!.attribute!,
-    directives.media!.attribute!,
-    directives.defer!.attribute!,
-    directives.interaction!.attribute!,
-  ]);
+  const builtinAttributes = createDirectiveSpine(directives).attributeNames;
   const seen = new Set<string>();
   for (const def of customDefs) {
     if (seen.has(def.name)) {
@@ -96,7 +104,13 @@ export function resolveThemeIslandsPolicy(
       directives,
       customDirectives,
       debug,
+      resolveTag: options.resolveTag,
     },
     runtime,
+    bootstrap: {
+      resolveTag: options.resolveTag,
+      customDirectives,
+      reviveOptions: runtime,
+    },
   };
 }

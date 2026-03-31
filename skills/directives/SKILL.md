@@ -6,18 +6,21 @@ description: >
   client:defer (setTimeout delay), client:interaction (mouseenter/touchstart/focusin).
   Directives resolve sequentially — visible → media → idle → defer →
   interaction → custom. Per-element value overrides. Empty client:media
-  warning. `client:interaction` now validates per-element tokens at runtime:
+  warning. `client:idle` and `client:defer` require strict integer strings;
+  invalid values warn and fall back. `client:interaction` validates per-element tokens at runtime:
   whitespace-only values warn and fall back; mixed supported/unsupported values
   warn and ignore the unsupported tokens; fully unsupported values warn and fall
   back to default events. Global `directives.interaction.events` config is
   intentionally narrowed to the curated set `mouseenter`, `touchstart`, and
-  `focusin`. Current directive sequencing and custom-directive latching are
-  owned by src/directive-orchestration.ts.
+  `focusin`. Implementation: src/directive-spine.ts (gates), src/directive-waiters.ts
+  (built-in waits), src/activation-session.ts (sequencing, custom latch, loader).
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
-  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-waiters.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
@@ -82,6 +85,7 @@ Combined directives are AND-latched. The island loads only after every condition
 The attribute value overrides the globally configured default for that element. Other elements are unaffected.
 In config, `directives.interaction.events` is stricter and only accepts the curated package-owned list: `mouseenter`, `touchstart`, and `focusin`.
 At runtime, per-element `client:interaction` values use that same curated set. Unsupported tokens are ignored with a warning; if no supported tokens remain, the runtime warns and falls back to the default interaction events.
+For `client:idle` and `client:defer`, values like `"20ms"` are now invalid and fall back to the configured default timeout or delay.
 
 ### `client:defer` without a value uses the global default
 
@@ -107,7 +111,7 @@ An empty `client:defer` attribute is NOT zero — it falls back to the configure
 
 An empty `client:interaction` attribute uses the configured default events with no warning. A whitespace-only value such as `client:interaction="   "` emits a warning and still falls back to the default events.
 
-Source: src/directive-orchestration.ts — interaction token parsing and fallback warning
+Source: src/directive-spine.ts and src/activation-session.ts — interaction token parsing and fallback warning
 
 ### Mixed supported and unsupported interaction tokens
 
@@ -160,7 +164,25 @@ Correct:
 
 An empty `client:media` value emits a console warning and skips the media check — the island loads immediately. Provide a valid media query string.
 
-Source: src/directive-orchestration.ts — `if (query === "")` branch
+Source: src/directive-spine.ts and src/activation-session.ts — empty media gate handling
+
+### MEDIUM `client:idle` and `client:defer` do not accept suffix junk
+
+Wrong:
+
+```html
+<analytics-widget client:idle="2000ms"></analytics-widget>
+<chat-widget client:defer="3s"></chat-widget>
+```
+
+Correct:
+
+```html
+<analytics-widget client:idle="2000"></analytics-widget>
+<chat-widget client:defer="3000"></chat-widget>
+```
+
+These attributes now require strict integer strings. Invalid values warn and fall back to the configured default timeout or delay.
 
 ### MEDIUM Whitespace-only `client:interaction` value warns and falls back
 
@@ -182,7 +204,7 @@ Correct:
 
 Whitespace-only values are not treated the same as an empty attribute. The runtime warns and falls back to the configured default events.
 
-Source: src/directive-orchestration.ts — `interactionAttr.split(/\s+/).filter(Boolean)`
+Source: src/directive-spine.ts — interaction gate parsing and whitespace fallback
 
 ### MEDIUM Unsupported per-element interaction tokens are warned and ignored
 
@@ -201,7 +223,7 @@ Correct:
 
 The runtime no longer attaches arbitrary listeners for unsupported per-element tokens. Supported tokens still work; unsupported ones are ignored with a warning. If no supported tokens remain, the runtime falls back to the configured default events.
 
-Source: src/directive-orchestration.ts — `partitionInteractionEventTokens()` handling
+Source: src/directive-spine.ts and src/activation-session.ts — supported/unsupported interaction token handling
 
 ### HIGH Multiple directives are AND, not OR
 
@@ -221,7 +243,7 @@ Correct understanding:
 
 The runtime awaits each directive sequentially. There is no way to express OR semantics with built-in directives — use a custom directive for that.
 
-Source: src/directive-orchestration.ts — runBuiltIns() sequential awaits
+Source: src/activation-session.ts — `runBuiltInDirectives()` runs built-ins before custom directives
 
 ### MEDIUM `client:defer` without value ≠ immediate load
 
@@ -241,7 +263,7 @@ Correct:
 
 `client:defer` with no value uses the global `defer.delay` default (3000ms). `parseInt("", 10)` produces `NaN`, which the runtime replaces with the configured default.
 
-Source: src/directive-orchestration.ts — defer parsing and fallback to directives.defer.delay
+Source: src/activation-session.ts — defer parsing and fallback to directives.defer.delay
 
 ### MEDIUM Per-element visible value replaces rootMargin, not adds to it
 
@@ -261,7 +283,7 @@ Correct:
 
 The attribute value is passed directly to `IntersectionObserver` as `rootMargin`, fully replacing the global default.
 
-Source: src/directive-orchestration.ts — visible attribute value replaces directives.visible.rootMargin
+Source: src/activation-session.ts — visible attribute value replaces directives.visible.rootMargin
 
 ### HIGH Directive attribute typo — island loads without condition
 
@@ -279,7 +301,7 @@ Correct:
 
 Directive attributes are case-sensitive. An unrecognised attribute is silently ignored — the island loads immediately as if no directive were set. No warning is emitted. Check for typos if an island activates earlier than expected.
 
-Source: src/directive-orchestration.ts — built-ins read exact configured attribute names
+Source: src/directive-spine.ts — built-ins read exact configured attribute names from the spine
 
 ### HIGH Unsupported interaction events in config fail plugin setup
 
@@ -324,4 +346,4 @@ Correct:
 
 When `directives.visible.attribute` (or any directive's `attribute` option) is overridden in `vite.config.ts`, all Liquid templates must use the configured name. The default `client:*` names no longer apply. Always read `vite.config.ts` to check for overridden attribute names before writing directives in Liquid.
 
-Source: src/options.ts:DirectivesConfig — `attribute` field per directive; src/runtime.ts reads configured attribute names at runtime
+Source: src/options.ts — `DirectivesConfig` `attribute` field per directive; src/directive-spine.ts reads configured attribute names at runtime

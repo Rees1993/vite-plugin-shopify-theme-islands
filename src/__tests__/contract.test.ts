@@ -5,8 +5,9 @@
  * key→tag semantics, options normalization, and payload → island map.
  * No Vite or DOM required.
  */
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import {
+  deriveDefaultTag,
   defaultKeyToTag,
   buildIslandMap,
   normalizeReviveOptions,
@@ -17,6 +18,11 @@ import { DEFAULT_INTERACTION_EVENTS } from "../interaction-events";
 
 describe("contract", () => {
   describe("key→tag (path-like keys become tag names)", () => {
+    it("deriveDefaultTag strips the extension without warning or skip logic", () => {
+      expect(deriveDefaultTag("/frontend/js/islands/product-form.ts")).toBe("product-form");
+      expect(deriveDefaultTag("/islands/myisland.ts")).toBe("myisland");
+    });
+
     it("path-like keys yield tag = last segment with extension stripped", () => {
       expect(defaultKeyToTag("/frontend/js/islands/product-form.ts").tag).toBe("product-form");
       expect(defaultKeyToTag("/islands/my-counter.js").tag).toBe("my-counter");
@@ -118,6 +124,7 @@ describe("contract", () => {
     it("first key wins when multiple keys yield the same tag name", () => {
       const first = async () => ({});
       const second = async () => ({});
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
       const payload: RevivePayload = {
         islands: {
           "/islands/my-island.ts": first,
@@ -127,6 +134,73 @@ describe("contract", () => {
       };
       const map = buildIslandMap(payload);
       expect(map.get("my-island")).toBe(first);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("Multiple island entrypoints resolve to <my-island>"),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/my-island.ts"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/components/my-island.js"));
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("resolveTag({ filePath, defaultTag })"),
+      );
+      warn.mockRestore();
+    });
+
+    it("uses resolvedTags overrides when provided", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/productForm.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/productForm.ts": "product-form",
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.get("product-form")).toBe(loader);
+    });
+
+    it("skips entries whose resolvedTags override is false", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/product-form.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/product-form.ts": false,
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.size).toBe(0);
+    });
+
+    it("warns when resolvedTags overrides collide on the same final tag", () => {
+      const first = async () => ({});
+      const second = async () => ({});
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/legacy-widget.ts": first,
+          "/islands/new-widget.ts": second,
+        },
+        resolvedTags: {
+          "/islands/legacy-widget.ts": "shared-widget",
+          "/islands/new-widget.ts": "shared-widget",
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.get("shared-widget")).toBe(first);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("Multiple island entrypoints resolve to <shared-widget>"),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/legacy-widget.ts"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/new-widget.ts"));
+      warn.mockRestore();
     });
   });
 });

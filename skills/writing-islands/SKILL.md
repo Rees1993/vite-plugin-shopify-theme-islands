@@ -5,15 +5,19 @@ description: >
   configured directories auto-discovered by tag name = filename) and Island
   mixin (import Island from vite-plugin-shopify-theme-islands/island to mark
   files anywhere in the project). Mixin islands added or removed during dev
-  trigger an automatic reload. Covers customElements.define, the Island
-  base class, and child island cascade behaviour now owned by
-  src/lifecycle.ts.
+  invalidate the virtual revive module (reloadModule when available, otherwise a
+  full page reload) — no manual Vite restart. Covers customElements.define, the Island
+  base class, resolveTag overrides, and child island cascade behaviour now owned by
+  src/lifecycle.ts. File-path-to-tag resolution and revive bootstrap planning
+  are now coordinated through src/revive-pipeline.ts and src/revive-bootstrap.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-bootstrap.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -62,7 +66,7 @@ if (!customElements.get("cart-drawer")) {
 }
 ```
 
-The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island file triggers an automatic reload — no Vite restart needed.
+The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the bootstrap picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
 
 ## Core Patterns
 
@@ -100,6 +104,21 @@ export default defineConfig({
 ```
 
 The plugin resolves Vite aliases in `directories` during `configResolved`.
+
+### Override tag mapping when filename convention is not enough
+
+```ts
+shopifyThemeIslands({
+  resolveTag({ filePath, defaultTag }) {
+    if (filePath.endsWith("/frontend/js/legacy/widget.ts")) return "legacy-widget";
+    return defaultTag;
+  },
+});
+```
+
+Use `resolveTag()` to override the default filename-to-tag mapping or exclude a file entirely by returning `false`. Returning `defaultTag` keeps the default derived tag.
+
+When more than one discovered file maps to the same custom-element tag, the runtime keeps the first entrypoint and logs a warning naming the conflicting paths — use `resolveTag` to disambiguate or exclude one file.
 
 ## Common Mistakes
 

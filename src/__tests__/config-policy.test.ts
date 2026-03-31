@@ -53,6 +53,24 @@ describe("config-policy", () => {
     });
   });
 
+  it("exposes a bootstrap-ready view of the resolved policy", () => {
+    const resolveTag = ({ defaultTag }: { filePath: string; defaultTag: string }) => defaultTag;
+    const customDirectives = [{ name: "client:on-click", entrypoint: "./click.ts" }];
+
+    const policy = resolveThemeIslandsPolicy({
+      resolveTag,
+      directives: { custom: customDirectives },
+      retry: { retries: 2, delay: 500 },
+      debug: true,
+    });
+
+    expect(policy.bootstrap).toEqual({
+      resolveTag,
+      customDirectives,
+      reviveOptions: policy.runtime,
+    });
+  });
+
   it("rejects empty directories", () => {
     expect(() => resolveThemeIslandsPolicy({ directories: [] })).toThrow(
       '"directories" must not be empty',

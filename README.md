@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/vite-plugin-shopify-theme-islands)](https://www.npmjs.com/package/vite-plugin-shopify-theme-islands)
 [![license](https://img.shields.io/npm/l/vite-plugin-shopify-theme-islands)](./LICENSE)
 
-Island architecture for Shopify themes. Lazily hydrate custom elements using loading directives — only load the JavaScript when it's actually needed.
+Shopify-first island architecture for web components in Liquid themes. Lazily load custom element JavaScript only when it is actually needed.
 
 ## Installation
 
@@ -14,6 +14,49 @@ npm install -D vite-plugin-shopify-theme-islands
 pnpm add -D vite-plugin-shopify-theme-islands
 yarn add -D vite-plugin-shopify-theme-islands
 ```
+
+## Quick start
+
+Minimal end-to-end setup:
+
+1. Add the plugin in `vite.config.ts`
+2. Import `vite-plugin-shopify-theme-islands/revive` in your client entrypoint
+3. Create a web component file whose filename matches the tag name
+4. Use that tag in Liquid, with a directive if you want lazy loading
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
+
+export default defineConfig({
+  plugins: [shopifyThemeIslands()],
+});
+```
+
+```ts
+// frontend/entrypoints/theme.ts
+import "vite-plugin-shopify-theme-islands/revive";
+```
+
+```ts
+// frontend/js/islands/product-form.ts
+class ProductForm extends HTMLElement {
+  connectedCallback() {
+    // ...
+  }
+}
+
+if (!customElements.get("product-form")) {
+  customElements.define("product-form", ProductForm);
+}
+```
+
+```liquid
+<product-form client:visible></product-form>
+```
+
+That is enough to get a lazily loaded island working.
 
 ## Setup
 
@@ -34,13 +77,36 @@ export default defineConfig({
 import "vite-plugin-shopify-theme-islands/revive";
 ```
 
-That's it. The plugin automatically scans your islands directory and wires everything up.
+That's it. The plugin automatically scans your configured island directories, includes mixin-marked island files, and wires everything up.
 
-For SPA navigation teardown, import `disconnect` to stop the MutationObserver:
+The shared runtime also handles:
+
+- dynamic DOM additions via `MutationObserver`
+- Shopify Theme Editor section and block lifecycle events
+- subtree teardown and reactivation through helpers exported from the same module
+
+`./revive` is a shared page-level singleton. Importing it in multiple files does not create multiple runtimes; later named imports reuse the same runtime instance and helper surface.
+
+If you need explicit control for partial swaps, drawers, or teardown, import the helpers from that same entrypoint:
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
-// Call during SPA teardown:
+import {
+  disconnect,
+  scan,
+  observe,
+  unobserve,
+} from "vite-plugin-shopify-theme-islands/revive";
+
+// Re-scan a subtree immediately
+scan(container);
+
+// Re-enable a subtree that was previously unobserved
+observe(container);
+
+// Pause a subtree and cancel pending work inside it
+unobserve(container);
+
+// Stop the shared runtime entirely
 disconnect();
 ```
 
@@ -125,6 +191,15 @@ Child islands nested inside a parent island are automatically held until the par
 
 Add these attributes to your custom elements in Liquid to control when the JavaScript loads. Without a directive, the island loads immediately.
 
+### Directive semantics
+
+Directives gate **code loading at the tag level**.
+
+- directives are authored on individual elements
+- once a tag's module loads, matching elements upgrade normally through the Custom Elements registry
+- if the same tag appears with conflicting gates, the first-resolved instance wins for that tag
+- in `debug: true`, the runtime logs a warning once per tag when it sees conflicting same-tag gates
+
 ### `client:visible`
 
 Loads the island when the element scrolls into view.
@@ -175,6 +250,8 @@ The attribute value overrides the global `timeout` for that element only:
 </recently-viewed>
 ```
 
+If the attribute value is not a strict integer, the runtime logs a warning and falls back to the configured default timeout.
+
 ### `client:defer`
 
 Loads the island after a fixed delay. The delay in milliseconds is read from the attribute value. If no value is given, the configured default (3000ms) is used.
@@ -191,6 +268,8 @@ Loads the island after a fixed delay. The delay in milliseconds is read from the
 ```
 
 Unlike `client:idle`, which waits for genuine browser idle time, `client:defer` always waits exactly the specified number of milliseconds.
+
+If the attribute value is not a strict integer, the runtime logs a warning and falls back to the configured default delay.
 
 ### `client:interaction`
 
@@ -243,7 +322,7 @@ Because conditions resolve sequentially, each directive is only evaluated after 
 
 ### Custom directives
 
-Register your own loading conditions via `directives.custom`. A custom directive is a function that receives a `load` callback and decides when to call it.
+Register your own loading conditions via `directives.custom`. A custom directive receives a `load` callback, the matched attribute metadata, the element, and a cleanup-aware runtime context.
 
 #### 1. Write the directive
 
@@ -251,12 +330,19 @@ Register your own loading conditions via `directives.custom`. A custom directive
 // src/directives/hash.ts
 import type { ClientDirective } from "vite-plugin-shopify-theme-islands";
 
-const hashDirective: ClientDirective = (load, opts) => {
+const hashDirective: ClientDirective = (load, opts, _el, ctx) => {
   const target = opts.value;
-  if (location.hash === target) { load(); return; }
-  window.addEventListener("hashchange", () => {
+  if (location.hash === target) {
+    void load();
+    return;
+  }
+
+  const onHashChange = () => {
     if (location.hash === target) load();
-  });
+  };
+
+  window.addEventListener("hashchange", onHashChange);
+  ctx.onCleanup(() => window.removeEventListener("hashchange", onHashChange));
 };
 
 export default hashDirective;
@@ -264,7 +350,7 @@ export default hashDirective;
 
 Useful for anchor-linked sections — `<product-reviews client:hash="#reviews">` loads only when the URL fragment matches, so deep-links like `/products/shirt#reviews` activate the island immediately while other visitors never load it.
 
-The function signature is `(load, options, el) => void | Promise<void>`:
+The function signature is `(load, options, el, ctx) => void | Promise<void>`:
 
 | Parameter       | Type                   | Description                                           |
 | --------------- | ---------------------- | ----------------------------------------------------- |
@@ -272,11 +358,16 @@ The function signature is `(load, options, el) => void | Promise<void>`:
 | `options.name`  | `string`               | The matched attribute name, e.g. `'client:hash'`      |
 | `options.value` | `string`               | The attribute value; empty string if no value was set |
 | `el`            | `HTMLElement`          | The island element                                    |
+| `ctx.signal`    | `AbortSignal`          | Aborted when the directive should stop waiting        |
+| `ctx.onCleanup` | `(fn: () => void) => void` | Register cleanup work for abort or successful resolution |
+
+Use `ctx.signal` with APIs that accept `AbortSignal`; otherwise register explicit teardown with `ctx.onCleanup()`.
 
 #### 2. Register it in the plugin config
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
 import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
 
 export default defineConfig({
@@ -313,6 +404,7 @@ Built-in directives always run first. A custom directive is only invoked after a
 
 The custom directive owns the `load()` call — the built-in chain never calls it directly when a custom directive is matched.
 If a custom directive throws or returns a rejected promise, the runtime dispatches `islands:error` and abandons that island activation attempt.
+When a subtree is unobserved, removed, or the shared runtime disconnects, pending custom directives receive `ctx.signal.abort()` and registered cleanup functions are run once.
 
 Multiple custom directives on the same element use AND semantics — the island loads only once all matched directives have called `load()`. For example, given two registered custom directives `client:hash` and `client:network`:
 
@@ -335,13 +427,16 @@ shopifyThemeIslands({
 
 This is useful during development to surface directives that hang due to bugs, or in production to ensure broken directives don't silently degrade the experience.
 
-## Configuration
+## Configuration reference
+
+### Top-level options
 
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
+| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override file-path-to-tag mapping. Return `defaultTag` to keep the default derived tag or `false` to exclude a file. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
-| `retry`            | `object`             | —                           | Automatic retry behaviour for failed island loads. See [Retries](#retries).        |
+| `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
 | `directiveTimeout` | `number`             | `0` (disabled)              | Milliseconds before a custom directive that never calls `load()` is considered timed out. Fires `islands:error` and abandons the island. |
 
@@ -411,6 +506,34 @@ export default defineConfig({
 });
 ```
 
+### Overriding tag resolution
+
+By default, the plugin derives the tag name from the filename. Use `resolveTag()` when you need an escape hatch without changing the file name.
+
+Important:
+
+- `resolveTag()` is authoritative for the files it handles
+- returning `false` excludes that file from the island map
+- if you want to keep default filename-based behavior for other files, return `defaultTag`
+
+```ts
+shopifyThemeIslands({
+  resolveTag({ filePath, defaultTag }) {
+    if (filePath.endsWith("productForm.ts")) return "product-form";
+    if (filePath.endsWith("legacy-widget.ts")) return false;
+    return defaultTag;
+  },
+});
+```
+
+That means:
+
+- `productForm.ts` becomes `<product-form>`
+- `legacy-widget.ts` is skipped entirely
+- everything else falls back to its filename-derived tag
+
+If you want to keep the default derived tag for most files, return `defaultTag`.
+
 ## Retries
 
 Automatically retry failed island loads with exponential backoff:
@@ -451,10 +574,20 @@ offError();
 ```
 
 For SPA teardown, the virtual `/revive` module also exports `disconnect()`, which stops further lifecycle observation and cancels pending startup before init has run.
+The same module also exports `scan()`, `observe()`, and `unobserve()` for subtree control.
 
 ### Raw DOM events
 
-The events are also available via the standard `document.addEventListener` API. Event types are fully typed via `DocumentEventMap` augmentation — available automatically when `vite-plugin-shopify-theme-islands` is present in your TypeScript compilation (e.g. via `vite.config.ts` or a directive type import).
+The events are also available via the standard `document.addEventListener` API. The package augments `DocumentEventMap`, but your app-side TypeScript program needs to see the package types for that augmentation to apply.
+
+If your browser/client TS config does not already include the package types, add a small `.d.ts` file in your app code:
+
+```ts
+// app/types/vite-plugin-shopify-theme-islands.d.ts
+import "vite-plugin-shopify-theme-islands";
+```
+
+After that, `document.addEventListener("islands:load", ...)` and `document.addEventListener("islands:error", ...)` will be typed in client-side code.
 
 ```ts
 document.addEventListener("islands:load", (e) => {
@@ -477,7 +610,7 @@ If you use an AI coding agent (Claude Code, Cursor, Copilot, etc.), run once aft
 npx @tanstack/intent@latest install
 ```
 
-This maps the bundled skills to your agent config so your agent gets accurate v1 API guidance. Skills update automatically with npm updates — no re-run needed.
+This maps the bundled skills to your agent config so your agent gets accurate current API guidance. Skills update automatically with npm updates — no re-run needed.
 
 ## License
 
