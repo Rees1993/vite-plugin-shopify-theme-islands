@@ -21,6 +21,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 
@@ -31,6 +32,8 @@ Most Shopify projects also use
 [vite-plugin-shopify](https://github.com/barrel/vite-plugin-shopify) to handle
 Shopify-specific asset serving — if the project uses it, add this plugin
 alongside it in the existing `plugins` array.
+
+The package targets **Node.js 22+** and declares **Vite 6+** as a peer dependency.
 
 ### 1. Add the plugin to `vite.config.ts`
 
@@ -97,6 +100,8 @@ shopifyThemeIslands({
 Use `resolveTag()` when filename-based tag derivation is not sufficient.
 Returning `false` excludes the file from the island map. Returning
 `defaultTag` keeps the default derived tag.
+
+If two different source files still resolve to the same tag, the runtime keeps the first discovered entrypoint and warns — adjust `resolveTag` or exclude one file to fix it.
 
 ### Override built-in directive defaults
 
@@ -317,3 +322,49 @@ shopifyThemeIslands({
 The typed config surface only supports the package-owned interaction events `mouseenter`, `touchstart`, and `focusin`. An empty array is rejected because it would otherwise create an interaction gate that never resolves.
 
 Source: src/interaction-events.ts — validateInteractionEvents()
+
+### HIGH `directories: []` fails plugin validation
+
+Wrong:
+
+```ts
+shopifyThemeIslands({ directories: [] });
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands();
+// or at least one path:
+shopifyThemeIslands({ directories: ["/frontend/js/islands/"] });
+```
+
+An empty `directories` array is rejected at config resolution.
+
+Source: src/config-policy.ts — validateOptions()
+
+### HIGH `directives.visible.threshold` outside 0–1 fails plugin validation
+
+Wrong:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { threshold: 1.5 },
+  },
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands({
+  directives: {
+    visible: { threshold: 0.5 },
+  },
+});
+```
+
+`threshold` must be between `0` and `1` inclusive.
+
+Source: src/config-policy.ts — validateOptions()

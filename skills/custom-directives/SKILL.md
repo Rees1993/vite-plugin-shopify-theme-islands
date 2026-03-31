@@ -9,14 +9,14 @@ description: >
   built-in conditions resolve. Matched directives now receive teardown-aware
   cleanup via ctx.signal and ctx.onCleanup(). Matching is resolved by
   src/directive-spine.ts; cleanup, AND-latch, and timeout policy are owned by
-  src/directive-orchestration.ts.
+  src/activation-session.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/directive-orchestration.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -169,7 +169,7 @@ const myDirective: ClientDirective = (load, _opts, el) => {
 
 No immediate error is thrown by default, so the island is silently never loaded unless you configure `directiveTimeout`.
 
-Source: src/directive-spine.ts and src/directive-orchestration.ts — matched custom directives own the `run()` call path
+Source: src/directive-spine.ts and src/activation-session.ts — matched custom directives own the `run()` call path
 
 ### HIGH Directive creates side effects without cleanup
 
@@ -220,7 +220,7 @@ Correct:
 
 `client:interaction` is a built-in directive that handles `mouseenter`, `touchstart`, and `focusin`. Custom directives are for conditions the built-ins cannot express (e.g. URL hash matching, network conditions, feature flags).
 
-Source: src/directive-orchestration.ts — built-in interaction handling covers the hover/touch/focus pattern
+Source: src/activation-session.ts — built-in interaction handling covers the hover/touch/focus pattern
 
 ### HIGH AND-latch: both matched directives must call `load()`
 
@@ -243,7 +243,7 @@ Correct:
 
 With two matching custom directives, `remaining = 2`. Each `load()` call decrements it. The island activates only when `remaining === 0`.
 
-Source: src/directive-orchestration.ts — `let remaining = matched.length`
+Source: src/activation-session.ts — `let remaining = matched.length`
 
 ### HIGH Duplicate custom directive names or collisions with built-ins fail plugin setup
 
@@ -312,7 +312,7 @@ Wrong expectation:
 
 The runtime awaits built-ins in order (`visible → media → idle → defer → interaction`) first, then passes control to matched custom directives. Custom directives cannot short-circuit or replace built-in awaits.
 
-Source: src/directive-orchestration.ts — runBuiltIns() completes before runCustomDirectives()
+Source: src/activation-session.ts — `runBuiltInDirectives()` completes before `runCustomDirectives()`
 
 ### MEDIUM Calling `load()` multiple times has no effect after the first
 
@@ -334,4 +334,4 @@ const retryDirective: ClientDirective = (load, _opts, el) => {
 
 The `loadOnce` wrapper ignores all calls after the first (`fired` guard). Use `{ once: true }` on event listeners to avoid unnecessary calls.
 
-Source: src/directive-orchestration.ts — `if (fired || aborted) return Promise.resolve()`
+Source: src/activation-session.ts — `loadOnce` guard (`if (fired || aborted) return Promise.resolve()`)

@@ -14,13 +14,18 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 /** A function that triggers the load of an island module. */
 export type ClientDirectiveLoader = () => Promise<void>;
 
-export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
+export type {
+  ClientDirective,
+  ClientDirectiveContext,
+  ClientDirectiveOptions,
+} from "./contract.js";
 
 export type {
   ClientDirectiveDefinition,
   DirectivesConfig,
   ShopifyThemeIslandsOptions,
 } from "./options.js";
+
 export type {
   IslandLoadDetail,
   IslandErrorDetail,
@@ -28,7 +33,9 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
+
 export type { InteractionEventName } from "./interaction-events.js";
+
 export {
   DEFAULT_INTERACTION_EVENTS,
   INTERACTION_EVENT_NAMES,

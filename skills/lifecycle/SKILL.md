@@ -100,11 +100,24 @@ unobserve(container);
 disconnect();
 ```
 
-`disconnect()` stops the shared runtime entirely. `unobserve(root)` is the narrower tool: it pauses one subtree and cancels pending built-in waits, retries, and custom directive cleanup inside it. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later.
+`disconnect()` stops the shared runtime entirely and removes the Shopify Theme Editor lifecycle listeners registered by default. `unobserve(root)` is the narrower tool: it pauses one subtree and cancels pending built-in waits, retries, and custom directive cleanup inside it. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later.
 
 The startup walk itself is now lifecycle-owned. The runtime resolves the root lazily at init time, then the lifecycle coordinator performs the initial walk, begins observing subtree additions, and keeps child islands gated behind queued parents until the parent resolves.
 
 Load/error events and debug-ready groups are dispatched through the runtime surface, but the user-facing lifecycle behavior remains the same: startup is lazy, activation is subtree-aware, and teardown prevents later observation.
+
+### Shopify Theme Editor lifecycle (on by default)
+
+The shared runtime registers listeners for Theme Editor section and block events and maps them to subtree helpers on the resolved DOM root:
+
+| Event | Action |
+| --- | --- |
+| `shopify:section:load` | `observe(root)` |
+| `shopify:section:unload` | `unobserve(root)` |
+| `shopify:section:reorder`, `shopify:section:select`, `shopify:section:deselect` | `scan(root)` |
+| `shopify:block:select`, `shopify:block:deselect` | `scan(root)` |
+
+Roots are resolved from `event.detail` (`sectionId` / `blockId`) and `event.target` via `src/shopify-lifecycle.ts` (`resolveLifecycleRoot`). This keeps islands aligned when sections are swapped or reordered in the editor.
 
 ### Raw DOM events (when type augmentation is in scope)
 
@@ -162,7 +175,7 @@ import { disconnect, scan, observe, unobserve } from "vite-plugin-shopify-theme-
 
 Only the virtual module (`/revive`) exports the shared helper surface bound to the plugin-managed runtime instance.
 
-Source: src/revive-module.ts — buildReviveModuleSource() emits `export const { disconnect } = _islands(payload)`
+Source: src/revive-module.ts — `buildReviveModuleSource()` emits `export const { disconnect, scan, observe, unobserve } = runtime`
 
 ### MEDIUM `onIslandError` fires on every retry, not just final failure
 
