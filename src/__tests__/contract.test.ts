@@ -135,11 +135,13 @@ describe("contract", () => {
       const map = buildIslandMap(payload);
       expect(map.get("my-island")).toBe(first);
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('Multiple island entrypoints resolve to <my-island>'),
+        expect.stringContaining("Multiple island entrypoints resolve to <my-island>"),
       );
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/my-island.ts"));
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("/components/my-island.js"));
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("resolveTag({ filePath, defaultTag })"));
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("resolveTag({ filePath, defaultTag })"),
+      );
       warn.mockRestore();
     });
 
@@ -194,7 +196,7 @@ describe("contract", () => {
       const map = buildIslandMap(payload);
       expect(map.get("shared-widget")).toBe(first);
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('Multiple island entrypoints resolve to <shared-widget>'),
+        expect.stringContaining("Multiple island entrypoints resolve to <shared-widget>"),
       );
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/legacy-widget.ts"));
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/new-widget.ts"));

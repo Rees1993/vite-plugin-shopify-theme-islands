@@ -16,7 +16,7 @@ description: >
   block lifecycle events are bridged into the shared runtime by default.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-ownership.ts

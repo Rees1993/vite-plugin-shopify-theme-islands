@@ -97,7 +97,7 @@ describe("runtime bootstrap", () => {
       expect(first).toHaveBeenCalledTimes(1);
       expect(second).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('Multiple island entrypoints resolve to <my-island>'),
+        expect.stringContaining("Multiple island entrypoints resolve to <my-island>"),
       );
       warn.mockRestore();
     });

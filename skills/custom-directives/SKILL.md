@@ -12,7 +12,7 @@ description: >
   src/directive-orchestration.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts

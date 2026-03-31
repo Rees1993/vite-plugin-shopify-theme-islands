@@ -49,10 +49,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   ).map(normalizeDir);
 
   const policy = resolveThemeIslandsPolicy(options);
-  const {
-    directives,
-    debug,
-  } = policy.plugin;
+  const { directives, debug } = policy.plugin;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const revivePipeline = createRevivePipeline({
     rawDirectories: rawDirs,
