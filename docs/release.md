@@ -6,18 +6,26 @@ This repo uses the pre-Changesets release flow: the maintainer controls the vers
 
 - Trigger: publishing a GitHub Release.
 - Verifies that `package.json` matches the release tag exactly.
-- Runs the quality gates: typecheck, tests, lint, format check, and build.
+- Runs the quality gates: typecheck, tests, lint, format check, build, and any
+  repo-level validation already wired into the release prep flow.
 - Publishes the package to npm with trusted publishing via GitHub Actions OIDC.
 
 ## Release steps
 
 1. Make sure `main` is green in CI.
 2. Update `package.json` to the release version.
-3. Commit and push that version bump to `main`.
-4. Create and push the matching tag.
-5. Create the GitHub Release for that tag and publish it.
-6. Wait for `.github/workflows/publish.yml` to finish.
-7. Verify the npm publish.
+3. Update `library_version` in shipped Intent skills under `skills/*/SKILL.md`.
+4. Run the local release gates:
+   - `bun test`
+   - `bun run check`
+   - `bun run lint`
+   - `bun run build`
+   - `npx @tanstack/intent validate`
+5. Commit and push the version bump to `main`.
+6. Create and push the matching tag.
+7. Create the GitHub Release for that tag and publish it.
+8. Wait for `.github/workflows/publish.yml` to finish.
+9. Verify the npm publish.
 
 ## Stable release example
 
@@ -25,16 +33,16 @@ This repo uses the pre-Changesets release flow: the maintainer controls the vers
 git checkout main
 git pull origin main
 
-npm version 0.7.3 --no-git-tag-version
-git add package.json
-git commit -m "chore: bump version to 0.7.3"
+npm version 2.0.0 --no-git-tag-version
+git add package.json skills/*/SKILL.md
+git commit -m "chore: bump version to 2.0.0"
 git push origin main
 
-git tag v0.7.3
-git push origin v0.7.3
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
-Then publish the GitHub Release for `v0.7.3` in the GitHub UI.
+Then publish the GitHub Release for `v2.0.0` in the GitHub UI.
 
 ## Prerelease example
 
@@ -42,23 +50,23 @@ Then publish the GitHub Release for `v0.7.3` in the GitHub UI.
 git checkout main
 git pull origin main
 
-npm version 0.7.3-alpha.1 --no-git-tag-version
-git add package.json
-git commit -m "chore: bump version to 0.7.3-alpha.1"
+npm version 2.0.0-rc.1 --no-git-tag-version
+git add package.json skills/*/SKILL.md
+git commit -m "chore: bump version to 2.0.0-rc.1"
 git push origin main
 
-git tag v0.7.3-alpha.1
-git push origin v0.7.3-alpha.1
+git tag v2.0.0-rc.1
+git push origin v2.0.0-rc.1
 ```
 
-Then publish the GitHub Release for `v0.7.3-alpha.1` in the GitHub UI.
+Then publish the GitHub Release for `v2.0.0-rc.1` in the GitHub UI.
 
 ## Important rule
 
 The workflow requires:
 
-- `package.json` version = `0.7.3`
-- tag = `v0.7.3`
+- `package.json` version = release version (for example `2.0.0`)
+- tag = the same release prefixed with `v` (for example `v2.0.0`)
 
 If they do not match, npm publishing is blocked.
 
