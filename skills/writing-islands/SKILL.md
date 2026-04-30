@@ -11,8 +11,8 @@ description: >
   cascade behaviour now owned by src/lifecycle.ts. Duplicate final tags now
   fail instead of warning, and obvious static customElements.define(...)
   mismatches can warn without changing ownership. File-path-to-tag resolution
-  and revive bootstrap planning are now coordinated through
-  src/revive-pipeline.ts and src/revive-bootstrap.ts.
+  and revive compile planning are now coordinated through
+  src/revive-pipeline.ts and src/revive-compile.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
@@ -20,7 +20,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-bootstrap.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-compile.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -69,7 +69,7 @@ if (!customElements.get("cart-drawer")) {
 }
 ```
 
-The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the bootstrap picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
+The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the recompile picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
 
 For both directory-scanned files and mixin-marked files, tag ownership comes
 from the file path by default, or from `resolveTag()` when configured. The
@@ -215,7 +215,7 @@ The plugin resolves ownership from the file path (or `resolveTag()`), not from
 the registration call. Obvious static mismatches can warn, and the element will
 not upgrade correctly if the DOM tag and registered tag disagree.
 
-Source: src/revive-bootstrap.ts — static customElements.define(...) mismatch warning
+Source: src/revive-compile.ts — static customElements.define(...) mismatch warning
 
 ### HIGH Filename without a hyphen is skipped as an invalid custom element tag
 

@@ -17,7 +17,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/resolved-config.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
 ---
@@ -275,7 +275,7 @@ shopifyThemeIslands({
 
 Custom directive names must be unique and must not collide with any built-in directive name, including renamed built-ins.
 
-Source: src/config-policy.ts — validateOptions() duplicate and built-in conflict checks
+Source: src/resolved-config.ts — validateOptions() duplicate and built-in conflict checks
 
 ### HIGH Entrypoint path missing `./` prefix
 
@@ -299,7 +299,7 @@ Correct:
 
 Custom directive entrypoints are resolved through Vite. Relative local files should usually use `./...`; unresolved entrypoints fail the build.
 
-Source: src/index.ts — `this.resolve(entrypoint)` throws on null during revive bootstrap planning
+Source: src/index.ts — `this.resolve(entrypoint)` throws on null during revive compile planning
 
 ### MEDIUM Custom directives run after all built-in directive awaits
 

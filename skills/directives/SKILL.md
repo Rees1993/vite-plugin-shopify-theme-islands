@@ -23,7 +23,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/resolved-config.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
 

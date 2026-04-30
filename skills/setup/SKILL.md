@@ -22,9 +22,9 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/resolved-config.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-bootstrap.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-compile.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
@@ -353,7 +353,7 @@ shopifyThemeIslands({ directories: ["/frontend/js/islands/"] });
 
 An empty `directories` array is rejected at config resolution.
 
-Source: src/config-policy.ts — validateOptions()
+Source: src/resolved-config.ts — validateOptions()
 
 ### HIGH `directives.visible.threshold` outside 0–1 fails plugin validation
 
@@ -379,4 +379,4 @@ shopifyThemeIslands({
 
 `threshold` must be between `0` and `1` inclusive.
 
-Source: src/config-policy.ts — validateOptions()
+Source: src/resolved-config.ts — validateOptions()
