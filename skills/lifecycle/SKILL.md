@@ -11,9 +11,8 @@ description: >
   disconnect() prevents init from ever starting if called early. Startup, DOM walking, mutation observation, and
   parent/child activation gating are now owned by src/lifecycle.ts, while
   subtree/runtime helper coordination is owned by src/runtime-ownership.ts.
-  Runtime observability and event dispatch are routed through
-  src/runtime-observability.ts and src/runtime-surface.ts. Shopify section and
-  block lifecycle events are bridged into the shared runtime by default.
+  Event dispatch is via src/runtime-surface.ts; debug-only diagnostics live in
+  src/runtime-observability.ts. Shopify section/block events bridged by default.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
@@ -23,6 +22,9 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-observability.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/retry-scheduler.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/cancellable-watchers.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/shopify-lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -201,7 +203,7 @@ onIslandError(({ tag, error, attempt }) => {
 
 With `retry: { retries: 3 }`, a single island can fire `islands:error` up to 4 times before exhausting retries. Use `attempt` to distinguish the initial failure from retries.
 
-Source: src/runtime.ts — runtimeSurface.dispatchError(...) inside the loader failure path before retry check
+Source: src/activation-session.ts — surface.dispatchError(...) inside the loader failure path before retry check
 
 ### MEDIUM `islands:error` fires for custom directive failures too
 
@@ -216,10 +218,10 @@ onIslandError(({ tag, error }) => {
 
 `islands:error` fires when any custom directive throws, rejects, or times out, not only when the island module's `import()` fails. The `error` value may be a directive error rather than a network or chunk error.
 
-Source: src/runtime.ts — handleDirectiveError dispatches `islands:error`
+Source: src/activation-session.ts — handleDirectiveError dispatches `islands:error`
 
 ### LOW Removed elements waiting on `client:visible` / `client:interaction` do not emit `islands:error`
 
 If an element is removed from the DOM before a cancellable built-in directive resolves, the lifecycle coordinator cancels that activation attempt and the runtime treats it as expected teardown. No `islands:error` event is dispatched.
 
-Source: src/lifecycle.ts — cancelDetached() with watchCancellable() ownership
+Source: src/cancellable-watchers.ts — cancelDetached() / watch() registry, called from src/lifecycle.ts

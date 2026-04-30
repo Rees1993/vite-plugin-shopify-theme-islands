@@ -23,7 +23,6 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/resolved-config.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-compile.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts

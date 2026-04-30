@@ -11,15 +11,14 @@ description: >
   cascade behaviour now owned by src/lifecycle.ts. Duplicate final tags now
   fail instead of warning, and obvious static customElements.define(...)
   mismatches can warn without changing ownership. File-path-to-tag resolution
-  and revive compile planning are now coordinated through
-  src/revive-pipeline.ts and src/revive-compile.ts.
+  and revive compile planning are now coordinated directly from src/index.ts
+  through src/discovery.ts and src/revive-compile.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
-  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-compile.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
