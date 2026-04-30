@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { compileThemeIslandsPolicy } from "./config-policy.js";
+import { compileThemeIslandsConfig } from "./resolved-config.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
 import { createRevivePipeline } from "./revive-pipeline.js";
 import { fileURLToPath } from "node:url";
@@ -55,13 +55,13 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  const policy = compileThemeIslandsPolicy(options);
-  const { directives, debug } = policy.plugin;
+  const config = compileThemeIslandsConfig(options);
+  const { directives, debug } = config.plugin;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const revivePipeline = createRevivePipeline({
     rawDirectories: rawDirs,
     runtimePath,
-    compileBootstrap: (input) => policy.compileBootstrap(input),
+    compileBootstrap: (input) => config.compileBootstrap(input),
   });
   let devServer: ViteDevServer | null = null;
 

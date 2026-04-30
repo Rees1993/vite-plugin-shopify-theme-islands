@@ -93,8 +93,6 @@ _Avoid_: mixin (too generic), wrapper, decorator
 The validated plugin configuration with derivation methods (`runtimeOptions()`, `compileBootstrap()`) attached. Single source of truth for plugin behaviour after option resolution.
 _Avoid_: policy, settings, options (when ambiguous)
 
-> Currently named `ThemeIslandsPluginPolicy` / `CompiledThemeIslandsPolicy` in code; rename pending. See `.scratch/rename-policy-to-config/`.
-
 **Compile** (plugin):
 The plugin's build-time step that turns the Resolved config plus the Island inventory into a Plan, then emits the Plan as the virtual `/revive` module source. At runtime that emitted source runs once and calls `revive()`.
 _Avoid_: bootstrap, build, codegen
@@ -126,6 +124,5 @@ _Avoid_: blueprint, payload, bundle
 ## Flagged ambiguities
 
 - "island" was used to mean both the definition and the DOM instance — resolved: **Island** is the definition, **Island element** is the DOM occurrence.
-- "policy" is used in code today (`ThemeIslandsPluginPolicy`) but is misleading — glossary uses **Resolved config**. Rename tracked in `.scratch/rename-policy-to-config/`.
 - "bootstrap" is used in code today (`ReviveBootstrap*`) but collides with the runtime boot step and the CSS framework — glossary uses **Compile** + **Plan**. Rename tracked in `.scratch/rename-bootstrap-to-compile/`.
 - "ownership" is used in code (`RootOwnershipCoordinator`, `IslandLifecycle`) but is implementation-only — consumer-facing concept is **Observed root**.

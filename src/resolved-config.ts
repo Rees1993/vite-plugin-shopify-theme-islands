@@ -11,14 +11,14 @@ import type { ReviveBootstrapInputs } from "./revive-bootstrap.js";
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
-export interface ThemeIslandsPluginPolicy {
+export interface ThemeIslandsPluginConfig {
   plugin: {
     directives: DirectivesConfig;
     debug: boolean;
   };
 }
 
-export interface CompiledThemeIslandsPolicy extends ThemeIslandsPluginPolicy {
+export interface CompiledThemeIslandsConfig extends ThemeIslandsPluginConfig {
   runtimeOptions(): ReviveOptions;
   compileBootstrap(input: IslandInventoryBootstrapState): ReviveBootstrapInputs;
 }
@@ -77,9 +77,9 @@ function validateOptions(
   }
 }
 
-export function resolveThemeIslandsPolicy(
+export function resolveThemeIslandsConfig(
   options: ShopifyThemeIslandsOptions = {},
-): CompiledThemeIslandsPolicy {
+): CompiledThemeIslandsConfig {
   const directives = mergeDirectives(options.directives);
   validateOptions(options, directives);
 
@@ -109,4 +109,4 @@ export function resolveThemeIslandsPolicy(
   };
 }
 
-export const compileThemeIslandsPolicy = resolveThemeIslandsPolicy;
+export const compileThemeIslandsConfig = resolveThemeIslandsConfig;

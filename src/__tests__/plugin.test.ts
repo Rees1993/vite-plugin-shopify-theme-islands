@@ -31,7 +31,7 @@ function makePlugin(opts?: ShopifyThemeIslandsOptions): PluginUnderTest {
 
 describe("plugin", () => {
   describe("validateOptions", () => {
-    it("surfaces config-policy validation errors during plugin creation", () => {
+    it("surfaces resolved-config validation errors during plugin creation", () => {
       expect(() => makePlugin({ directories: [] })).toThrow('"directories" must not be empty');
       expect(() =>
         makePlugin({
