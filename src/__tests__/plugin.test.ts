@@ -340,7 +340,9 @@ describe("plugin", () => {
         await plugin.load(RESOLVED_ID);
 
         expect(warn).toHaveBeenCalledWith(
-          expect.stringContaining("resolves to <product-form> but statically registers <x-product-form>"),
+          expect.stringContaining(
+            "resolves to <product-form> but statically registers <x-product-form>",
+          ),
         );
         expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/product-form.ts"));
       } finally {

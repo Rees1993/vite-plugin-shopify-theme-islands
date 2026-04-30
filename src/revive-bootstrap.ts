@@ -44,8 +44,7 @@ export interface ReviveBootstrapCompiler {
   compile(input: ReviveBootstrapInputs, ports?: ReviveBootstrapResolvePorts): Promise<string>;
 }
 
-const STATIC_CUSTOM_ELEMENT_DEFINE_RE =
-  /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]\s*,/;
+const STATIC_CUSTOM_ELEMENT_DEFINE_RE = /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]\s*,/;
 
 function readStaticDefinedTag(filePath: string): string | null {
   try {
