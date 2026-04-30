@@ -94,6 +94,49 @@ describe("lifecycle", () => {
     expect(tags).toEqual(["dynamic-island"]);
   });
 
+  it("delegates cancellable-watcher firing through MutationObserver and excludeRoot", () => {
+    const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
+    let moCallback: MutationCallback | undefined;
+    cleanups.track(
+      mockMutationObserver(
+        class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver,
+      ),
+    );
+
+    document.body.innerHTML = "<scope-root><inside-island></inside-island></scope-root>";
+    const root = document.querySelector("scope-root") as HTMLElement;
+    const inside = document.querySelector("inside-island") as HTMLElement;
+    const detached = document.createElement("detached-island");
+    document.body.appendChild(detached);
+
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap: new Map(),
+        onActivate() {},
+      }).disconnect,
+    );
+
+    // Path 1: MutationObserver callback fires cancelDetached().
+    const detachedCancel = mock(() => {});
+    lifecycle.watchCancellable(detached, detachedCancel);
+    document.body.removeChild(detached);
+    moCallback?.([{ addedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+    expect(detachedCancel).toHaveBeenCalledTimes(1);
+
+    // Path 2: excludeRoot() fires cancelInRoot() for descendants.
+    const insideCancel = mock(() => {});
+    lifecycle.watchCancellable(inside, insideCancel);
+    lifecycle.excludeRoot(root);
+    expect(insideCancel).toHaveBeenCalledTimes(1);
+  });
+
   it("delegates retry cancellation through settleSuccess, settleFailure, and clear", () => {
     type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
     const timers: FakeTimer[] = [];

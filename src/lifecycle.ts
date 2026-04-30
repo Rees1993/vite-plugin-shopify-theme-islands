@@ -1,3 +1,4 @@
+import { createCancellableWatchers } from "./cancellable-watchers.js";
 import type { IslandLoader } from "./contract.js";
 import { createRetryScheduler, type RetryPlatform } from "./retry-scheduler.js";
 
@@ -39,7 +40,7 @@ export function createIslandLifecycleCoordinator(opts: {
     retryDelay: opts.retryDelay,
     platform: opts.platform,
   });
-  const cancellableElements = new Map<Element, Set<() => void>>();
+  const cancellableWatchers = createCancellableWatchers();
   const excludedRoots = new Set<HTMLElement>();
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
@@ -91,28 +92,6 @@ export function createIslandLifecycleCoordinator(opts: {
 
   const isQueued = (tag: string): boolean => queued.has(tag);
 
-  const watchCancellable = (el: Element, cancel: () => void): (() => void) => {
-    const cancels = cancellableElements.get(el) ?? new Set<() => void>();
-    cancels.add(cancel);
-    cancellableElements.set(el, cancels);
-    return () => {
-      const activeCancels = cancellableElements.get(el);
-      if (!activeCancels) return;
-      activeCancels.delete(cancel);
-      if (activeCancels.size === 0) cancellableElements.delete(el);
-    };
-  };
-
-  const cancelDetached = (): void => {
-    if (cancellableElements.size === 0) return;
-    for (const [el, cancels] of cancellableElements) {
-      if (!el.isConnected) {
-        cancellableElements.delete(el);
-        for (const cancel of cancels) cancel();
-      }
-    }
-  };
-
   const start = (input: IslandLifecycleStartInput): { disconnect: () => void } => {
     let disconnected = false;
     let initialized = false;
@@ -161,7 +140,7 @@ export function createIslandLifecycleCoordinator(opts: {
     };
 
     const observer = new MutationObserver((mutations) => {
-      cancelDetached();
+      cancellableWatchers.cancelDetached();
       handleAdditions(mutations);
     });
 
@@ -195,12 +174,7 @@ export function createIslandLifecycleCoordinator(opts: {
   return {
     excludeRoot(root) {
       excludedRoots.add(root);
-      for (const [el, cancels] of cancellableElements) {
-        if (el === root || root.contains(el)) {
-          cancellableElements.delete(el);
-          for (const cancel of cancels) cancel();
-        }
-      }
+      cancellableWatchers.cancelInRoot(root);
     },
     includeRoot(root) {
       excludedRoots.delete(root);
@@ -216,7 +190,7 @@ export function createIslandLifecycleCoordinator(opts: {
     get initialWalkComplete() {
       return initialWalkComplete;
     },
-    watchCancellable,
+    watchCancellable: cancellableWatchers.watch,
     walk(root) {
       walkImpl?.(root);
     },
