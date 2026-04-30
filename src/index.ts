@@ -1,7 +1,8 @@
 import { relative } from "node:path";
 import { compileThemeIslandsConfig } from "./resolved-config.js";
+import { createIslandInventory, getIslandPathsForLoad } from "./discovery.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
-import { createRevivePipeline } from "./revive-pipeline.js";
+import { createReviveCompiler } from "./revive-compile.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -58,11 +59,8 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const config = compileThemeIslandsConfig(options);
   const { directives, debug } = config.plugin;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
-  const revivePipeline = createRevivePipeline({
-    rawDirectories: rawDirs,
-    runtimePath,
-    compileInputs: (input) => config.compileInputs(input),
-  });
+  const inventory = createIslandInventory(rawDirs);
+  const compiler = createReviveCompiler({ toLoadPaths: getIslandPathsForLoad }, runtimePath);
   let devServer: ViteDevServer | null = null;
 
   const invalidateReviveModule = (): void => {
@@ -82,7 +80,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     enforce: "pre",
 
     configResolved(config) {
-      revivePipeline.configure({
+      inventory.configure({
         root: config.root,
         aliases: config.resolve.alias,
       });
@@ -94,7 +92,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     buildStart() {
       const t0 = performance.now();
-      const snapshot = revivePipeline.scan();
+      const snapshot = inventory.scan();
       if (!snapshot) return;
       if (debug) {
         const scanMs = (performance.now() - t0).toFixed(1);
@@ -109,7 +107,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
           );
         }
         if (snapshot.islandFiles.length) {
-          const root = revivePipeline.getRoot();
+          const root = inventory.getRoot();
           log(`Found ${snapshot.islandFiles.length} island file(s) via mixin import:`);
           for (const file of snapshot.islandFiles) log(" ", relative(root, file));
         }
@@ -119,9 +117,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     // Pick up files added/changed during dev (HMR); remove stale entries
     transform(code, id) {
-      const change = revivePipeline.applyTransform(id, code);
+      const change = inventory.applyTransform(id, code);
       if (!change) return;
-      const root = revivePipeline.getRoot();
+      const root = inventory.getRoot();
       log(
         change.type === "detected" ? "Detected island:" : "Removed island:",
         relative(root, change.file),
@@ -129,9 +127,9 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     },
 
     watchChange(id, { event }) {
-      const change = revivePipeline.applyWatchChange(id, event);
+      const change = inventory.applyWatchChange(id, event);
       if (!change) return;
-      const root = revivePipeline.getRoot();
+      const root = inventory.getRoot();
       const prefix =
         event === "delete"
           ? "Removed island (deleted):"
@@ -150,14 +148,16 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      return revivePipeline.compile(async (entrypoint: string) => {
-        const resolved = await this.resolve(entrypoint);
-        if (!resolved) {
-          throw new Error(
-            `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
-          );
-        }
-        return resolved.id;
+      return compiler.compile(config.compileInputs(inventory.state()), {
+        resolveEntrypoint: async (entrypoint: string) => {
+          const resolved = await this.resolve(entrypoint);
+          if (!resolved) {
+            throw new Error(
+              `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
+            );
+          }
+          return resolved.id;
+        },
       });
     },
   };

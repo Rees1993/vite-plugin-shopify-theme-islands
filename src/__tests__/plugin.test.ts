@@ -256,6 +256,15 @@ describe("plugin", () => {
       expect(output).toContain("my-widget.ts");
     });
 
+    it("compiles mixin files without a prior buildStart() scan", async () => {
+      writeFileSync(join(tmp, "my-widget.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/nonexistent/"] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).toContain("my-widget.ts");
+    });
+
     it("emits resolvedTags overrides when resolveTag is configured", async () => {
       const islandsDir = join(tmp, "islands");
       mkdirSync(islandsDir);
