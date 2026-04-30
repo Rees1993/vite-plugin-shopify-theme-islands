@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import { createRuntimeSurface } from "../runtime-surface";
-import { createCleanupQueue } from "./harness";
+import { createCleanupQueue } from "./utils/harness";
 
 describe("runtime-surface", () => {
   const cleanups = createCleanupQueue();

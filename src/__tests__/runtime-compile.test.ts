@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import { revive } from "../runtime";
 import type { ClientDirective } from "../index";
 import type { ReviveOptions } from "../contract";
-import { createRuntimeSuite, flush, mockMutationObserver } from "./harness";
+import { createRuntimeSuite, flush, mockMutationObserver } from "./utils/harness";
 
 const suite = createRuntimeSuite();
 

@@ -10,7 +10,7 @@ import {
   installTimerDriver,
   installVisibilityDriver,
   mockRequestIdleCallback,
-} from "./harness";
+} from "./utils/harness";
 
 const suite = createRuntimeSuite();
 let cleanups = suite.cleanups;

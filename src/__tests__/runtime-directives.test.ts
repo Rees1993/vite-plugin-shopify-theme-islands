@@ -7,7 +7,7 @@ import {
   installMutationDriver,
   installTimerDriver,
   installVisibilityDriver,
-} from "./harness";
+} from "./utils/harness";
 
 const suite = createRuntimeSuite();
 let cleanups = suite.cleanups;

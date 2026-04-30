@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import type { ClientDirective } from "../index";
-import { createRuntimeSuite, flush } from "./harness";
+import { createRuntimeSuite, flush } from "./utils/harness";
 
 const suite = createRuntimeSuite();
 let runtimeHarness = suite.runtime;

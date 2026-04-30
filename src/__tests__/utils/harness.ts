@@ -1,7 +1,7 @@
 import { mock } from "bun:test";
-import { revive, type ReviveRuntime } from "../runtime";
-import type { ReviveOptions, RevivePayload } from "../contract";
-import type { ClientDirective } from "../index";
+import { revive, type ReviveRuntime } from "../../runtime";
+import type { ReviveOptions, RevivePayload } from "../../contract";
+import type { ClientDirective } from "../../index";
 
 const REAL_SET_TIMEOUT = globalThis.setTimeout.bind(globalThis);
 

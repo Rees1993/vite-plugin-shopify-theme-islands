@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { describe, expect, it, mock, afterEach } from "bun:test";
 import { createIslandLifecycleCoordinator } from "../lifecycle";
-import { createCleanupQueue, flush, mockMutationObserver } from "./harness";
+import { createCleanupQueue, flush, mockMutationObserver } from "./utils/harness";
 
 describe("lifecycle", () => {
   const cleanups = createCleanupQueue();

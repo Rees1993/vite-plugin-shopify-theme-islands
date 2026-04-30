@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { connectShopifyLifecycle, resolveLifecycleRoot } from "../shopify-lifecycle";
-import { createCleanupQueue } from "./harness";
+import { createCleanupQueue } from "./utils/harness";
 
 describe("connectShopifyLifecycle", () => {
   const cleanups = createCleanupQueue();

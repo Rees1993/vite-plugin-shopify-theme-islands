@@ -10,7 +10,7 @@ import {
   installVisibilityDriver,
   flush,
   mockIntersectionObserver,
-} from "./harness";
+} from "./utils/harness";
 
 describe("test harness", () => {
   const cleanups = createCleanupQueue();

@@ -2,7 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { onIslandError, onIslandLoad } from "../events";
 import type { ClientDirective } from "../index";
-import { createRuntimeSuite, flush, installMutationDriver, installTimerDriver } from "./harness";
+import {
+  createRuntimeSuite,
+  flush,
+  installMutationDriver,
+  installTimerDriver,
+} from "./utils/harness";
 
 const suite = createRuntimeSuite();
 
