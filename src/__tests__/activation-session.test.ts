@@ -49,10 +49,12 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
-      observability: {
+      surface: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad: mock(() => {}),
         dispatchError: mock((_detail: { tag: string; error: unknown; attempt: number }) => {}),
+      },
+      observability: {
         noteInitialWaits: mock(() => {}),
         warnOnConflictingLoadGate: mock(() => {}),
         clear: mock(() => {}),
@@ -97,10 +99,12 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk,
       },
-      observability: {
+      surface: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad,
         dispatchError: mock((_detail: { tag: string; error: unknown; attempt: number }) => {}),
+      },
+      observability: {
         noteInitialWaits: mock(() => {}),
         warnOnConflictingLoadGate: mock(() => {}),
         clear: mock(() => {}),
@@ -165,10 +169,12 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
-      observability: {
+      surface: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad,
         dispatchError: mock((_detail: { tag: string; error: unknown; attempt: number }) => {}),
+      },
+      observability: {
         noteInitialWaits: mock(() => {}),
         warnOnConflictingLoadGate: mock(() => {}),
         clear: mock(() => {}),
@@ -240,10 +246,12 @@ describe("activation-session", () => {
         }),
         walk: mock((_root: HTMLElement) => {}),
       },
-      observability: {
+      surface: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad: mock(() => {}),
         dispatchError,
+      },
+      observability: {
         noteInitialWaits: mock(() => {}),
         warnOnConflictingLoadGate: mock(() => {}),
         clear: mock(() => {}),
@@ -295,10 +303,12 @@ describe("activation-session", () => {
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
-      observability: {
+      surface: {
         createLogger: () => ({ note() {}, flush() {} }),
         dispatchLoad: mock(() => {}),
         dispatchError,
+      },
+      observability: {
         noteInitialWaits: mock(() => {}),
         warnOnConflictingLoadGate: mock(() => {}),
         clear: mock(() => {}),

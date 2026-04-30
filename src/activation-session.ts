@@ -11,7 +11,7 @@ import {
   type DirectiveWaiters,
 } from "./directive-waiters.js";
 import { formatUnsupportedInteractionTokenWarning } from "./interaction-events.js";
-import type { RuntimeLogger } from "./runtime-surface.js";
+import type { RuntimeLogger, RuntimeSurface } from "./runtime-surface.js";
 import type { RuntimeObservability } from "./runtime-observability.js";
 
 export interface ActivationCandidate {
@@ -41,14 +41,14 @@ export interface ActivationSessionDeps {
   directiveTimeout: number;
   waiters?: DirectiveWaiters;
   ownership: ActivationOwnership;
+  surface: {
+    dispatchLoad: RuntimeSurface["dispatchLoad"];
+    dispatchError: RuntimeSurface["dispatchError"];
+    createLogger(tagName: string): RuntimeLogger;
+  };
   observability: Pick<
     RuntimeObservability,
-    | "createLogger"
-    | "dispatchLoad"
-    | "dispatchError"
-    | "noteInitialWaits"
-    | "warnOnConflictingLoadGate"
-    | "clear"
+    "noteInitialWaits" | "warnOnConflictingLoadGate" | "clear"
   >;
   platform: ActivationPlatform;
 }
@@ -90,7 +90,7 @@ interface LoaderRunContext {
     ActivationOwnership,
     "isObserved" | "evict" | "settleSuccess" | "settleFailure" | "walk"
   >;
-  observability: Pick<RuntimeObservability, "dispatchLoad" | "dispatchError">;
+  surface: Pick<RuntimeSurface, "dispatchLoad" | "dispatchError">;
   platform: ActivationPlatform;
 }
 
@@ -254,7 +254,7 @@ function runCustomDirectives(ctx: CustomDirectiveExecutionContext): boolean {
 }
 
 function createLoaderRunner(ctx: LoaderRunContext): () => Promise<void> {
-  const { tagName, element, loader, ownership, observability, platform } = ctx;
+  const { tagName, element, loader, ownership, surface, platform } = ctx;
 
   const abortIfInactive = (): boolean => {
     if (ownership.isObserved(element)) return false;
@@ -269,7 +269,7 @@ function createLoaderRunner(ctx: LoaderRunContext): () => Promise<void> {
       .then(() => {
         if (abortIfInactive()) return;
         const attempt = ownership.settleSuccess(tagName);
-        observability.dispatchLoad({
+        surface.dispatchLoad({
           tag: tagName,
           duration: platform.now() - startedAt,
           attempt,
@@ -281,7 +281,7 @@ function createLoaderRunner(ctx: LoaderRunContext): () => Promise<void> {
         const { willRetry, attempt } = ownership.settleFailure(tagName, () => {
           void runLoader();
         });
-        observability.dispatchError({
+        surface.dispatchError({
           tag: tagName,
           error,
           attempt,
@@ -328,7 +328,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
       deps.platform.console.error(`[islands] Built-in directive failed for <${tagName}>:`, error);
     }
 
-    deps.observability.dispatchError({ tag: tagName, error, attempt: 1 });
+    deps.surface.dispatchError({ tag: tagName, error, attempt: 1 });
     deps.ownership.evict(tagName);
     log.flush(attrName === null ? "aborted (directive error)" : "aborted (custom directive error)");
   };
@@ -339,14 +339,14 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
 
   const activate = async ({ tagName, element, loader }: ActivationCandidate): Promise<void> => {
     deps.observability.noteInitialWaits(tagName, element, deps.ownership.initialWalkComplete);
-    const log = deps.observability.createLogger(tagName);
+    const log = deps.surface.createLogger(tagName);
     const gates = deps.spine.readGates(element);
     const runLoader = createLoaderRunner({
       tagName,
       element,
       loader,
       ownership: deps.ownership,
-      observability: deps.observability,
+      surface: deps.surface,
       platform: deps.platform,
     });
 

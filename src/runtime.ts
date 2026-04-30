@@ -61,13 +61,19 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     spine,
     debug: opts.debug,
     isObserved: (element) => lifecycle.isObserved(element),
-    surface: runtimeSurface,
     console,
   });
+  const debugBoundSurface = {
+    dispatchLoad: runtimeSurface.dispatchLoad,
+    dispatchError: runtimeSurface.dispatchError,
+    createLogger: (tagName: string) => runtimeSurface.createLogger(tagName, opts.debug),
+    beginReadyLog: (islandCount: number) => runtimeSurface.beginReadyLog(islandCount, opts.debug),
+  };
   const session = createActivationSession({
     spine,
     directiveTimeout: opts.directiveTimeout,
     ownership: lifecycle,
+    surface: debugBoundSurface,
     observability,
     platform: {
       now: () => performance.now(),
@@ -82,6 +88,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     islandMap,
     lifecycle,
     session,
-    surface: observability,
+    surface: debugBoundSurface,
   });
 }

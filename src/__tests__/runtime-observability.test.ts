@@ -15,12 +15,6 @@ describe("runtime-observability", () => {
       spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
       isObserved: () => true,
-      surface: {
-        createLogger: mock(() => ({ note() {}, flush() {} })),
-        beginReadyLog: mock(() => () => {}),
-        dispatchLoad: mock(() => {}),
-        dispatchError: mock(() => {}),
-      },
       console: {
         log: mock(() => {}),
         warn,
@@ -49,12 +43,6 @@ describe("runtime-observability", () => {
       spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
       isObserved: () => true,
-      surface: {
-        createLogger: mock(() => ({ note() {}, flush() {} })),
-        beginReadyLog: mock(() => () => {}),
-        dispatchLoad: mock(() => {}),
-        dispatchError: mock(() => {}),
-      },
       console: {
         log,
         warn: mock(() => {}),

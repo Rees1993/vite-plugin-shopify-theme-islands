@@ -1,6 +1,5 @@
 import type { IslandLoader } from "./contract.js";
 import type { IslandLifecycle } from "./lifecycle.js";
-import type { RuntimeObservability } from "./runtime-observability.js";
 import { connectShopifyLifecycle, type ShopifyLifecycleRuntime } from "./shopify-lifecycle.js";
 
 interface RuntimeOwnershipRuntime {
@@ -26,7 +25,7 @@ export interface RootOwnershipCoordinatorDeps {
   islandMap: Map<string, IslandLoader>;
   lifecycle: Pick<IslandLifecycle, "start" | "includeRoot" | "excludeRoot" | "walk">;
   session: OwnershipSession;
-  surface: Pick<RuntimeObservability, "beginReadyLog">;
+  surface: { beginReadyLog(islandCount: number): () => void };
   connectShopify?: (runtime: ShopifyLifecycleRuntime) => () => void;
 }
 

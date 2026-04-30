@@ -1,25 +1,15 @@
-import type { IslandErrorDetail, IslandLoadDetail } from "./contract.js";
 import type { DirectiveSpine, GateResult } from "./directive-spine.js";
-import type { RuntimeLogger, RuntimeSurface } from "./runtime-surface.js";
 
 export interface RuntimeObservability {
-  beginReadyLog(islandCount: number): () => void;
-  createLogger(tagName: string): RuntimeLogger;
   noteInitialWaits(tagName: string, element: HTMLElement, initialWalkComplete: boolean): void;
   warnOnConflictingLoadGate(tagName: string, element: HTMLElement): void;
   clear(tagNames?: Iterable<string>): void;
-  dispatchLoad(detail: IslandLoadDetail): void;
-  dispatchError(detail: IslandErrorDetail): void;
 }
 
 export interface RuntimeObservabilityDeps {
   spine: DirectiveSpine;
   debug: boolean;
   isObserved(element: Element): boolean;
-  surface: Pick<
-    RuntimeSurface,
-    "beginReadyLog" | "createLogger" | "dispatchLoad" | "dispatchError"
-  >;
   console: Pick<Console, "log" | "warn">;
 }
 
@@ -56,14 +46,6 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
   };
 
   return {
-    beginReadyLog(islandCount) {
-      return deps.surface.beginReadyLog(islandCount, deps.debug);
-    },
-
-    createLogger(tagName) {
-      return deps.surface.createLogger(tagName, deps.debug);
-    },
-
     noteInitialWaits(tagName, element, initialWalkComplete) {
       if (!deps.debug || initialWalkComplete) return;
 
@@ -112,13 +94,5 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
     },
 
     clear,
-
-    dispatchLoad(detail) {
-      deps.surface.dispatchLoad(detail);
-    },
-
-    dispatchError(detail) {
-      deps.surface.dispatchError(detail);
-    },
   };
 }
