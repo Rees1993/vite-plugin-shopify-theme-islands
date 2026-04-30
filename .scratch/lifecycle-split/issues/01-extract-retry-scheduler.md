@@ -1,0 +1,26 @@
+# Extract Retry scheduler from `lifecycle.ts`
+
+Status: needs-triage
+
+## What to build
+
+Move retry scheduling out of `IslandLifecycle` into a new `src/retry-scheduler.ts` module. Lifecycle delegates to it instead of owning retry state directly.
+
+The retry concern in `lifecycle.ts` today: `settleSuccess(tag)`, `settleFailure(tag, retry)`, the `retryCount` and `retryTimers` maps, and the per-attempt timing logic that schedules a `setTimeout` and fires the caller's `retry` callback. This is one self-contained state machine; pulling it out reduces the `IslandLifecycle` interface from 14 methods toward something closer to its actual scope (Observed-root tracking + per-Tag queue/loaded sets).
+
+## Acceptance criteria
+
+- [ ] New module `src/retry-scheduler.ts` owns retry-attempt state, retry-timer scheduling, and the success/failure settle calls
+- [ ] `lifecycle.ts` calls into the scheduler; no retry-specific state remains in lifecycle
+- [ ] Existing retry coverage in `lifecycle.test.ts` moves to a focused `retry-scheduler.test.ts` driven by a deterministic clock
+- [ ] Activation session's interaction with the scheduler is unchanged from the outside (`settleSuccess` / `settleFailure` shapes preserved on the consumer side)
+- [ ] `bun run check`, `bun test`, `bun run lint`, `bun run format` all pass
+
+## Notes
+
+- Naming is a placeholder — `retry-scheduler.ts` is fine, but if a better name emerges from implementation, surface it before commit
+- No public API change; this is internal refactor only
+
+## Blocked by
+
+None — can start immediately.
