@@ -1,12 +1,6 @@
-import type { RetryConfig } from "./contract.js";
+import type { ResolveTagInput, ResolvedTagOverride, RetryConfig } from "./contract.js";
 import type { InteractionEventName } from "./interaction-events.js";
-
-export interface ResolveTagInput {
-  filePath: string;
-  defaultTag: string;
-}
-
-export type ResolveTagFn = (input: ResolveTagInput) => string | false;
+export type ResolveTagFn = (input: ResolveTagInput) => ResolvedTagOverride;
 
 /** Plugin option entry for registering a custom client directive. */
 export interface ClientDirectiveDefinition {
@@ -63,6 +57,7 @@ export interface ShopifyThemeIslandsOptions {
   /**
    * Override file-path-to-tag resolution.
    * Return `defaultTag` to keep default behavior, or `false` to exclude a file.
+   * Final tag ownership must remain unique across discovered files.
    */
   resolveTag?: ResolveTagFn;
   /** Log discovered islands and generated virtual module. Default: `false` */

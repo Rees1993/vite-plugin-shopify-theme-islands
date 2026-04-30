@@ -146,6 +146,16 @@ export function createIslandInventory(rawDirectories: string[]) {
     return islandFiles.delete(id) ? { type: "removed", file: id } : null;
   };
 
+  const ensureScanned = (): IslandInventorySnapshot | null => {
+    if (scanned) return null;
+    scanned = true;
+    directoryFiles.clear();
+    absDirs.flatMap((dir) => collectFiles(dir)).forEach((file) => directoryFiles.add(file));
+    islandFiles.clear();
+    discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
+    return buildSnapshot();
+  };
+
   return {
     configure(config: IslandInventoryConfig): void {
       root = config.root;
@@ -154,13 +164,7 @@ export function createIslandInventory(rawDirectories: string[]) {
     },
 
     scan(): IslandInventorySnapshot | null {
-      if (scanned) return null;
-      scanned = true;
-      directoryFiles.clear();
-      absDirs.flatMap((dir) => collectFiles(dir)).forEach((file) => directoryFiles.add(file));
-      islandFiles.clear();
-      discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
-      return buildSnapshot();
+      return ensureScanned();
     },
 
     applyTransform(id: string, code: string): IslandInventoryChange | null {
@@ -189,7 +193,8 @@ export function createIslandInventory(rawDirectories: string[]) {
       }
     },
 
-    getBootstrapState(): IslandInventoryBootstrapState {
+    compileState(): IslandInventoryBootstrapState {
+      ensureScanned();
       return {
         root,
         directories: [...resolvedDirs],

@@ -165,6 +165,9 @@ export function normalizeReviveOptions(options?: ReviveOptions): NormalizedReviv
 // ---------------------------------------------------------------------------
 
 export type KeyToTagResult = { tag: string; skip?: boolean };
+export type ResolvedTagOverride = string | false;
+export type ResolveTagInput = { filePath: string; defaultTag: string };
+export type ResolveTagOverrideFn = (input: ResolveTagInput) => ResolvedTagOverride;
 
 /**
  * Maps a glob key (e.g. "/frontend/js/islands/product-form.ts") to a custom element tag.
@@ -192,10 +195,26 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
   return { tag, skip };
 }
 
-function warnDuplicateTagOwnership(tag: string, firstKey: string, duplicateKey: string): void {
-  console.warn(
-    `[islands] Multiple island entrypoints resolve to <${tag}>. Using the first discovered entrypoint and ignoring the others:\n- ${firstKey}\n- ${duplicateKey}\nUse resolveTag({ filePath, defaultTag }) to disambiguate or return false to exclude one file.`,
+function duplicateTagOwnershipError(tag: string, filePaths: string[]): Error {
+  return new Error(
+    `[islands] Multiple island entrypoints resolve to <${tag}>:\n- ${filePaths.join(
+      "\n- ",
+    )}\nTag ownership must be unique before calling revive(...). Remove one entry or disambiguate the final tag.`,
   );
+}
+
+export function compileResolvedTags(
+  filePaths: Iterable<string>,
+  resolveTag: ResolveTagOverrideFn,
+): Record<string, ResolvedTagOverride> | null {
+  const entries: Array<[string, ResolvedTagOverride]> = [];
+  for (const filePath of filePaths) {
+    const defaultTag = deriveDefaultTag(filePath);
+    const resolvedTag = resolveTag({ filePath, defaultTag });
+    if (resolvedTag === defaultTag) continue;
+    entries.push([filePath, resolvedTag]);
+  }
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,7 +223,7 @@ function warnDuplicateTagOwnership(tag: string, firstKey: string, duplicateKey: 
 
 /**
  * Builds tag → loader map from payload.
- * Applies the default key→tag derivation and deduplicates by tag (first wins).
+ * Applies the default key→tag derivation and requires unique tag ownership.
  */
 export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
@@ -223,7 +242,7 @@ export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader
       sourceKeys.set(tag, key);
       continue;
     }
-    warnDuplicateTagOwnership(tag, sourceKeys.get(tag) ?? key, key);
+    throw duplicateTagOwnershipError(tag, [sourceKeys.get(tag) ?? key, key]);
   }
   return map;
 }

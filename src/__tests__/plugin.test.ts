@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -322,6 +322,50 @@ describe("plugin", () => {
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("/islands-legacy/legacy-widget.ts");
+    });
+
+    it("warns when a file's resolved tag disagrees with a static customElements.define() tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "product-form.ts"),
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("x-product-form", ProductForm);',
+      );
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
+
+      try {
+        const plugin = makePlugin({ directories: ["/islands/"] });
+        plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+        plugin.buildStart();
+        await plugin.load(RESOLVED_ID);
+
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("resolves to <product-form> but statically registers <x-product-form>"),
+        );
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/product-form.ts"));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("throws when a scanned file and a mixin file resolve to the same final tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      const srcDir = join(tmp, "src");
+      mkdirSync(islandsDir);
+      mkdirSync(srcDir);
+      writeFileSync(
+        join(islandsDir, "product-form.ts"),
+        "export default class ProductForm extends HTMLElement {}",
+      );
+      writeFileSync(join(srcDir, "product-form.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/islands/"] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+
+      await expect(plugin.load(RESOLVED_ID)).rejects.toThrow(
+        "Multiple island entrypoints resolve to <product-form>",
+      );
     });
   });
 

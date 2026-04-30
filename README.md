@@ -116,6 +116,17 @@ If `disconnect()` is called before `DOMContentLoaded`, the runtime also cancels 
 
 Two approaches — use either or both.
 
+Tag ownership is determined at build time from the file path:
+
+- by default, from the filename
+- or from `resolveTag()` when you override it
+
+The plugin does **not** inspect `customElements.define(...)` to discover the tag. That means your file-to-tag mapping and your `customElements.define("...")` name need to agree.
+
+For obvious static registrations like `customElements.define("product-form", ProductForm)`, the plugin will emit a warning if that registered tag disagrees with the resolved file-to-tag mapping. That warning is best-effort only; tag ownership still comes from the path or `resolveTag()`.
+
+The resolved file-to-tag mapping must also be unique. If two discovered files resolve to the same final tag, the plugin throws during the revive-module compile step so the ambiguity never reaches runtime. Direct `revive(payload)` consumers need the same uniqueness: duplicate final tags throw instead of silently picking a winner.
+
 ### Directory scanning
 
 Drop files into your islands directory and they're automatically picked up. The filename (without extension) must match the custom element tag name used in your Liquid templates.
@@ -164,6 +175,8 @@ if (!customElements.get("site-footer")) {
 ```
 
 The plugin detects the mixin import at build time and includes the file as a lazy island chunk — no directory config needed.
+
+For mixin-marked files, tag ownership still comes from the file path or `resolveTag()`, not from `customElements.define(...)`.
 
 ### Which to use
 
@@ -434,7 +447,7 @@ This is useful during development to surface directives that hang due to bugs, o
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
-| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override file-path-to-tag mapping. Return `defaultTag` to keep the default derived tag or `false` to exclude a file. |
+| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override file-path-to-tag mapping. Return `defaultTag` to keep the default derived tag or `false` to exclude a file. Final tag ownership must remain unique. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
 | `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
@@ -515,6 +528,8 @@ Important:
 - `resolveTag()` is authoritative for the files it handles
 - returning `false` excludes that file from the island map
 - if you want to keep default filename-based behavior for other files, return `defaultTag`
+- `resolveTag()` changes file-to-tag ownership only; it does not read or rewrite `customElements.define(...)`
+- the final resolved tag must still be unique across all discovered files; collisions are compile-time errors, and direct `revive(payload)` consumers must also avoid duplicate final tags
 
 ```ts
 shopifyThemeIslands({
@@ -531,6 +546,10 @@ That means:
 - `productForm.ts` becomes `<product-form>`
 - `legacy-widget.ts` is skipped entirely
 - everything else falls back to its filename-derived tag
+
+If a file resolves to `product-form`, the code inside that file should also register `product-form` with `customElements.define(...)`. The plugin does not infer the tag from the registration call.
+
+The plugin may warn for obvious static mismatches, but it still treats the resolved file-to-tag mapping as the source of truth.
 
 If you want to keep the default derived tag for most files, return `defaultTag`.
 

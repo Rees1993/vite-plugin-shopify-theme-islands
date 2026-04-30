@@ -1,4 +1,5 @@
-import { deriveDefaultTag, type ReviveOptions } from "./contract.js";
+import { readFileSync } from "node:fs";
+import { compileResolvedTags, deriveDefaultTag, type ReviveOptions } from "./contract.js";
 import { buildReviveModuleSource } from "./revive-module.js";
 import type { ResolveTagFn } from "./options.js";
 
@@ -40,6 +41,45 @@ export interface ReviveBootstrapCompiler {
     ports?: ReviveBootstrapResolvePorts,
   ): Promise<ReviveBootstrapPlan>;
   emit(plan: ReviveBootstrapPlan): string;
+  compile(input: ReviveBootstrapInputs, ports?: ReviveBootstrapResolvePorts): Promise<string>;
+}
+
+const STATIC_CUSTOM_ELEMENT_DEFINE_RE =
+  /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]\s*,/;
+
+function readStaticDefinedTag(filePath: string): string | null {
+  try {
+    const match = readFileSync(filePath, "utf-8").match(STATIC_CUSTOM_ELEMENT_DEFINE_RE);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function warnOnStaticTagMismatch(filePath: string, resolvedTag: string, definedTag: string): void {
+  console.warn(
+    `[vite-plugin-shopify-theme-islands] ${filePath} resolves to <${resolvedTag}> but statically registers <${definedTag}> via customElements.define(...). Tag ownership is path-based, so update the filename/resolveTag() or the registered tag so they match.`,
+  );
+}
+
+function assertUniqueResolvedTagOwnership(
+  fileMappings: Array<{ filePath: string; resolvedTag: string | false }>,
+): void {
+  const filePathsByTag = new Map<string, string[]>();
+  for (const { filePath, resolvedTag } of fileMappings) {
+    if (resolvedTag === false) continue;
+    const filePaths = filePathsByTag.get(resolvedTag) ?? [];
+    filePaths.push(filePath);
+    filePathsByTag.set(resolvedTag, filePaths);
+  }
+  for (const [tag, filePaths] of filePathsByTag) {
+    if (filePaths.length < 2) continue;
+    throw new Error(
+      `[vite-plugin-shopify-theme-islands] Multiple island entrypoints resolve to <${tag}>:\n- ${filePaths.join(
+        "\n- ",
+      )}\nTag ownership must be unique at compile time. Rename one file, adjust resolveTag({ filePath, defaultTag }), or return false to exclude one file.`,
+    );
+  }
 }
 
 export function createReviveBootstrapCompiler(
@@ -48,23 +88,35 @@ export function createReviveBootstrapCompiler(
 ): ReviveBootstrapCompiler {
   return {
     async plan(input, resolvePorts) {
+      const absoluteFiles = [...new Set([...input.directoryFiles, ...input.islandFiles])];
+      const filePaths = ports.toLoadPaths(new Set(absoluteFiles), input.root);
+      const fileMappings = absoluteFiles.map((absoluteFilePath, index) => {
+        const filePath = filePaths[index]!;
+        const defaultTag = deriveDefaultTag(filePath);
+        const resolvedTag = input.resolveTag
+          ? input.resolveTag({ filePath, defaultTag })
+          : defaultTag;
+        return { absoluteFilePath, filePath, resolvedTag };
+      });
+      const resolvedTagByFilePath = new Map(
+        fileMappings.map(({ filePath, resolvedTag }) => [filePath, resolvedTag]),
+      );
+      assertUniqueResolvedTagOwnership(fileMappings);
       const islandPaths =
         input.islandFiles.size > 0 ? ports.toLoadPaths(input.islandFiles, input.root) : null;
       const resolvedTags = input.resolveTag
-        ? (() => {
-            const entries: Array<[string, string | false]> = [];
-            for (const filePath of ports.toLoadPaths(
-              new Set([...input.directoryFiles, ...input.islandFiles]),
-              input.root,
-            )) {
-              const defaultTag = deriveDefaultTag(filePath);
-              const resolvedTag = input.resolveTag({ filePath, defaultTag });
-              if (resolvedTag === defaultTag) continue;
-              entries.push([filePath, resolvedTag]);
-            }
-            return entries.length > 0 ? Object.fromEntries(entries) : null;
-          })()
+        ? compileResolvedTags(
+            filePaths,
+            ({ filePath, defaultTag }) => resolvedTagByFilePath.get(filePath) ?? defaultTag,
+          )
         : null;
+      for (const { absoluteFilePath, filePath, resolvedTag } of fileMappings) {
+        if (resolvedTag === false) continue;
+        const definedTag = readStaticDefinedTag(absoluteFilePath);
+        if (definedTag && definedTag !== resolvedTag) {
+          warnOnStaticTagMismatch(filePath, resolvedTag, definedTag);
+        }
+      }
       const customDirectives = input.customDirectives?.length
         ? await (() => {
             if (!resolvePorts) {
@@ -100,6 +152,11 @@ export function createReviveBootstrapCompiler(
         customDirectives: plan.customDirectives?.length ? plan.customDirectives : undefined,
         reviveOptions: plan.reviveOptions,
       });
+    },
+
+    async compile(input, resolvePorts) {
+      const plan = await this.plan(input, resolvePorts);
+      return this.emit(plan);
     },
   };
 }

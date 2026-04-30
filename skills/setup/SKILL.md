@@ -4,14 +4,17 @@ description: >
   Getting-started journey and plugin configuration. Covers the full path from
   install to first working island. Shopify-first setup: shopifyThemeIslands()
   options include directories (string | string[]),
-  resolveTag({ filePath, defaultTag }), debug, directives deep-merge
+  resolveTag({ filePath, defaultTag }) with path-based tag ownership and unique
+  final-tag requirements, debug, directives deep-merge
   (visible, idle, media, defer, interaction, custom), retry (retries, delay
   with exponential backoff), directiveTimeout for hung custom directives, and
   the curated interaction-event config policy
   (`mouseenter`, `touchstart`, `focusin`; empty arrays rejected). Per-element
   `client:interaction` values are runtime-validated against the same curated
   set: unsupported tokens warn and are ignored; if no supported tokens remain,
-  the runtime falls back to the configured default events.
+  the runtime falls back to the configured default events. Obvious static
+  customElements.define(...) tag mismatches can warn, but final ownership still
+  comes from the file path or resolveTag().
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
@@ -21,6 +24,7 @@ sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/options.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/config-policy.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-pipeline.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-bootstrap.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/interaction-events.ts
 ---
@@ -101,7 +105,15 @@ Use `resolveTag()` when filename-based tag derivation is not sufficient.
 Returning `false` excludes the file from the island map. Returning
 `defaultTag` keeps the default derived tag.
 
-If two different source files still resolve to the same tag, the runtime keeps the first discovered entrypoint and warns — adjust `resolveTag` or exclude one file to fix it.
+Tag ownership stays path-based even if the module later calls
+`customElements.define(...)` with a different string. For obvious static
+registrations, the plugin can emit a best-effort warning when the registered tag
+does not match the resolved file-to-tag mapping.
+
+If two different source files still resolve to the same tag, normal plugin use
+now fails during revive-module compilation instead of keeping a first discovered
+winner. Rename one file, adjust `resolveTag`, or return `false` to exclude one
+file.
 
 ### Override built-in directive defaults
 

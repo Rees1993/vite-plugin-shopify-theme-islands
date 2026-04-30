@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { resolveThemeIslandsPolicy } from "../config-policy";
 import { createRevivePipeline } from "../revive-pipeline";
 
 describe("revive-pipeline", () => {
@@ -15,7 +16,7 @@ describe("revive-pipeline", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  it("compiles the virtual revive module from configured inventory state in one boundary", async () => {
+  it("compiles the virtual revive module through a policy compile operation", async () => {
     const islandsDir = join(tmp, "frontend/js/islands");
     const directivesDir = join(tmp, "src/directives");
     mkdirSync(islandsDir, { recursive: true });
@@ -29,20 +30,23 @@ describe("revive-pipeline", () => {
       join(tmp, "src/upsell-card.ts"),
       'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class UpsellCard extends Island(HTMLElement) {}',
     );
+    const policy = resolveThemeIslandsPolicy({
+      resolveTag: ({ filePath, defaultTag }) =>
+        filePath.endsWith("product-form.ts")
+          ? "product-form"
+          : filePath.endsWith("upsell-card.ts")
+            ? defaultTag
+            : defaultTag,
+      directives: {
+        custom: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
+      },
+      debug: true,
+    });
 
     const pipeline = createRevivePipeline({
       rawDirectories: ["/frontend/js/islands/"],
       runtimePath: "/runtime.js",
-      bootstrap: {
-        resolveTag: ({ filePath, defaultTag }) =>
-          filePath.endsWith("product-form.ts")
-            ? "product-form"
-            : filePath.endsWith("upsell-card.ts")
-              ? defaultTag
-              : defaultTag,
-        customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
-        reviveOptions: { debug: true },
-      },
+      compileBootstrap: (input) => policy.compileBootstrap(input),
     });
 
     pipeline.configure({ root: tmp, aliases: [] });
@@ -56,5 +60,35 @@ describe("revive-pipeline", () => {
     expect(source).toContain('import.meta.glob(["/src/upsell-card.ts"])');
     expect(source).not.toContain("const resolvedTags = ");
     expect(source).toContain("const payload = { islands, options, customDirectives };");
+  });
+
+  it("compiles from inventory state without requiring an explicit scan first", async () => {
+    const islandsDir = join(tmp, "frontend/js/islands");
+    const srcDir = join(tmp, "src");
+    mkdirSync(islandsDir, { recursive: true });
+    mkdirSync(srcDir, { recursive: true });
+
+    writeFileSync(
+      join(islandsDir, "product-form.ts"),
+      "export default class ProductForm extends HTMLElement {}",
+    );
+    writeFileSync(
+      join(srcDir, "upsell-card.ts"),
+      'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class UpsellCard extends Island(HTMLElement) {}',
+    );
+
+    const policy = resolveThemeIslandsPolicy({ debug: true });
+    const pipeline = createRevivePipeline({
+      rawDirectories: ["/frontend/js/islands/"],
+      runtimePath: "/runtime.js",
+      compileBootstrap: (input) => policy.compileBootstrap(input),
+    });
+
+    pipeline.configure({ root: tmp, aliases: [] });
+
+    const source = await pipeline.compile(async (entrypoint) => `/resolved/${entrypoint}`);
+
+    expect(source).toContain('import.meta.glob("/frontend/js/islands/**/*.{ts,js}")');
+    expect(source).toContain('import.meta.glob(["/src/upsell-card.ts"])');
   });
 });

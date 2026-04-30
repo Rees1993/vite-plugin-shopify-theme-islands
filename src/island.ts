@@ -15,6 +15,8 @@
  *
  * The only change from a standard web component is `extends Island(HTMLElement)`
  * instead of `extends HTMLElement`. Everything else stays identical.
+ * Tag ownership still comes from the file path (or `resolveTag()`), not from
+ * reading `customElements.define(...)`.
  */
 
 type Constructor<T = HTMLElement> = new (...args: any[]) => T;

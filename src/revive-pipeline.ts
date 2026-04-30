@@ -3,10 +3,10 @@ import {
   getIslandPathsForLoad,
   type AliasLike,
   type IslandInventoryChange,
+  type IslandInventoryBootstrapState,
   type IslandInventorySnapshot,
 } from "./discovery.js";
-import type { ResolvedThemeIslandsPolicy } from "./config-policy.js";
-import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
+import { createReviveBootstrapCompiler, type ReviveBootstrapInputs } from "./revive-bootstrap.js";
 
 export interface RevivePipelineConfig {
   root: string;
@@ -16,7 +16,7 @@ export interface RevivePipelineConfig {
 export interface RevivePipelineOptions {
   rawDirectories: string[];
   runtimePath: string;
-  bootstrap: ResolvedThemeIslandsPolicy["bootstrap"];
+  compileBootstrap(input: IslandInventoryBootstrapState): ReviveBootstrapInputs;
 }
 
 export interface RevivePipeline {
@@ -55,17 +55,9 @@ export function createRevivePipeline(options: RevivePipelineOptions): RevivePipe
     },
 
     async compile(resolveEntrypoint) {
-      const plan = await compiler.plan(
-        {
-          ...inventory.getBootstrapState(),
-          resolveTag: options.bootstrap.resolveTag,
-          customDirectives: options.bootstrap.customDirectives,
-          reviveOptions: options.bootstrap.reviveOptions,
-        },
-        { resolveEntrypoint },
-      );
-
-      return compiler.emit(plan);
+      return compiler.compile(options.compileBootstrap(inventory.compileState()), {
+        resolveEntrypoint,
+      });
     },
 
     getRoot() {

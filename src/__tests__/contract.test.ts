@@ -5,11 +5,12 @@
  * key→tag semantics, options normalization, and payload → island map.
  * No Vite or DOM required.
  */
-import { describe, expect, it, mock, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
   deriveDefaultTag,
   defaultKeyToTag,
   buildIslandMap,
+  compileResolvedTags,
   normalizeReviveOptions,
   DEFAULT_DIRECTIVES,
   type RevivePayload,
@@ -121,10 +122,9 @@ describe("contract", () => {
       expect(map.has("invalid")).toBe(false);
     });
 
-    it("first key wins when multiple keys yield the same tag name", () => {
+    it("throws when multiple keys yield the same tag name", () => {
       const first = async () => ({});
       const second = async () => ({});
-      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
       const payload: RevivePayload = {
         islands: {
           "/islands/my-island.ts": first,
@@ -132,17 +132,9 @@ describe("contract", () => {
         },
         options: {},
       };
-      const map = buildIslandMap(payload);
-      expect(map.get("my-island")).toBe(first);
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("Multiple island entrypoints resolve to <my-island>"),
+      expect(() => buildIslandMap(payload)).toThrow(
+        "Multiple island entrypoints resolve to <my-island>",
       );
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/my-island.ts"));
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/components/my-island.js"));
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("resolveTag({ filePath, defaultTag })"),
-      );
-      warn.mockRestore();
     });
 
     it("uses resolvedTags overrides when provided", () => {
@@ -177,10 +169,9 @@ describe("contract", () => {
       expect(map.size).toBe(0);
     });
 
-    it("warns when resolvedTags overrides collide on the same final tag", () => {
+    it("throws when resolvedTags overrides collide on the same final tag", () => {
       const first = async () => ({});
       const second = async () => ({});
-      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
       const payload: RevivePayload = {
         islands: {
           "/islands/legacy-widget.ts": first,
@@ -193,14 +184,27 @@ describe("contract", () => {
         options: {},
       };
 
-      const map = buildIslandMap(payload);
-      expect(map.get("shared-widget")).toBe(first);
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("Multiple island entrypoints resolve to <shared-widget>"),
+      expect(() => buildIslandMap(payload)).toThrow(
+        "Multiple island entrypoints resolve to <shared-widget>",
       );
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/legacy-widget.ts"));
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/new-widget.ts"));
-      warn.mockRestore();
+    });
+  });
+
+  describe("resolvedTags compilation", () => {
+    it("keeps only non-default overrides and explicit exclusions", () => {
+      expect(
+        compileResolvedTags(
+          ["/islands/productForm.ts", "/src/widget.ts", "/src/other.js"],
+          ({ filePath, defaultTag }) => {
+            if (filePath.endsWith("productForm.ts")) return "product-form";
+            if (filePath.endsWith("other.js")) return false;
+            return defaultTag;
+          },
+        ),
+      ).toEqual({
+        "/islands/productForm.ts": "product-form",
+        "/src/other.js": false,
+      });
     });
   });
 });

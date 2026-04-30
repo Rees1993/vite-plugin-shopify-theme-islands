@@ -3,29 +3,24 @@ import {
   type NormalizedReviveOptions,
   type ReviveOptions,
 } from "./contract.js";
+import type { IslandInventoryBootstrapState } from "./discovery.js";
 import { createDirectiveSpine } from "./directive-spine.js";
 import { validateInteractionEvents } from "./interaction-events.js";
-import type {
-  ClientDirectiveDefinition,
-  DirectivesConfig,
-  ShopifyThemeIslandsOptions,
-} from "./options.js";
+import type { DirectivesConfig, ShopifyThemeIslandsOptions } from "./options.js";
+import type { ReviveBootstrapInputs } from "./revive-bootstrap.js";
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
-export interface ResolvedThemeIslandsPolicy {
+export interface ThemeIslandsPluginPolicy {
   plugin: {
     directives: DirectivesConfig;
-    customDirectives: ClientDirectiveDefinition[];
     debug: boolean;
-    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
   };
-  runtime: ReviveOptions;
-  bootstrap: {
-    resolveTag?: ShopifyThemeIslandsOptions["resolveTag"];
-    customDirectives: ClientDirectiveDefinition[];
-    reviveOptions: ReviveOptions;
-  };
+}
+
+export interface CompiledThemeIslandsPolicy extends ThemeIslandsPluginPolicy {
+  runtimeOptions(): ReviveOptions;
+  compileBootstrap(input: IslandInventoryBootstrapState): ReviveBootstrapInputs;
 }
 
 function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
@@ -84,7 +79,7 @@ function validateOptions(
 
 export function resolveThemeIslandsPolicy(
   options: ShopifyThemeIslandsOptions = {},
-): ResolvedThemeIslandsPolicy {
+): CompiledThemeIslandsPolicy {
   const directives = mergeDirectives(options.directives);
   validateOptions(options, directives);
 
@@ -102,15 +97,16 @@ export function resolveThemeIslandsPolicy(
   return {
     plugin: {
       directives,
-      customDirectives,
       debug,
-      resolveTag: options.resolveTag,
     },
-    runtime,
-    bootstrap: {
+    runtimeOptions: () => runtime,
+    compileBootstrap: (input) => ({
+      ...input,
       resolveTag: options.resolveTag,
       customDirectives,
       reviveOptions: runtime,
-    },
+    }),
   };
 }
+
+export const compileThemeIslandsPolicy = resolveThemeIslandsPolicy;

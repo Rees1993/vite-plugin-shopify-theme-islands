@@ -7,9 +7,12 @@ description: >
   files anywhere in the project). Mixin islands added or removed during dev
   invalidate the virtual revive module (reloadModule when available, otherwise a
   full page reload) — no manual Vite restart. Covers customElements.define, the Island
-  base class, resolveTag overrides, and child island cascade behaviour now owned by
-  src/lifecycle.ts. File-path-to-tag resolution and revive bootstrap planning
-  are now coordinated through src/revive-pipeline.ts and src/revive-bootstrap.ts.
+  base class, path-based tag ownership, resolveTag overrides, and child island
+  cascade behaviour now owned by src/lifecycle.ts. Duplicate final tags now
+  fail instead of warning, and obvious static customElements.define(...)
+  mismatches can warn without changing ownership. File-path-to-tag resolution
+  and revive bootstrap planning are now coordinated through
+  src/revive-pipeline.ts and src/revive-bootstrap.ts.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
@@ -68,6 +71,10 @@ if (!customElements.get("cart-drawer")) {
 
 The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the bootstrap picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
 
+For both directory-scanned files and mixin-marked files, tag ownership comes
+from the file path by default, or from `resolveTag()` when configured. The
+plugin does not derive ownership from `customElements.define(...)`.
+
 ## Core Patterns
 
 ### Guard against duplicate registration
@@ -118,7 +125,14 @@ shopifyThemeIslands({
 
 Use `resolveTag()` to override the default filename-to-tag mapping or exclude a file entirely by returning `false`. Returning `defaultTag` keeps the default derived tag.
 
-When more than one discovered file maps to the same custom-element tag, the runtime keeps the first entrypoint and logs a warning naming the conflicting paths — use `resolveTag` to disambiguate or exclude one file.
+When more than one discovered file maps to the same custom-element tag, normal
+plugin use now fails during revive-module compilation instead of keeping a first
+entrypoint. Use `resolveTag` to disambiguate or exclude one file.
+
+If the resolved tag is `product-form`, the code inside the file should also
+register `product-form` with `customElements.define(...)`. The plugin can emit a
+best-effort warning for obvious static mismatches, but ownership still comes
+from the path or `resolveTag()`.
 
 ## Common Mistakes
 
@@ -172,6 +186,36 @@ if (!customElements.get("mini-cart")) {
 The plugin loads the module but the custom element never upgrades without `customElements.define`.
 
 Source: src/runtime.ts — loader() is called but registration is the file's responsibility
+
+### HIGH `customElements.define(...)` name disagrees with the resolved file tag
+
+Wrong:
+
+```ts
+// frontend/js/islands/product-form.ts
+class ProductForm extends HTMLElement {}
+
+if (!customElements.get("x-product-form")) {
+  customElements.define("x-product-form", ProductForm);
+}
+```
+
+Correct:
+
+```ts
+// frontend/js/islands/product-form.ts
+class ProductForm extends HTMLElement {}
+
+if (!customElements.get("product-form")) {
+  customElements.define("product-form", ProductForm);
+}
+```
+
+The plugin resolves ownership from the file path (or `resolveTag()`), not from
+the registration call. Obvious static mismatches can warn, and the element will
+not upgrade correctly if the DOM tag and registered tag disagree.
+
+Source: src/revive-bootstrap.ts — static customElements.define(...) mismatch warning
 
 ### HIGH Filename without a hyphen is skipped as an invalid custom element tag
 

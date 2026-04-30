@@ -7,11 +7,25 @@ describe("config-policy", () => {
   it("applies full defaults when options are omitted", () => {
     const policy = resolveThemeIslandsPolicy();
     expect(policy.plugin.directives).toEqual(DEFAULT_DIRECTIVES);
-    expect(policy.plugin.customDirectives).toEqual([]);
     expect(policy.plugin.debug).toBe(false);
-    expect(policy.runtime).toEqual({
+    expect(policy.runtimeOptions()).toEqual({
       directives: DEFAULT_DIRECTIVES,
       debug: false,
+    });
+  });
+
+  it("exposes runtime options through one policy operation", () => {
+    const policy = resolveThemeIslandsPolicy({
+      retry: { retries: 2, delay: 500 },
+      directiveTimeout: 250,
+      debug: true,
+    });
+
+    expect(policy.runtimeOptions()).toEqual({
+      directives: DEFAULT_DIRECTIVES,
+      debug: true,
+      retry: { retries: 2, delay: 500 },
+      directiveTimeout: 250,
     });
   });
 
@@ -34,9 +48,8 @@ describe("config-policy", () => {
       timeout: 100,
     });
     expect(policy.plugin.directives.interaction?.events).toEqual(["focusin"]);
-    expect(policy.plugin.customDirectives).toBe(customDirectives);
     expect(policy.plugin.debug).toBe(true);
-    expect(policy.runtime).toEqual({
+    expect(policy.runtimeOptions()).toEqual({
       directives: {
         visible: DEFAULT_DIRECTIVES.visible,
         idle: { attribute: "client:idle", timeout: 100 },
@@ -53,10 +66,9 @@ describe("config-policy", () => {
     });
   });
 
-  it("exposes a bootstrap-ready view of the resolved policy", () => {
+  it("compiles bootstrap input from inventory state through one policy operation", () => {
     const resolveTag = ({ defaultTag }: { filePath: string; defaultTag: string }) => defaultTag;
     const customDirectives = [{ name: "client:on-click", entrypoint: "./click.ts" }];
-
     const policy = resolveThemeIslandsPolicy({
       resolveTag,
       directives: { custom: customDirectives },
@@ -64,10 +76,21 @@ describe("config-policy", () => {
       debug: true,
     });
 
-    expect(policy.bootstrap).toEqual({
+    expect(
+      policy.compileBootstrap({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/product-form.ts"]),
+        islandFiles: new Set(["/project/src/upsell-card.ts"]),
+      }),
+    ).toEqual({
+      root: "/project",
+      directories: ["/islands/"],
+      directoryFiles: new Set(["/project/islands/product-form.ts"]),
+      islandFiles: new Set(["/project/src/upsell-card.ts"]),
       resolveTag,
       customDirectives,
-      reviveOptions: policy.runtime,
+      reviveOptions: policy.runtimeOptions(),
     });
   });
 

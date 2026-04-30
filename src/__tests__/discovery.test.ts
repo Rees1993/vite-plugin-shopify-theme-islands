@@ -97,7 +97,7 @@ describe("discovery", () => {
 
       expect(detected).toEqual({ type: "detected", file: filePath });
       expect(removed).toEqual({ type: "removed", file: filePath });
-      expect(inventory.getBootstrapState().islandFiles.size).toBe(0);
+      expect(inventory.compileState().islandFiles.size).toBe(0);
     });
 
     it("ignores transform additions inside configured directories", () => {
@@ -109,7 +109,7 @@ describe("discovery", () => {
       inventory.scan();
 
       expect(inventory.applyTransform(filePath, ISLAND_CONTENT)).toBeNull();
-      expect(inventory.getBootstrapState().islandFiles.size).toBe(0);
+      expect(inventory.compileState().islandFiles.size).toBe(0);
     });
 
     it("tracks watchChange create, update, and delete events", () => {
@@ -137,14 +137,26 @@ describe("discovery", () => {
       });
     });
 
-    it("resolves aliases before emitting bootstrap directories", () => {
+    it("resolves aliases before compiling inventory directories", () => {
       const inventory = createIslandInventory(["@islands/"]);
       inventory.configure({
         root: "/project",
         aliases: [{ find: "@islands", replacement: "/project/frontend/js/islands" }],
       });
 
-      expect(inventory.getBootstrapState().directories).toEqual(["/project/frontend/js/islands/"]);
+      expect(inventory.compileState().directories).toEqual(["/project/frontend/js/islands/"]);
+    });
+
+    it("compiles inventory state through one operation", () => {
+      writeFileSync(join(tmp, "outside-widget.ts"), ISLAND_CONTENT);
+      const inventory = makeInventory();
+
+      expect(inventory.compileState()).toEqual({
+        root: tmp,
+        directories: ["/islands/"],
+        directoryFiles: new Set<string>(),
+        islandFiles: new Set([join(tmp, "outside-widget.ts")]),
+      });
     });
   });
 });

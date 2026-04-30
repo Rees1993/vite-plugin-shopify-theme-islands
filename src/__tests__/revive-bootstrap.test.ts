@@ -100,6 +100,31 @@ describe("revive-bootstrap", () => {
     expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 
+  it("compiles bootstrap source through one compiler operation", async () => {
+    const compiler = createReviveBootstrapCompiler(
+      {
+        toLoadPaths: getIslandPathsForLoad,
+      },
+      "/runtime.js",
+    );
+
+    const source = await compiler.compile(
+      {
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set<string>(),
+        islandFiles: new Set(["/project/src/widget.ts"]),
+        customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
+        reviveOptions: { debug: false },
+      },
+      { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
+    );
+
+    expect(source).toContain('import { revive as _islands } from "/runtime.js"');
+    expect(source).toContain('import _directive0 from "/resolved/./src/directives/on-click.ts";');
+    expect(source).toContain("const payload = { islands, options, customDirectives };");
+  });
+
   it("omits default-tag mappings when resolveTag returns defaultTag", async () => {
     const compiler = createReviveBootstrapCompiler(
       {
@@ -121,5 +146,29 @@ describe("revive-bootstrap", () => {
     );
 
     expect(plan.resolvedTags).toBeNull();
+  });
+
+  it("throws when two discovered files resolve to the same final tag", async () => {
+    const compiler = createReviveBootstrapCompiler(
+      {
+        toLoadPaths: getIslandPathsForLoad,
+      },
+      "/runtime.js",
+    );
+
+    await expect(
+      compiler.plan(
+        {
+          root: "/project",
+          directories: ["/islands/"],
+          directoryFiles: new Set(["/project/islands/product-form.ts"]),
+          islandFiles: new Set(["/project/src/productForm.ts"]),
+          resolveTag: ({ filePath, defaultTag }) =>
+            filePath.endsWith("productForm.ts") ? "product-form" : defaultTag,
+          reviveOptions: { debug: false },
+        },
+        { resolveEntrypoint: async (entrypoint) => `/resolved/${entrypoint}` },
+      ),
+    ).rejects.toThrow("Multiple island entrypoints resolve to <product-form>");
   });
 });
