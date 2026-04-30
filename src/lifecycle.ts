@@ -1,4 +1,5 @@
 import type { IslandLoader } from "./contract.js";
+import { createRetryScheduler, type RetryPlatform } from "./retry-scheduler.js";
 
 export interface IslandLifecycleStartInput {
   getRoot(): HTMLElement | null;
@@ -24,10 +25,7 @@ export interface IslandLifecycle {
   start(input: IslandLifecycleStartInput): { disconnect: () => void };
 }
 
-export interface IslandLifecyclePlatform {
-  setTimeout(fn: () => void, delay: number): ReturnType<typeof setTimeout>;
-  clearTimeout(timer: ReturnType<typeof setTimeout>): void;
-}
+export interface IslandLifecyclePlatform extends RetryPlatform {}
 
 export function createIslandLifecycleCoordinator(opts: {
   retries: number;
@@ -36,11 +34,13 @@ export function createIslandLifecycleCoordinator(opts: {
 }): IslandLifecycle {
   const queued = new Set<string>();
   const loaded = new Set<string>();
-  const retryCount = new Map<string, number>();
-  const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const retryScheduler = createRetryScheduler({
+    retries: opts.retries,
+    retryDelay: opts.retryDelay,
+    platform: opts.platform,
+  });
   const cancellableElements = new Map<Element, Set<() => void>>();
   const excludedRoots = new Set<HTMLElement>();
-  const platform = opts.platform ?? globalThis;
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
@@ -57,19 +57,11 @@ export function createIslandLifecycleCoordinator(opts: {
     return true;
   };
 
-  const clearRetryTimer = (tag: string): void => {
-    const timer = retryTimers.get(tag);
-    if (timer === undefined) return;
-    platform.clearTimeout(timer);
-    retryTimers.delete(tag);
-  };
-
   const settleSuccess = (tag: string): number => {
-    const attempt = (retryCount.get(tag) ?? 0) + 1;
-    clearRetryTimer(tag);
+    const attempt = retryScheduler.attemptOf(tag);
+    retryScheduler.cancel(tag);
     queued.delete(tag);
     loaded.add(tag);
-    retryCount.delete(tag);
     return attempt;
   };
 
@@ -77,30 +69,13 @@ export function createIslandLifecycleCoordinator(opts: {
     tag: string,
     retry: () => void,
   ): { willRetry: boolean; attempt: number } => {
-    const attempt = (retryCount.get(tag) ?? 0) + 1;
-    if (attempt <= opts.retries) {
-      retryCount.set(tag, attempt);
-      clearRetryTimer(tag);
-      const timer = platform.setTimeout(
-        () => {
-          retryTimers.delete(tag);
-          retry();
-        },
-        opts.retryDelay * 2 ** (attempt - 1),
-      );
-      retryTimers.set(tag, timer);
-      return { willRetry: true, attempt };
-    }
-
-    clearRetryTimer(tag);
-    retryCount.delete(tag);
-    queued.delete(tag);
-    return { willRetry: false, attempt };
+    const result = retryScheduler.scheduleRetry(tag, retry);
+    if (!result.willRetry) queued.delete(tag);
+    return result;
   };
 
   const evict = (tag: string): void => {
-    clearRetryTimer(tag);
-    retryCount.delete(tag);
+    retryScheduler.cancel(tag);
     queued.delete(tag);
   };
 
@@ -110,9 +85,7 @@ export function createIslandLifecycleCoordinator(opts: {
       return;
     }
 
-    for (const timer of retryTimers.values()) platform.clearTimeout(timer);
-    retryTimers.clear();
-    retryCount.clear();
+    retryScheduler.cancelAll();
     queued.clear();
   };
 

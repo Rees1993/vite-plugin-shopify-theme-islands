@@ -94,6 +94,67 @@ describe("lifecycle", () => {
     expect(tags).toEqual(["dynamic-island"]);
   });
 
+  it("delegates retry cancellation through settleSuccess, settleFailure, and clear", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    // settleSuccess clears the pending retry timer for that tag.
+    lifecycle.settleFailure(
+      "alpha",
+      mock(() => {}),
+    );
+    expect(timers).toHaveLength(1);
+    lifecycle.settleSuccess("alpha");
+    expect(timers[0].cleared).toBe(true);
+
+    // settleFailure with exhausted retries removes the tag from the queue.
+    const giveUp = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 50 });
+    document.body.innerHTML = "<gone-island></gone-island>";
+    const islandMap = new Map<string, () => Promise<unknown>>([
+      ["gone-island", mock(async () => {})],
+    ]);
+    cleanups.track(
+      giveUp.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate() {},
+      }).disconnect,
+    );
+    expect(giveUp.isQueued("gone-island")).toBe(true);
+    const result = giveUp.settleFailure(
+      "gone-island",
+      mock(() => {}),
+    );
+    expect(result).toEqual({ attempt: 1, willRetry: false });
+    expect(giveUp.isQueued("gone-island")).toBe(false);
+
+    // clear() cancels all pending retry timers.
+    lifecycle.settleFailure(
+      "beta",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "gamma",
+      mock(() => {}),
+    );
+    lifecycle.clear();
+    expect(timers.every((timer) => timer.cleared)).toBe(true);
+  });
+
   it("resolves the root lazily and skips startup callbacks when disconnected before init", () => {
     const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
     let domReadyHandler: (() => void) | undefined;
@@ -165,106 +226,5 @@ describe("lifecycle", () => {
       document.addEventListener = originalAdd;
       document.removeEventListener = originalRemove;
     }
-  });
-
-  it("schedules retry callbacks with exponential backoff from the lifecycle boundary", () => {
-    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
-
-    const timers: FakeTimer[] = [];
-    const lifecycle = createIslandLifecycleCoordinator({
-      retries: 2,
-      retryDelay: 100,
-      platform: {
-        setTimeout(fn, delay) {
-          const timer: FakeTimer = { fn, delay, cleared: false };
-          timers.push(timer);
-          return timer as unknown as ReturnType<typeof setTimeout>;
-        },
-        clearTimeout(timer) {
-          (timer as unknown as FakeTimer).cleared = true;
-        },
-      },
-    });
-    const retry = mock(() => {});
-
-    const first = lifecycle.settleFailure("retry-island", retry);
-    const second = lifecycle.settleFailure("retry-island", retry);
-
-    expect(first).toEqual({ attempt: 1, willRetry: true });
-    expect(second).toEqual({ attempt: 2, willRetry: true });
-    expect(timers.map((timer) => timer.delay)).toEqual([100, 200]);
-
-    timers[0].fn();
-    timers[1].fn();
-    expect(retry).toHaveBeenCalledTimes(2);
-  });
-
-  it("clears pending retry timers on success and targeted clear", () => {
-    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
-
-    const timers: FakeTimer[] = [];
-    const lifecycle = createIslandLifecycleCoordinator({
-      retries: 2,
-      retryDelay: 50,
-      platform: {
-        setTimeout(fn, delay) {
-          const timer: FakeTimer = { fn, delay, cleared: false };
-          timers.push(timer);
-          return timer as unknown as ReturnType<typeof setTimeout>;
-        },
-        clearTimeout(timer) {
-          (timer as unknown as FakeTimer).cleared = true;
-        },
-      },
-    });
-
-    lifecycle.settleFailure(
-      "alpha-island",
-      mock(() => {}),
-    );
-    lifecycle.settleFailure(
-      "beta-island",
-      mock(() => {}),
-    );
-    expect(timers).toHaveLength(2);
-
-    const attempt = lifecycle.settleSuccess("alpha-island");
-    expect(attempt).toBe(2);
-    expect(timers[0].cleared).toBe(true);
-
-    lifecycle.clear(["beta-island"]);
-    expect(timers[1].cleared).toBe(true);
-  });
-
-  it("can clear all pending retries at once", () => {
-    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
-
-    const timers: FakeTimer[] = [];
-    const lifecycle = createIslandLifecycleCoordinator({
-      retries: 2,
-      retryDelay: 50,
-      platform: {
-        setTimeout(fn, delay) {
-          const timer: FakeTimer = { fn, delay, cleared: false };
-          timers.push(timer);
-          return timer as unknown as ReturnType<typeof setTimeout>;
-        },
-        clearTimeout(timer) {
-          (timer as unknown as FakeTimer).cleared = true;
-        },
-      },
-    });
-
-    lifecycle.settleFailure(
-      "alpha-island",
-      mock(() => {}),
-    );
-    lifecycle.settleFailure(
-      "beta-island",
-      mock(() => {}),
-    );
-    lifecycle.clear();
-
-    expect(timers.every((timer) => timer.cleared)).toBe(true);
   });
 });
