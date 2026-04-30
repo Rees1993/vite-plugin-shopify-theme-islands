@@ -101,8 +101,6 @@ _Avoid_: bootstrap, build, codegen
 The intermediate data structure produced by Compile. Carries everything the emitted virtual module needs to run `revive()` correctly (island map, resolved tags, custom directive bindings, runtime options).
 _Avoid_: blueprint, payload, bundle
 
-> Currently named `ReviveBootstrap*` in code; rename pending. See `.scratch/rename-bootstrap-to-compile/`.
-
 ## Relationships
 
 - An **Island** is identified by exactly one **Tag** and backed by exactly one source file.
@@ -124,5 +122,4 @@ _Avoid_: blueprint, payload, bundle
 ## Flagged ambiguities
 
 - "island" was used to mean both the definition and the DOM instance — resolved: **Island** is the definition, **Island element** is the DOM occurrence.
-- "bootstrap" is used in code today (`ReviveBootstrap*`) but collides with the runtime boot step and the CSS framework — glossary uses **Compile** + **Plan**. Rename tracked in `.scratch/rename-bootstrap-to-compile/`.
 - "ownership" is used in code (`RootOwnershipCoordinator`, `IslandLifecycle`) but is implementation-only — consumer-facing concept is **Observed root**.

@@ -33,7 +33,7 @@ export interface IslandInventoryChange {
   file: string;
 }
 
-export interface IslandInventoryBootstrapState {
+export interface IslandInventoryState {
   root: string;
   directories: string[];
   directoryFiles: Set<string>;
@@ -193,7 +193,7 @@ export function createIslandInventory(rawDirectories: string[]) {
       }
     },
 
-    compileState(): IslandInventoryBootstrapState {
+    state(): IslandInventoryState {
       ensureScanned();
       return {
         root,

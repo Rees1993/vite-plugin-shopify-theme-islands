@@ -46,7 +46,7 @@ describe("revive-pipeline", () => {
     const pipeline = createRevivePipeline({
       rawDirectories: ["/frontend/js/islands/"],
       runtimePath: "/runtime.js",
-      compileBootstrap: (input) => config.compileBootstrap(input),
+      compileInputs: (input) => config.compileInputs(input),
     });
 
     pipeline.configure({ root: tmp, aliases: [] });
@@ -81,7 +81,7 @@ describe("revive-pipeline", () => {
     const pipeline = createRevivePipeline({
       rawDirectories: ["/frontend/js/islands/"],
       runtimePath: "/runtime.js",
-      compileBootstrap: (input) => config.compileBootstrap(input),
+      compileInputs: (input) => config.compileInputs(input),
     });
 
     pipeline.configure({ root: tmp, aliases: [] });

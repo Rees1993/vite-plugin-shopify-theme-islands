@@ -15,7 +15,7 @@ function payload(
   return suite.runtime.payload(islands, options, customDirectives);
 }
 
-describe("runtime bootstrap", () => {
+describe("runtime compile", () => {
   beforeEach(() => {
     suite.reset();
   });

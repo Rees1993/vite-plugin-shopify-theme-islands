@@ -8,7 +8,7 @@ export interface ResolvedCustomDirective {
   entrypoint: string;
 }
 
-export interface ReviveBootstrapInputs {
+export interface ReviveCompileInputs {
   root: string;
   directories: string[];
   directoryFiles: Set<string>;
@@ -18,7 +18,7 @@ export interface ReviveBootstrapInputs {
   reviveOptions: ReviveOptions;
 }
 
-export interface ReviveBootstrapPlan {
+export interface RevivePlan {
   runtimePath: string;
   directoryGlobs: string[];
   islandPaths: string[] | null;
@@ -27,21 +27,18 @@ export interface ReviveBootstrapPlan {
   reviveOptions: ReviveOptions;
 }
 
-export interface ReviveBootstrapCompilerPorts {
+export interface ReviveCompilerPorts {
   toLoadPaths(islandFiles: Set<string>, root: string): string[];
 }
 
-export interface ReviveBootstrapResolvePorts {
+export interface ReviveCompileResolvePorts {
   resolveEntrypoint(entrypoint: string): Promise<string>;
 }
 
-export interface ReviveBootstrapCompiler {
-  plan(
-    input: ReviveBootstrapInputs,
-    ports?: ReviveBootstrapResolvePorts,
-  ): Promise<ReviveBootstrapPlan>;
-  emit(plan: ReviveBootstrapPlan): string;
-  compile(input: ReviveBootstrapInputs, ports?: ReviveBootstrapResolvePorts): Promise<string>;
+export interface ReviveCompiler {
+  plan(input: ReviveCompileInputs, ports?: ReviveCompileResolvePorts): Promise<RevivePlan>;
+  emit(plan: RevivePlan): string;
+  compile(input: ReviveCompileInputs, ports?: ReviveCompileResolvePorts): Promise<string>;
 }
 
 const STATIC_CUSTOM_ELEMENT_DEFINE_RE = /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]\s*,/;
@@ -81,10 +78,10 @@ function assertUniqueResolvedTagOwnership(
   }
 }
 
-export function createReviveBootstrapCompiler(
-  ports: ReviveBootstrapCompilerPorts,
+export function createReviveCompiler(
+  ports: ReviveCompilerPorts,
   runtimePath: string,
-): ReviveBootstrapCompiler {
+): ReviveCompiler {
   return {
     async plan(input, resolvePorts) {
       const absoluteFiles = [...new Set([...input.directoryFiles, ...input.islandFiles])];

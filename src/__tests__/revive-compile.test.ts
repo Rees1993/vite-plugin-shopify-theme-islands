@@ -1,11 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import { createReviveBootstrapCompiler } from "../revive-bootstrap";
+import { createReviveCompiler } from "../revive-compile";
 import { getIslandPathsForLoad } from "../discovery";
 
-describe("revive-bootstrap", () => {
-  it("plans a semantic bootstrap artifact from resolved plugin state", async () => {
+describe("revive-compile", () => {
+  it("plans a semantic compile artifact from resolved plugin state", async () => {
     const seen: Array<{ filePath: string; defaultTag: string }> = [];
-    const compiler = createReviveBootstrapCompiler(
+    const compiler = createReviveCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
       },
@@ -75,8 +75,8 @@ describe("revive-bootstrap", () => {
     expect(source).toContain("export const { disconnect, scan, observe, unobserve } = runtime;");
   });
 
-  it("renders the bootstrap source from a semantic plan", async () => {
-    const compiler = createReviveBootstrapCompiler(
+  it("renders the compiled source from a semantic plan", async () => {
+    const compiler = createReviveCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
       },
@@ -100,8 +100,8 @@ describe("revive-bootstrap", () => {
     expect(source).toContain("const payload = { islands, options, customDirectives };");
   });
 
-  it("compiles bootstrap source through one compiler operation", async () => {
-    const compiler = createReviveBootstrapCompiler(
+  it("compiles compiled source through one compiler operation", async () => {
+    const compiler = createReviveCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
       },
@@ -126,7 +126,7 @@ describe("revive-bootstrap", () => {
   });
 
   it("omits default-tag mappings when resolveTag returns defaultTag", async () => {
-    const compiler = createReviveBootstrapCompiler(
+    const compiler = createReviveCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
       },
@@ -149,7 +149,7 @@ describe("revive-bootstrap", () => {
   });
 
   it("throws when two discovered files resolve to the same final tag", async () => {
-    const compiler = createReviveBootstrapCompiler(
+    const compiler = createReviveCompiler(
       {
         toLoadPaths: getIslandPathsForLoad,
       },

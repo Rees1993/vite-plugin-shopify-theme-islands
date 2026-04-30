@@ -66,7 +66,7 @@ describe("resolved-config", () => {
     });
   });
 
-  it("compiles bootstrap input from inventory state through one config operation", () => {
+  it("compiles compile input from inventory state through one config operation", () => {
     const resolveTag = ({ defaultTag }: { filePath: string; defaultTag: string }) => defaultTag;
     const customDirectives = [{ name: "client:on-click", entrypoint: "./click.ts" }];
     const config = resolveThemeIslandsConfig({
@@ -77,7 +77,7 @@ describe("resolved-config", () => {
     });
 
     expect(
-      config.compileBootstrap({
+      config.compileInputs({
         root: "/project",
         directories: ["/islands/"],
         directoryFiles: new Set(["/project/islands/product-form.ts"]),

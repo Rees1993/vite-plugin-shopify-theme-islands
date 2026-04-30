@@ -3,11 +3,11 @@ import {
   type NormalizedReviveOptions,
   type ReviveOptions,
 } from "./contract.js";
-import type { IslandInventoryBootstrapState } from "./discovery.js";
+import type { IslandInventoryState } from "./discovery.js";
 import { createDirectiveSpine } from "./directive-spine.js";
 import { validateInteractionEvents } from "./interaction-events.js";
 import type { DirectivesConfig, ShopifyThemeIslandsOptions } from "./options.js";
-import type { ReviveBootstrapInputs } from "./revive-bootstrap.js";
+import type { ReviveCompileInputs } from "./revive-compile.js";
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
@@ -20,7 +20,7 @@ export interface ThemeIslandsPluginConfig {
 
 export interface CompiledThemeIslandsConfig extends ThemeIslandsPluginConfig {
   runtimeOptions(): ReviveOptions;
-  compileBootstrap(input: IslandInventoryBootstrapState): ReviveBootstrapInputs;
+  compileInputs(input: IslandInventoryState): ReviveCompileInputs;
 }
 
 function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
@@ -100,7 +100,7 @@ export function resolveThemeIslandsConfig(
       debug,
     },
     runtimeOptions: () => runtime,
-    compileBootstrap: (input) => ({
+    compileInputs: (input) => ({
       ...input,
       resolveTag: options.resolveTag,
       customDirectives,

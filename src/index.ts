@@ -61,7 +61,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const revivePipeline = createRevivePipeline({
     rawDirectories: rawDirs,
     runtimePath,
-    compileBootstrap: (input) => config.compileBootstrap(input),
+    compileInputs: (input) => config.compileInputs(input),
   });
   let devServer: ViteDevServer | null = null;
 
