@@ -52,6 +52,14 @@ function validateOptions(
   const interactionEvents = options.directives?.interaction?.events;
   validateInteractionEvents(interactionEvents);
 
+  if (
+    options.tagSource !== undefined &&
+    options.tagSource !== "registeredTag" &&
+    options.tagSource !== "filename"
+  ) {
+    throw new Error(`${PREFIX} "tagSource" must be "registeredTag" or "filename"`);
+  }
+
   if (options.retry !== undefined) {
     const { retries, delay } = options.retry;
     if (retries !== undefined && retries < 0) {
@@ -102,6 +110,7 @@ export function resolveThemeIslandsConfig(
     runtimeOptions: () => runtime,
     compileInputs: (input) => ({
       ...input,
+      tagSource: options.tagSource ?? "registeredTag",
       resolveTag: options.resolveTag,
       customDirectives,
       reviveOptions: runtime,

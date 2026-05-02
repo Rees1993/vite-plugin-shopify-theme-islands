@@ -89,6 +89,14 @@ _Avoid_: islands folder, islands path
 A no-op class mixin imported from `vite-plugin-shopify-theme-islands/island`. Wrapping a custom element with `Island(HTMLElement)` marks that file as an Island so the plugin discovers it even when it lives outside the configured Island directories. Identity at runtime; meaningful only at build time.
 _Avoid_: mixin (too generic), wrapper, decorator
 
+**Registered Tag**:
+The custom-element Tag string passed to `customElements.define(...)` (for example `cart-drawer`). Distinct from filename-derived Tag ownership.
+_Avoid_: registration, define name
+
+**Tag source**:
+The plugin policy that decides where an Island's Tag ownership comes from at Compile time — for example the filename or the Registered Tag.
+_Avoid_: naming mode, ownership mode
+
 **Resolved config**:
 The validated plugin configuration with derivation methods (`runtimeOptions()`, `compileBootstrap()`) attached. Single source of truth for plugin behaviour after option resolution.
 _Avoid_: policy, settings, options (when ambiguous)
@@ -108,6 +116,7 @@ _Avoid_: blueprint, payload, bundle
 - A **Directive** is realised on a specific **Island element** as a **Gate**.
 - **Discovery** produces an **Island inventory** from **Island directories** and **Island marker** imports.
 - **Compile** consumes a **Resolved config** + **Island inventory** and emits a **Plan** as the virtual `/revive` module source.
+- An **Island** has one effective **Tag** at Compile time, chosen by the configured **Tag source** and then optionally overridden by `resolveTag()`.
 - At runtime, **revive()** instantiates one **Activation session** that activates **Island elements** within all **Observed roots**.
 - The **Lifecycle bridge** maps Shopify Theme Editor events on **Sections** / **Blocks** to **Subtree**-scoped runtime control verbs (`observe`, `unobserve`, `scan`).
 
@@ -123,3 +132,4 @@ _Avoid_: blueprint, payload, bundle
 
 - "island" was used to mean both the definition and the DOM instance — resolved: **Island** is the definition, **Island element** is the DOM occurrence.
 - "ownership" is used in code (`RootOwnershipCoordinator`, `IslandLifecycle`) but is implementation-only — consumer-facing concept is **Observed root**.
+- "registration" was used to mean both the `customElements.define(...)` call and the Tag string inside it — resolved: the call is registration, the string is the **Registered Tag**.

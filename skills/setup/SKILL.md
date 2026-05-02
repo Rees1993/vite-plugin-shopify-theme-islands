@@ -4,17 +4,18 @@ description: >
   Getting-started journey and plugin configuration. Covers the full path from
   install to first working island. Shopify-first setup: shopifyThemeIslands()
   options include directories (string | string[]),
-  resolveTag({ filePath, defaultTag }) with path-based tag ownership and unique
-  final-tag requirements, debug, directives deep-merge
+  tagSource ("registeredTag" default — Tag derived from static
+  customElements.define("...", ...) call; "filename" for v1.x compatibility),
+  resolveTag({ filePath, defaultTag }) with unique final-tag requirements
+  (defaultTag is the Registered Tag in registeredTag mode, filename-derived in
+  filename mode), debug, directives deep-merge
   (visible, idle, media, defer, interaction, custom), retry (retries, delay
   with exponential backoff), directiveTimeout for hung custom directives, and
   the curated interaction-event config policy
   (`mouseenter`, `touchstart`, `focusin`; empty arrays rejected). Per-element
   `client:interaction` values are runtime-validated against the same curated
   set: unsupported tokens warn and are ignored; if no supported tokens remain,
-  the runtime falls back to the configured default events. Obvious static
-  customElements.define(...) tag mismatches can warn, but final ownership still
-  comes from the file path or resolveTag().
+  the runtime falls back to the configured default events.
 type: core
 library: vite-plugin-shopify-theme-islands
 library_version: "2.0.0"
@@ -75,8 +76,11 @@ same runtime instance instead of creating a second one.
 <product-form client:visible></product-form>
 ```
 
-That's a working setup. Islands in `/frontend/js/islands/` matching the tag
-name are loaded lazily when the directive condition is met.
+That's a working setup. Any discovered Island whose effective Tag matches
+`<product-form>` is loaded lazily when the directive condition is met. In the
+default `registeredTag` mode, that Tag comes from the file's static
+`customElements.define("...", ...)` call; `tagSource: "filename"` restores the
+v1.x filename-based lookup.
 
 ## Core Patterns
 
@@ -88,7 +92,7 @@ shopifyThemeIslands({
 });
 ```
 
-### Override filename-to-tag mapping
+### Override the derived Tag
 
 ```ts
 shopifyThemeIslands({
@@ -100,19 +104,13 @@ shopifyThemeIslands({
 });
 ```
 
-Use `resolveTag()` when filename-based tag derivation is not sufficient.
-Returning `false` excludes the file from the island map. Returning
-`defaultTag` keeps the default derived tag.
+Use `resolveTag()` to override Tag derivation for specific files. In the
+default `registeredTag` mode, `defaultTag` is the Tag read from the file's
+static `customElements.define("...", ...)` call. Returning `false` excludes
+the file from the island map. Returning `defaultTag` keeps the default.
 
-Tag ownership stays path-based even if the module later calls
-`customElements.define(...)` with a different string. For obvious static
-registrations, the plugin can emit a best-effort warning when the registered tag
-does not match the resolved file-to-tag mapping.
-
-If two different source files still resolve to the same tag, normal plugin use
-now fails during revive-module compilation instead of keeping a first discovered
-winner. Rename one file, adjust `resolveTag`, or return `false` to exclude one
-file.
+If two different source files resolve to the same Tag, plugin compilation fails.
+Rename, adjust `resolveTag`, or return `false` to exclude one file.
 
 ### Override built-in directive defaults
 

@@ -62,6 +62,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
   const inventory = createIslandInventory(rawDirs);
   const compiler = createReviveCompiler({ toLoadPaths: getIslandPathsForLoad }, runtimePath);
   let devServer: ViteDevServer | null = null;
+  const ownershipSnapshot = new Map<string, string | false>();
 
   const invalidateReviveModule = (): void => {
     if (!devServer) return;
@@ -128,16 +129,27 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     watchChange(id, { event }) {
       const change = inventory.applyWatchChange(id, event);
-      if (!change) return;
-      const root = inventory.getRoot();
-      const prefix =
-        event === "delete"
-          ? "Removed island (deleted):"
-          : change.type === "detected"
-            ? "Detected island (watchChange):"
-            : "Removed island (watchChange):";
-      log(prefix, relative(root, change.file));
-      invalidateReviveModule();
+      if (change) {
+        const root = inventory.getRoot();
+        const prefix =
+          event === "delete"
+            ? "Removed island (deleted):"
+            : change.type === "detected"
+              ? "Detected island (watchChange):"
+              : "Removed island (watchChange):";
+        log(prefix, relative(root, change.file));
+        invalidateReviveModule();
+        return;
+      }
+      if (event === "update" && ownershipSnapshot.has(id)) {
+        const compileInputs = config.compileInputs(inventory.state());
+        const loadPath = "/" + relative(inventory.getRoot(), id).replace(/\\/g, "/");
+        const newTag = compiler.recomputeOwnership(id, loadPath, compileInputs);
+        if (newTag === null || newTag !== ownershipSnapshot.get(id)) {
+          if (newTag !== null) ownershipSnapshot.set(id, newTag);
+          invalidateReviveModule();
+        }
+      }
     },
 
     resolveId(id) {
@@ -148,7 +160,7 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      return compiler.compile(config.compileInputs(inventory.state()), {
+      const plan = await compiler.plan(config.compileInputs(inventory.state()), {
         resolveEntrypoint: async (entrypoint: string) => {
           const resolved = await this.resolve(entrypoint);
           if (!resolved) {
@@ -159,6 +171,11 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
           return resolved.id;
         },
       });
+      ownershipSnapshot.clear();
+      for (const [absPath, tag] of plan.ownershipMap) {
+        ownershipSnapshot.set(absPath, tag);
+      }
+      return compiler.emit(plan);
     },
   };
 }

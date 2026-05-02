@@ -21,7 +21,7 @@ Minimal end-to-end setup:
 
 1. Add the plugin in `vite.config.ts`
 2. Import `vite-plugin-shopify-theme-islands/revive` in your client entrypoint
-3. Create a web component file whose filename matches the tag name
+3. Create a web component file and call `customElements.define("your-tag", ...)` inside it
 4. Use that tag in Liquid, with a directive if you want lazy loading
 
 ```ts
@@ -116,42 +116,39 @@ If `disconnect()` is called before `DOMContentLoaded`, the runtime also cancels 
 
 Two approaches — use either or both.
 
-Tag ownership is determined at build time from the file path:
+Tag ownership is determined at build time:
 
-- by default, from the filename
-- or from `resolveTag()` when you override it
+- by default (`registeredTag` mode), from the `customElements.define("your-tag", ...)` call inside the file
+- or with `tagSource: "filename"` (compatibility mode), from the filename — the v1.x behaviour
+- `resolveTag()` is the final override layer in both modes
 
-The plugin does **not** inspect `customElements.define(...)` to discover the tag. That means your file-to-tag mapping and your `customElements.define("...")` name need to agree.
+In `registeredTag` mode (the default), the plugin reads each Island file for a single static `customElements.define("...", ...)` call and uses that string as the Tag. This means filenames can use any casing — `CartDrawer.ts` can own `<cart-drawer>`. The plugin fails at compile time if an Island file has no readable Registered Tag, or more than one.
 
-For obvious static registrations like `customElements.define("product-form", ProductForm)`, the plugin will emit a warning if that registered tag disagrees with the resolved file-to-tag mapping. That warning is best-effort only; tag ownership still comes from the path or `resolveTag()`.
-
-The resolved file-to-tag mapping must also be unique. If two discovered files resolve to the same final tag, the plugin throws during the revive-module compile step so the ambiguity never reaches runtime. Direct `revive(payload)` consumers need the same uniqueness: duplicate final tags throw instead of silently picking a winner.
+The resolved Tag must be unique across all discovered files. If two files resolve to the same Tag the plugin throws during the revive-module compile step so the ambiguity never reaches runtime.
 
 ### Directory scanning
 
-Drop files into your islands directory and they're automatically picked up. The filename (without extension) must match the custom element tag name used in your Liquid templates.
+Drop files into your islands directory and they're automatically picked up. The Tag is read from the static `customElements.define("your-tag", ...)` call inside the file, so the filename can use any casing.
 
 ```
 frontend/js/islands/
-  product-form.ts        →  <product-form>
-  cart-drawer.ts         →  <cart-drawer>
-  forms/checkout-form.ts →  <checkout-form>
+  ProductForm.ts         →  <product-form>   (from define call)
+  CartDrawer.ts          →  <cart-drawer>    (from define call)
+  forms/CheckoutForm.ts  →  <checkout-form>  (from define call)
 ```
-
-> Filenames must contain a hyphen (`product-form.ts` not `productform.ts`) — this is a Web Components requirement. Filenames must also be lowercase to match the tag name.
 
 Subdirectories are supported. Any file in the directory becomes an island automatically.
 
 ```ts
-// frontend/js/islands/product-form.ts
-class ProductForm extends HTMLElement {
+// frontend/js/islands/CartDrawer.ts
+class CartDrawer extends HTMLElement {
   connectedCallback() {
     // ...
   }
 }
 
-if (!customElements.get("product-form")) {
-  customElements.define("product-form", ProductForm);
+if (!customElements.get("cart-drawer")) {
+  customElements.define("cart-drawer", CartDrawer);
 }
 ```
 
@@ -160,7 +157,7 @@ if (!customElements.get("product-form")) {
 Mark any file as an island with the `Island` mixin, regardless of where it lives. Import it and extend from `Island(HTMLElement)` instead of `HTMLElement` — everything else stays identical.
 
 ```ts
-// frontend/js/components/site-footer.ts
+// frontend/js/components/SiteFooter.ts
 import Island from "vite-plugin-shopify-theme-islands/island";
 
 class SiteFooter extends Island(HTMLElement) {
@@ -174,9 +171,7 @@ if (!customElements.get("site-footer")) {
 }
 ```
 
-The plugin detects the mixin import at build time and includes the file as a lazy island chunk — no directory config needed.
-
-For mixin-marked files, tag ownership still comes from the file path or `resolveTag()`, not from `customElements.define(...)`.
+The plugin detects the mixin import at build time and includes the file as a lazy island chunk — no directory config needed. The Tag is read from the static `customElements.define(...)` call, the same as for directory-scanned files.
 
 ### Which to use
 
@@ -447,7 +442,8 @@ This is useful during development to surface directives that hang due to bugs, o
 | Option             | Type                 | Default                     | Description                                                                        |
 | ------------------ | -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | `directories`      | `string \| string[]` | `['/frontend/js/islands/']` | Directories to scan for island files. Accepts Vite aliases.                        |
-| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override file-path-to-tag mapping. Return `defaultTag` to keep the default derived tag or `false` to exclude a file. Final tag ownership must remain unique. |
+| `tagSource`        | `"registeredTag" \| "filename"` | `"registeredTag"` | Where each Island's Tag is derived from. `"registeredTag"` (default) reads the static `customElements.define("...", ...)` call. `"filename"` uses the filename — the v1.x compatibility mode. |
+| `resolveTag`       | `({ filePath, defaultTag }) => string \| false` | —          | Override Tag derivation for specific files. `defaultTag` is the Registered Tag in `registeredTag` mode, or the filename-derived tag in `filename` mode. Return a string to override, `false` to exclude, or `defaultTag` to keep the default. Final Tag must be unique across all files. |
 | `directives`       | `object`             | see below                   | Per-directive configuration — attribute names, timing options, and custom entries. |
 | `retry`            | `object`             | `{ retries: 0, delay: 1000 }` | Automatic retry behaviour for failed island loads. See [Retries](#retries).      |
 | `debug`            | `boolean`            | `false`                     | Log discovered islands at build time and directive events in the browser console.  |
@@ -521,37 +517,24 @@ export default defineConfig({
 
 ### Overriding tag resolution
 
-By default, the plugin derives the tag name from the filename. Use `resolveTag()` when you need an escape hatch without changing the file name.
+By default, the plugin reads the Tag from the static `customElements.define("your-tag", ...)` call in each Island file. Use `resolveTag()` when you need to override that for specific files — for example to rename a Tag without touching the source file, or to exclude a file entirely.
 
-Important:
-
-- `resolveTag()` is authoritative for the files it handles
-- returning `false` excludes that file from the island map
-- if you want to keep default filename-based behavior for other files, return `defaultTag`
-- `resolveTag()` changes file-to-tag ownership only; it does not read or rewrite `customElements.define(...)`
-- the final resolved tag must still be unique across all discovered files; collisions are compile-time errors, and direct `revive(payload)` consumers must also avoid duplicate final tags
+`resolveTag()` receives `{ filePath, defaultTag }` where `defaultTag` is the Registered Tag read from the file (in `registeredTag` mode) or the filename-derived tag (in `filename` mode). Return a string to override, `false` to exclude, or `defaultTag` to keep the default.
 
 ```ts
 shopifyThemeIslands({
   resolveTag({ filePath, defaultTag }) {
-    if (filePath.endsWith("productForm.ts")) return "product-form";
-    if (filePath.endsWith("legacy-widget.ts")) return false;
+    if (filePath.endsWith("LegacyWidget.ts")) return false;
     return defaultTag;
   },
 });
 ```
 
-That means:
+Important:
 
-- `productForm.ts` becomes `<product-form>`
-- `legacy-widget.ts` is skipped entirely
-- everything else falls back to its filename-derived tag
-
-If a file resolves to `product-form`, the code inside that file should also register `product-form` with `customElements.define(...)`. The plugin does not infer the tag from the registration call.
-
-The plugin may warn for obvious static mismatches, but it still treats the resolved file-to-tag mapping as the source of truth.
-
-If you want to keep the default derived tag for most files, return `defaultTag`.
+- returning `false` excludes the file from the island map entirely
+- the final resolved Tag must be unique across all discovered files; collisions are compile-time errors
+- `resolveTag()` overrides the Tag derivation only; it does not affect `customElements.define(...)` in the source file
 
 ## Retries
 
@@ -630,6 +613,26 @@ npx @tanstack/intent@latest install
 ```
 
 This maps the bundled skills to your agent config so your agent gets accurate current API guidance. Skills update automatically with npm updates — no re-run needed.
+
+## Migrating from v1.x
+
+### Tag ownership now defaults to `registeredTag`
+
+In v1.x, the Tag was always derived from the filename (`product-form.ts` → `<product-form>`). In v2.0 the default is `registeredTag`: the plugin reads the static `customElements.define("your-tag", ...)` call inside each Island file.
+
+If your filenames and `customElements.define(...)` tags already agree (the common case), nothing breaks.
+
+If they disagree — for example a file named `product-form.ts` that calls `customElements.define("x-product-form", ...)` — the Tag ownership changes on upgrade. The plugin will fail at compile time if no static define is found, or emit a different Tag than before.
+
+To preserve v1.x behaviour explicitly, set `tagSource: "filename"`:
+
+```ts
+shopifyThemeIslands({
+  tagSource: "filename", // use filename-derived tags, same as v1.x
+});
+```
+
+New projects should use the default `registeredTag` mode — it keeps the plugin's ownership model in sync with the browser's own source of truth.
 
 ## License
 

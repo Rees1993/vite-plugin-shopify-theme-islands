@@ -249,7 +249,7 @@ describe("plugin", () => {
     it("includes mixin files discovered outside the islands directory", async () => {
       writeFileSync(join(tmp, "my-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/nonexistent/"] });
+      const plugin = makePlugin({ directories: ["/nonexistent/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
@@ -259,7 +259,7 @@ describe("plugin", () => {
     it("compiles mixin files without a prior buildStart() scan", async () => {
       writeFileSync(join(tmp, "my-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/nonexistent/"] });
+      const plugin = makePlugin({ directories: ["/nonexistent/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("my-widget.ts");
@@ -275,6 +275,7 @@ describe("plugin", () => {
 
       const plugin = makePlugin({
         directories: ["/islands/"],
+        tagSource: "filename",
         resolveTag: ({ filePath, defaultTag }) =>
           filePath.endsWith("productForm.ts") ? "product-form" : defaultTag,
       });
@@ -296,6 +297,7 @@ describe("plugin", () => {
 
       const plugin = makePlugin({
         directories: ["/islands/"],
+        tagSource: "filename",
         resolveTag: ({ filePath, defaultTag }) =>
           filePath.endsWith("legacy-widget.ts") ? false : defaultTag,
       });
@@ -312,7 +314,7 @@ describe("plugin", () => {
       mkdirSync(islandsDir);
       writeFileSync(join(islandsDir, "my-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/islands/"] });
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
@@ -326,7 +328,7 @@ describe("plugin", () => {
       mkdirSync(legacyDir);
       writeFileSync(join(legacyDir, "legacy-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/islands/"] });
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
@@ -343,7 +345,7 @@ describe("plugin", () => {
       const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
 
       try {
-        const plugin = makePlugin({ directories: ["/islands/"] });
+        const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
         plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
         plugin.buildStart();
         await plugin.load(RESOLVED_ID);
@@ -370,7 +372,7 @@ describe("plugin", () => {
       );
       writeFileSync(join(srcDir, "product-form.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/islands/"] });
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
 
@@ -392,7 +394,7 @@ describe("plugin", () => {
     });
 
     function makeWatchPlugin(islandsDir = "/nonexistent/") {
-      const plugin = makePlugin({ directories: [islandsDir] });
+      const plugin = makePlugin({ directories: [islandsDir], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       return plugin;
@@ -473,6 +475,120 @@ describe("plugin", () => {
 
       expect(invalidated).toBe(false);
       expect(reloaded).toBe(false);
+    });
+  });
+
+  describe("semantic invalidation (registeredTag mode)", () => {
+    let tmp: string;
+
+    beforeEach(() => {
+      tmp = mkdtempSync(join(tmpdir(), "islands-ri-"));
+    });
+
+    afterEach(() => {
+      rmSync(tmp, { recursive: true, force: true });
+    });
+
+    function makeRegisteredTagPlugin(islandsDir: string) {
+      const plugin = makePlugin({ directories: [islandsDir] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      return plugin;
+    }
+
+    function attachDevServer(plugin: PluginUnderTest): { invalidated: object[] } {
+      const invalidated: object[] = [];
+      const reviveModule = {};
+      plugin.configureServer({
+        moduleGraph: {
+          getModuleById: (id: string) => (id === RESOLVED_ID ? reviveModule : undefined),
+          invalidateModule: (mod: object) => invalidated.push(mod),
+        },
+        reloadModule: () => Promise.resolve(),
+      } as unknown as ViteDevServer);
+      return { invalidated };
+    }
+
+    it("invalidates /revive when a directory Island's Registered Tag changes", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(filePath, 'customElements.define("cart-drawer", CartDrawer)');
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(filePath, 'customElements.define("cart-drawer-v2", CartDrawer)');
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(1);
+    });
+
+    it("does not invalidate /revive for implementation edits that keep the same Registered Tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(
+        filePath,
+        'customElements.define("cart-drawer", CartDrawer)\nclass CartDrawer extends HTMLElement {}',
+      );
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(
+        filePath,
+        'customElements.define("cart-drawer", CartDrawer)\nclass CartDrawer extends HTMLElement { connectedCallback() {} }',
+      );
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(0);
+    });
+
+    it("invalidates /revive when the customElements.define call is removed from a directory Island", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(filePath, 'customElements.define("cart-drawer", CartDrawer)');
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(filePath, "class CartDrawer extends HTMLElement {}");
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(1);
+    });
+
+    it("filename mode never invalidates /revive for content updates", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "product-form.ts");
+      writeFileSync(
+        filePath,
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("product-form", ProductForm)',
+      );
+
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(
+        filePath,
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("different-tag", ProductForm)',
+      );
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(0);
     });
   });
 });

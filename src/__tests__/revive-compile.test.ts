@@ -3,6 +3,332 @@ import { createReviveCompiler } from "../revive-compile";
 import { getIslandPathsForLoad } from "../discovery";
 
 describe("revive-compile", () => {
+  describe("tagSource: registeredTag", () => {
+    it("defaults to registeredTag mode when tagSource is omitted", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: (path) =>
+            path.endsWith("CartDrawer.ts")
+              ? 'customElements.define("cart-drawer", CartDrawer)'
+              : null,
+        },
+        "/runtime.js",
+      );
+
+      const seen: string[] = [];
+      await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        resolveTag: ({ defaultTag }) => {
+          seen.push(defaultTag);
+          return defaultTag;
+        },
+        reviveOptions: { debug: false },
+      });
+
+      expect(seen).toEqual(["cart-drawer"]);
+    });
+
+    it("does not count line-commented customElements.define as a Registered Tag", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            '// customElements.define("old-tag", CartDrawer)\ncustomElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
+    it("does not count block-commented customElements.define as a Registered Tag", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            '/* customElements.define("old-tag", CartDrawer) */\ncustomElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
+    it("does not count JSDoc-style customElements.define as a Registered Tag", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            '/**\n * @example customElements.define("old-tag", CartDrawer)\n */\ncustomElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
+    it("does not count string-literal customElements.define text as a Registered Tag", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            'const example = \'customElements.define("old-tag", CartDrawer)\';\ncustomElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
+    it("throws at compile when an Island file has multiple static customElements.define calls", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            'customElements.define("cart-drawer", CartDrawer); customElements.define("product-form", ProductForm)',
+        },
+        "/runtime.js",
+      );
+
+      await expect(
+        compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        }),
+      ).rejects.toThrow("found 2 static customElements.define");
+    });
+
+    it("throws at compile when an Island file has no static customElements.define", async () => {
+      const compiler = createReviveCompiler(
+        { toLoadPaths: getIslandPathsForLoad, readFile: () => "export class CartDrawer {}" },
+        "/runtime.js",
+      );
+
+      await expect(
+        compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        }),
+      ).rejects.toThrow("no static customElements.define");
+    });
+
+    it("accepts a non-kebab-case filename when the Registered Tag is valid", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => 'customElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
+    it("passes the Registered Tag as defaultTag to resolveTag", async () => {
+      const seen: Array<{ filePath: string; defaultTag: string }> = [];
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: (path) =>
+            path.endsWith("CartDrawer.ts")
+              ? 'customElements.define("cart-drawer", CartDrawer)'
+              : null,
+        },
+        "/runtime.js",
+      );
+
+      await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        tagSource: "registeredTag",
+        resolveTag: ({ filePath, defaultTag }) => {
+          seen.push({ filePath, defaultTag });
+          return defaultTag;
+        },
+        reviveOptions: { debug: false },
+      });
+
+      expect(seen).toEqual([{ filePath: "/islands/CartDrawer.ts", defaultTag: "cart-drawer" }]);
+    });
+  });
+
+
+  describe("tagSource: filename", () => {
+    it("warns when the filename-derived tag disagrees with the Registered Tag", async () => {
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => 'customElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      try {
+        await compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          tagSource: "filename",
+          directoryFiles: new Set(["/project/islands/product-form.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        });
+      } finally {
+        console.warn = originalWarn;
+      }
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain("statically registers <cart-drawer>");
+    });
+
+    it("ignores commented and string-literal define text when warning on mismatches", async () => {
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () =>
+            [
+              '// customElements.define("commented-tag", ProductForm)',
+              'const example = \'customElements.define("string-tag", ProductForm)\';',
+              'customElements.define("cart-drawer", ProductForm)',
+            ].join("\n"),
+        },
+        "/runtime.js",
+      );
+
+      try {
+        await compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          tagSource: "filename",
+          directoryFiles: new Set(["/project/islands/product-form.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        });
+      } finally {
+        console.warn = originalWarn;
+      }
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain("statically registers <cart-drawer>");
+      expect(warnings[0]).not.toContain("commented-tag");
+      expect(warnings[0]).not.toContain("string-tag");
+    });
+
+    it("suppresses the mismatch warning in registeredTag mode", async () => {
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => 'customElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      try {
+        await compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          tagSource: "registeredTag",
+          directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        });
+      } finally {
+        console.warn = originalWarn;
+      }
+
+      expect(warnings).toHaveLength(0);
+    });
+
+    it("derives defaultTag from the filename, ignoring file content", async () => {
+      const seen: string[] = [];
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => "export class ProductForm extends HTMLElement {}",
+        },
+        "/runtime.js",
+      );
+
+      await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        tagSource: "filename",
+        directoryFiles: new Set(["/project/islands/product-form.ts"]),
+        islandFiles: new Set(),
+        resolveTag: ({ defaultTag }) => {
+          seen.push(defaultTag);
+          return defaultTag;
+        },
+        reviveOptions: { debug: false },
+      });
+
+      expect(seen).toEqual(["product-form"]);
+    });
+  });
+
   it("plans a semantic compile artifact from resolved plugin state", async () => {
     const seen: Array<{ filePath: string; defaultTag: string }> = [];
     const compiler = createReviveCompiler(
@@ -16,6 +342,7 @@ describe("revive-compile", () => {
       {
         root: "/project",
         directories: ["/islands/", "/components/"],
+        tagSource: "filename",
         directoryFiles: new Set(["/project/islands/productForm.ts"]),
         islandFiles: new Set(["/project/src/widget.ts", "/project/src/other.js"]),
         resolveTag: ({ filePath, defaultTag }) => {
@@ -86,6 +413,7 @@ describe("revive-compile", () => {
       {
         root: "/project",
         directories: ["/islands/"],
+        tagSource: "filename",
         directoryFiles: new Set<string>(),
         islandFiles: new Set(["/project/src/widget.ts"]),
         customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
@@ -112,6 +440,7 @@ describe("revive-compile", () => {
       {
         root: "/project",
         directories: ["/islands/"],
+        tagSource: "filename",
         directoryFiles: new Set<string>(),
         islandFiles: new Set(["/project/src/widget.ts"]),
         customDirectives: [{ name: "client:on-click", entrypoint: "./src/directives/on-click.ts" }],
@@ -137,6 +466,7 @@ describe("revive-compile", () => {
       {
         root: "/project",
         directories: ["/islands/"],
+        tagSource: "filename",
         directoryFiles: new Set(["/project/islands/productForm.ts"]),
         islandFiles: new Set(["/project/src/widget.ts"]),
         resolveTag: ({ defaultTag }) => defaultTag,
@@ -161,6 +491,7 @@ describe("revive-compile", () => {
         {
           root: "/project",
           directories: ["/islands/"],
+          tagSource: "filename",
           directoryFiles: new Set(["/project/islands/product-form.ts"]),
           islandFiles: new Set(["/project/src/productForm.ts"]),
           resolveTag: ({ filePath, defaultTag }) =>

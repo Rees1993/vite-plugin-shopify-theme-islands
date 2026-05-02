@@ -15,8 +15,10 @@
  *
  * The only change from a standard web component is `extends Island(HTMLElement)`
  * instead of `extends HTMLElement`. Everything else stays identical.
- * Tag ownership still comes from the file path (or `resolveTag()`), not from
- * reading `customElements.define(...)`.
+ * By default, Tag ownership comes from the static `customElements.define(...)`
+ * call in the file (`tagSource: "registeredTag"`). Set `tagSource: "filename"`
+ * to restore the v1.x filename-based ownership model. `resolveTag()` remains
+ * the final override layer in either mode.
  */
 
 type Constructor<T = HTMLElement> = new (...args: any[]) => T;

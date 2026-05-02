@@ -88,6 +88,7 @@ describe("resolved-config", () => {
       directories: ["/islands/"],
       directoryFiles: new Set(["/project/islands/product-form.ts"]),
       islandFiles: new Set(["/project/src/upsell-card.ts"]),
+      tagSource: "registeredTag",
       resolveTag,
       customDirectives,
       reviveOptions: config.runtimeOptions(),
@@ -164,5 +165,33 @@ describe("resolved-config", () => {
     expect(() => resolveThemeIslandsConfig(options)).toThrow(
       '"directives.interaction.events" contains unsupported event "click"',
     );
+  });
+
+  it("passes tagSource through compileInputs", () => {
+    const config = resolveThemeIslandsConfig({ tagSource: "filename" });
+    const inputs = config.compileInputs({
+      root: "/project",
+      directories: ["/islands/"],
+      directoryFiles: new Set(),
+      islandFiles: new Set(),
+    });
+    expect(inputs.tagSource).toBe("filename");
+  });
+
+  it("defaults tagSource to registeredTag when omitted", () => {
+    const config = resolveThemeIslandsConfig();
+    const inputs = config.compileInputs({
+      root: "/project",
+      directories: ["/islands/"],
+      directoryFiles: new Set(),
+      islandFiles: new Set(),
+    });
+    expect(inputs.tagSource).toBe("registeredTag");
+  });
+
+  it("rejects unknown tagSource values", () => {
+    expect(() =>
+      resolveThemeIslandsConfig({ tagSource: "unknown" as "filename" }),
+    ).toThrow('"tagSource" must be "registeredTag" or "filename"');
   });
 });
