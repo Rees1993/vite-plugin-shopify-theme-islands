@@ -229,6 +229,22 @@ In `registeredTag` mode each Island file must have exactly one static
 `customElements.define(...)` so the plugin can determine unambiguous Tag
 ownership. If you need to define two custom elements, put them in separate files.
 
+This applies to inheritance chains too — if a base class and its subclass are both
+custom elements, they must live in separate Island files:
+
+```ts
+// frontend/js/islands/CartItems.ts
+export class CartItems extends HTMLElement {}
+customElements.define("cart-items", CartItems); // one define per file
+```
+
+```ts
+// frontend/js/islands/CartDrawerItems.ts
+import { CartItems } from "./CartItems";
+class CartDrawerItems extends CartItems {}
+customElements.define("cart-drawer-items", CartDrawerItems); // separate file
+```
+
 Source: src/revive-compile.ts — registeredTag mode tag derivation
 
 ### MEDIUM Filename without a hyphen in `filename` mode

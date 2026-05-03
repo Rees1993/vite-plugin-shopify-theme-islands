@@ -174,6 +174,26 @@ describe("revive-compile", () => {
       expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
     });
 
+    it("reads the Registered Tag from window.customElements.define(...)", async () => {
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => 'window.customElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      const plan = await compiler.plan({
+        root: "/project",
+        directories: ["/islands/"],
+        directoryFiles: new Set(["/project/islands/CartDrawer.ts"]),
+        islandFiles: new Set(),
+        reviveOptions: { debug: false },
+      });
+
+      expect(plan.resolvedTags).toEqual({ "/islands/CartDrawer.ts": "cart-drawer" });
+    });
+
     it("passes the Registered Tag as defaultTag to resolveTag", async () => {
       const seen: Array<{ filePath: string; defaultTag: string }> = [];
       const compiler = createReviveCompiler(
@@ -206,6 +226,36 @@ describe("revive-compile", () => {
 
 
   describe("tagSource: filename", () => {
+    it("warns when window.customElements.define tag disagrees with the filename-derived tag", async () => {
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+
+      const compiler = createReviveCompiler(
+        {
+          toLoadPaths: getIslandPathsForLoad,
+          readFile: () => 'window.customElements.define("cart-drawer", CartDrawer)',
+        },
+        "/runtime.js",
+      );
+
+      try {
+        await compiler.plan({
+          root: "/project",
+          directories: ["/islands/"],
+          tagSource: "filename",
+          directoryFiles: new Set(["/project/islands/product-form.ts"]),
+          islandFiles: new Set(),
+          reviveOptions: { debug: false },
+        });
+      } finally {
+        console.warn = originalWarn;
+      }
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain("statically registers <cart-drawer>");
+    });
+
     it("warns when the filename-derived tag disagrees with the Registered Tag", async () => {
       const warnings: string[] = [];
       const originalWarn = console.warn;
