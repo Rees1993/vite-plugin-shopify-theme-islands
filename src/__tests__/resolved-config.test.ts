@@ -190,8 +190,8 @@ describe("resolved-config", () => {
   });
 
   it("rejects unknown tagSource values", () => {
-    expect(() =>
-      resolveThemeIslandsConfig({ tagSource: "unknown" as "filename" }),
-    ).toThrow('"tagSource" must be "registeredTag" or "filename"');
+    expect(() => resolveThemeIslandsConfig({ tagSource: "unknown" as "filename" })).toThrow(
+      '"tagSource" must be "registeredTag" or "filename"',
+    );
   });
 });

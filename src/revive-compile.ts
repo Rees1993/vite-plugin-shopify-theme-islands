@@ -51,8 +51,6 @@ export interface ReviveCompiler {
   ): string | false | null;
 }
 
-const STATIC_CUSTOM_ELEMENT_DEFINE_RE = /customElements\.define\(\s*["'`]([a-z0-9-]+)["'`]\s*,/;
-
 function isIdentifierChar(char: string | undefined): boolean {
   return char !== undefined && /[A-Za-z0-9_$]/.test(char);
 }
@@ -91,7 +89,10 @@ function skipWhitespace(content: string, start: number): number {
   return i;
 }
 
-function readStaticDefinedTagAt(content: string, start: number): { tag: string; end: number } | null {
+function readStaticDefinedTagAt(
+  content: string,
+  start: number,
+): { tag: string; end: number } | null {
   const prefix = "customElements.define";
   if (!content.startsWith(prefix, start)) return null;
   if (isIdentifierChar(content[start - 1])) return null;
@@ -285,7 +286,12 @@ export function createReviveCompiler(
       const directoryGlobs = input.directories.map((dir) => dir + "**/*.{ts,js}");
       const ownershipMap: Map<string, string | false> =
         tagSource === "registeredTag"
-          ? new Map(fileMappings.map(({ absoluteFilePath, resolvedTag }) => [absoluteFilePath, resolvedTag]))
+          ? new Map(
+              fileMappings.map(({ absoluteFilePath, resolvedTag }) => [
+                absoluteFilePath,
+                resolvedTag,
+              ]),
+            )
           : new Map();
       return {
         runtimePath,

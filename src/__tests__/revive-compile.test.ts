@@ -224,7 +224,6 @@ describe("revive-compile", () => {
     });
   });
 
-
   describe("tagSource: filename", () => {
     it("warns when window.customElements.define tag disagrees with the filename-derived tag", async () => {
       const warnings: string[] = [];
@@ -297,7 +296,7 @@ describe("revive-compile", () => {
           readFile: () =>
             [
               '// customElements.define("commented-tag", ProductForm)',
-              'const example = \'customElements.define("string-tag", ProductForm)\';',
+              "const example = 'customElements.define(\"string-tag\", ProductForm)';",
               'customElements.define("cart-drawer", ProductForm)',
             ].join("\n"),
         },
