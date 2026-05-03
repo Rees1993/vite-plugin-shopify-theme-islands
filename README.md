@@ -122,7 +122,7 @@ Tag ownership is determined at build time:
 - or with `tagSource: "filename"` (compatibility mode), from the filename — the v1.x behaviour
 - `resolveTag()` is the final override layer in both modes
 
-In `registeredTag` mode (the default), the plugin reads each Island file for a single static `customElements.define("...", ...)` call and uses that string as the Tag. This means filenames can use any casing — `CartDrawer.ts` can own `<cart-drawer>`. The plugin fails at compile time if an Island file has no readable Registered Tag, or more than one.
+In `registeredTag` mode (the default), the plugin reads each Island file for exactly one static `customElements.define("...", ...)` call and uses that string as the Tag. This means filenames can use any casing — `CartDrawer.ts` can own `<cart-drawer>`. This is a plugin constraint, not a platform one: the plugin keeps one Island file as one lazy-loaded module boundary, so it fails at compile time if an Island file has no readable Registered Tag, or more than one.
 
 The resolved Tag must be unique across all discovered files. If two files resolve to the same Tag the plugin throws during the revive-module compile step so the ambiguity never reaches runtime.
 

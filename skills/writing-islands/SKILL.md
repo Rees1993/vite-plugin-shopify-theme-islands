@@ -205,6 +205,8 @@ if (!customElements.get("cart-drawer")) {
 In `registeredTag` mode (the default), the plugin reads a static
 `customElements.define("...", ...)` call from each Island file at compile time.
 If no call is found, or more than one is found, compilation fails with an error.
+This is a plugin constraint for keeping one Island file as one lazy-loaded module
+boundary, not a Web Components platform restriction.
 
 Source: src/revive-compile.ts — registeredTag mode tag derivation
 
@@ -225,9 +227,9 @@ Correct — split into separate Island files, one define each:
 customElements.define("cart-drawer", CartDrawer);
 ```
 
-In `registeredTag` mode each Island file must have exactly one static
-`customElements.define(...)` so the plugin can determine unambiguous Tag
-ownership. If you need to define two custom elements, put them in separate files.
+In `registeredTag` mode this plugin requires each Island file to have exactly one
+static `customElements.define(...)` so Tag ownership and lazy-load boundaries stay
+unambiguous. If you need to define two custom elements, put them in separate files.
 
 This applies to inheritance chains too — if a base class and its subclass are both
 custom elements, they must live in separate Island files:
@@ -244,6 +246,9 @@ import { CartItems } from "./CartItems";
 class CartDrawerItems extends CartItems {}
 customElements.define("cart-drawer-items", CartDrawerItems); // separate file
 ```
+
+The browser does allow multiple `customElements.define(...)` calls in one source
+file; this one-per-Island-file rule is specific to the plugin's performance model.
 
 Source: src/revive-compile.ts — registeredTag mode tag derivation
 

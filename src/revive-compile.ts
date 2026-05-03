@@ -219,12 +219,12 @@ export function createReviveCompiler(
           const tags = content ? readStaticDefinedTags(content) : [];
           if (tags.length === 0) {
             throw new Error(
-              `[vite-plugin-shopify-theme-islands] ${filePath}: no static customElements.define("...", ...) found. In registeredTag mode every Island file must have exactly one static Registered Tag. Add customElements.define("your-tag", ...) or switch to tagSource: "filename".`,
+              `[vite-plugin-shopify-theme-islands] ${filePath}: no static customElements.define("...", ...) found. In registeredTag mode this plugin requires exactly one static Registered Tag per Island file so Tag ownership and lazy-load boundaries stay unambiguous. Add customElements.define("your-tag", ...) or switch to tagSource: "filename".`,
             );
           }
           if (tags.length > 1) {
             throw new Error(
-              `[vite-plugin-shopify-theme-islands] ${filePath}: found ${tags.length} static customElements.define(...) calls (${tags.map((t) => `<${t}>`).join(", ")}). In registeredTag mode each Island file must have exactly one Registered Tag.`,
+              `[vite-plugin-shopify-theme-islands] ${filePath}: found ${tags.length} static customElements.define(...) calls (${tags.map((t) => `<${t}>`).join(", ")}). In registeredTag mode this plugin requires exactly one Registered Tag per Island file so Tag ownership and lazy-load boundaries stay unambiguous.`,
             );
           }
           defaultTag = tags[0]!;
