@@ -1,8 +1,8 @@
 import { relative } from "node:path";
+import { compileThemeIslandsConfig } from "./resolved-config.js";
 import { createIslandInventory, getIslandPathsForLoad } from "./discovery.js";
-import { resolveThemeIslandsPolicy } from "./config-policy.js";
 import type { ShopifyThemeIslandsOptions } from "./options.js";
-import { createReviveBootstrapCompiler } from "./revive-bootstrap.js";
+import { createReviveCompiler } from "./revive-compile.js";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -15,13 +15,18 @@ const islandPath = fileURLToPath(new URL("./island.js", import.meta.url));
 /** A function that triggers the load of an island module. */
 export type ClientDirectiveLoader = () => Promise<void>;
 
-export type { ClientDirective, ClientDirectiveOptions } from "./contract.js";
+export type {
+  ClientDirective,
+  ClientDirectiveContext,
+  ClientDirectiveOptions,
+} from "./contract.js";
 
 export type {
   ClientDirectiveDefinition,
   DirectivesConfig,
   ShopifyThemeIslandsOptions,
 } from "./options.js";
+
 export type {
   IslandLoadDetail,
   IslandErrorDetail,
@@ -29,7 +34,9 @@ export type {
   RetryConfig,
   RuntimeDirectivesConfig,
 } from "./contract.js";
+
 export type { InteractionEventName } from "./interaction-events.js";
+
 export {
   DEFAULT_INTERACTION_EVENTS,
   INTERACTION_EVENT_NAMES,
@@ -49,18 +56,23 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
       : [options.directories ?? defaultDirectories[0]]
   ).map(normalizeDir);
 
-  const policy = resolveThemeIslandsPolicy(options);
-  const { directives, customDirectives: clientDirectiveDefinitions, debug } = policy.plugin;
-  const { runtime: reviveOptions } = policy;
+  const config = compileThemeIslandsConfig(options);
+  const { directives, debug } = config.plugin;
   const log = debug ? (...args: unknown[]) => console.log("[islands]", ...args) : () => {};
   const inventory = createIslandInventory(rawDirs);
+  const compiler = createReviveCompiler({ toLoadPaths: getIslandPathsForLoad }, runtimePath);
   let devServer: ViteDevServer | null = null;
+  const ownershipSnapshot = new Map<string, string | false>();
 
   const invalidateReviveModule = (): void => {
     if (!devServer) return;
     const mod = devServer.moduleGraph.getModuleById(RESOLVED_ID);
     if (!mod) return;
     devServer.moduleGraph.invalidateModule(mod);
+    if (typeof devServer.reloadModule === "function") {
+      void devServer.reloadModule(mod);
+      return;
+    }
     devServer.ws.send({ type: "full-reload" });
   };
 
@@ -117,16 +129,27 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
 
     watchChange(id, { event }) {
       const change = inventory.applyWatchChange(id, event);
-      if (!change) return;
-      const root = inventory.getRoot();
-      const prefix =
-        event === "delete"
-          ? "Removed island (deleted):"
-          : change.type === "detected"
-            ? "Detected island (watchChange):"
-            : "Removed island (watchChange):";
-      log(prefix, relative(root, change.file));
-      invalidateReviveModule();
+      if (change) {
+        const root = inventory.getRoot();
+        const prefix =
+          event === "delete"
+            ? "Removed island (deleted):"
+            : change.type === "detected"
+              ? "Detected island (watchChange):"
+              : "Removed island (watchChange):";
+        log(prefix, relative(root, change.file));
+        invalidateReviveModule();
+        return;
+      }
+      if (event === "update" && ownershipSnapshot.has(id)) {
+        const compileInputs = config.compileInputs(inventory.state());
+        const loadPath = "/" + relative(inventory.getRoot(), id).replace(/\\/g, "/");
+        const newTag = compiler.recomputeOwnership(id, loadPath, compileInputs);
+        if (newTag === null || newTag !== ownershipSnapshot.get(id)) {
+          if (newTag !== null) ownershipSnapshot.set(id, newTag);
+          invalidateReviveModule();
+        }
+      }
     },
 
     resolveId(id) {
@@ -137,28 +160,21 @@ export default function shopifyThemeIslands(options: ShopifyThemeIslandsOptions 
     async load(this: { resolve(id: string): Promise<{ id: string } | null> }, id: string) {
       if (id !== RESOLVED_ID) return;
 
-      const compiler = createReviveBootstrapCompiler(
-        {
-          resolveEntrypoint: async (entrypoint: string) => {
-            const resolved = await this.resolve(entrypoint);
-            if (!resolved) {
-              throw new Error(
-                `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
-              );
-            }
-            return resolved.id;
-          },
-          toLoadPaths: getIslandPathsForLoad,
+      const plan = await compiler.plan(config.compileInputs(inventory.state()), {
+        resolveEntrypoint: async (entrypoint: string) => {
+          const resolved = await this.resolve(entrypoint);
+          if (!resolved) {
+            throw new Error(
+              `[vite-plugin-shopify-theme-islands] Cannot resolve custom directive entrypoint: "${entrypoint}"`,
+            );
+          }
+          return resolved.id;
         },
-        runtimePath,
-      );
-
-      const plan = await compiler.plan({
-        ...inventory.getBootstrapState(),
-        customDirectives: clientDirectiveDefinitions,
-        reviveOptions,
       });
-
+      ownershipSnapshot.clear();
+      for (const [absPath, tag] of plan.ownershipMap) {
+        ownershipSnapshot.set(absPath, tag);
+      }
       return compiler.emit(plan);
     },
   };

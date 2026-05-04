@@ -24,6 +24,7 @@ export interface IslandInventoryConfig {
 export interface IslandInventorySnapshot {
   resolvedDirectories: string[];
   islandFiles: string[];
+  directoryFiles: string[];
   directoryTagNames: string[];
 }
 
@@ -32,9 +33,10 @@ export interface IslandInventoryChange {
   file: string;
 }
 
-export interface IslandInventoryBootstrapState {
+export interface IslandInventoryState {
   root: string;
   directories: string[];
+  directoryFiles: Set<string>;
   islandFiles: Set<string>;
 }
 
@@ -88,17 +90,21 @@ function toAbsoluteDirs(root: string, resolvedDirs: string[]): string[] {
   );
 }
 
+/** True when file content declares Island membership and the file is not inside a managed directory. */
+export function isIslandMember(code: string, absolutePath: string, absDirs: string[]): boolean {
+  return ISLAND_IMPORT_RE.test(code) && !inDirectory(absolutePath, absDirs);
+}
+
 /** Scan from root for files containing the island import; returns paths (not in absDirs). */
 export function discoverIslandFiles(root: string, absDirs: string[]): Set<string> {
   const found = new Set<string>();
   walkDir(root, (_, full) => {
     try {
-      if (ISLAND_IMPORT_RE.test(readFileSync(full, "utf-8"))) found.add(full);
+      if (isIslandMember(readFileSync(full, "utf-8"), full, absDirs)) found.add(full);
     } catch {
       // skip unreadable
     }
   });
-  for (const f of [...found]) if (inDirectory(f, absDirs)) found.delete(f);
   return found;
 }
 
@@ -109,31 +115,45 @@ export function collectTagNames(dir: string): string[] {
   return names;
 }
 
+function collectFiles(dir: string): string[] {
+  const files: string[] = [];
+  walkDir(dir, (_, full) => files.push(full));
+  return files;
+}
+
 export function createIslandInventory(rawDirectories: string[]) {
   let root = process.cwd();
   let resolvedDirs = [...rawDirectories];
   let absDirs = [...rawDirectories];
+  const directoryFiles = new Set<string>();
   const islandFiles = new Set<string>();
   let scanned = false;
 
   const buildSnapshot = (): IslandInventorySnapshot => ({
     resolvedDirectories: [...resolvedDirs],
+    directoryFiles: [...directoryFiles],
     islandFiles: [...islandFiles],
     directoryTagNames: absDirs.flatMap((dir) => collectTagNames(dir)),
   });
 
   const updateIslandFile = (id: string, code: string): IslandInventoryChange | null => {
     if (!TS_JS_RE.test(id)) return null;
-    if (
-      code.includes("shopify-theme-islands/island") &&
-      ISLAND_IMPORT_RE.test(code) &&
-      !inDirectory(id, absDirs)
-    ) {
+    if (isIslandMember(code, id, absDirs)) {
       const sizeBefore = islandFiles.size;
       islandFiles.add(id);
       return islandFiles.size !== sizeBefore ? { type: "detected", file: id } : null;
     }
     return islandFiles.delete(id) ? { type: "removed", file: id } : null;
+  };
+
+  const ensureScanned = (): IslandInventorySnapshot | null => {
+    if (scanned) return null;
+    scanned = true;
+    directoryFiles.clear();
+    absDirs.flatMap((dir) => collectFiles(dir)).forEach((file) => directoryFiles.add(file));
+    islandFiles.clear();
+    discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
+    return buildSnapshot();
   };
 
   return {
@@ -144,11 +164,7 @@ export function createIslandInventory(rawDirectories: string[]) {
     },
 
     scan(): IslandInventorySnapshot | null {
-      if (scanned) return null;
-      scanned = true;
-      islandFiles.clear();
-      discoverIslandFiles(root, absDirs).forEach((file) => islandFiles.add(file));
-      return buildSnapshot();
+      return ensureScanned();
     },
 
     applyTransform(id: string, code: string): IslandInventoryChange | null {
@@ -157,6 +173,16 @@ export function createIslandInventory(rawDirectories: string[]) {
 
     applyWatchChange(id: string, event: string): IslandInventoryChange | null {
       if (!TS_JS_RE.test(id)) return null;
+      if (inDirectory(id, absDirs)) {
+        if (event === "delete") {
+          return directoryFiles.delete(id) ? { type: "removed", file: id } : null;
+        }
+        if (!directoryFiles.has(id)) {
+          directoryFiles.add(id);
+          return { type: "detected", file: id };
+        }
+        return null;
+      }
       if (event === "delete") {
         return islandFiles.delete(id) ? { type: "removed", file: id } : null;
       }
@@ -167,10 +193,12 @@ export function createIslandInventory(rawDirectories: string[]) {
       }
     },
 
-    getBootstrapState(): IslandInventoryBootstrapState {
+    state(): IslandInventoryState {
+      ensureScanned();
       return {
         root,
         directories: [...resolvedDirs],
+        directoryFiles: new Set(directoryFiles),
         islandFiles: new Set(islandFiles),
       };
     },

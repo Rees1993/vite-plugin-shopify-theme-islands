@@ -2,18 +2,24 @@
 name: writing-islands
 description: >
   Writing island files. Two discovery modes: directory scanning (files in
-  configured directories auto-discovered by tag name = filename) and Island
-  mixin (import Island from vite-plugin-shopify-theme-islands/island to mark
-  files anywhere in the project). Mixin islands added or removed during dev
-  trigger an automatic reload. Covers customElements.define, the Island
-  base class, and child island cascade behaviour now owned by
-  src/lifecycle.ts.
+  configured directories auto-discovered; Tag derived from static
+  customElements.define("...", ...) call by default) and Island mixin (import
+  Island from vite-plugin-shopify-theme-islands/island to mark files anywhere
+  in the project). Mixin islands added or removed during dev invalidate the
+  virtual revive module (reloadModule when available, otherwise a full page
+  reload) — no manual Vite restart. In registeredTag mode (default) Tag
+  ownership comes from the static customElements.define call; filename mode
+  (tagSource: "filename") restores v1.x filename-based ownership. resolveTag
+  overrides run after tag source derivation in both modes. Duplicate final tags
+  fail at compile time. Ordinary implementation edits do not invalidate /revive;
+  only Tag ownership changes do.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/revive-compile.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
@@ -23,24 +29,24 @@ sources:
 
 ### Directory-based island (simplest)
 
-Place the file in a configured island directory. The filename (minus extension) becomes the tag name.
+Place the file in a configured island directory. The Tag is read from the static `customElements.define("your-tag", ...)` call inside the file — the filename can use any casing.
 
 ```ts
-// frontend/js/islands/product-form.ts
-class ProductForm extends HTMLElement {
+// frontend/js/islands/CartDrawer.ts
+class CartDrawer extends HTMLElement {
   connectedCallback() {
     this.innerHTML = "<p>Loaded</p>";
   }
 }
 
-if (!customElements.get("product-form")) {
-  customElements.define("product-form", ProductForm);
+if (!customElements.get("cart-drawer")) {
+  customElements.define("cart-drawer", CartDrawer);
 }
 ```
 
 ```html
 <!-- In Shopify theme template -->
-<product-form client:visible></product-form>
+<cart-drawer client:visible></cart-drawer>
 ```
 
 ### Island mixin (file outside islands directory)
@@ -62,7 +68,13 @@ if (!customElements.get("cart-drawer")) {
 }
 ```
 
-The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island file triggers an automatic reload — no Vite restart needed.
+The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the recompile picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
+
+For both directory-scanned files and mixin-marked files, the default Tag comes
+from the file's static `customElements.define("your-tag", ...)` call
+(`registeredTag` mode). `resolveTag()` runs after that default is derived and
+can override it or return `false` to exclude the file. Set
+`tagSource: "filename"` to restore v1.x filename-based ownership.
 
 ## Core Patterns
 
@@ -100,6 +112,21 @@ export default defineConfig({
 ```
 
 The plugin resolves Vite aliases in `directories` during `configResolved`.
+
+### Override the derived Tag for specific files
+
+```ts
+shopifyThemeIslands({
+  resolveTag({ filePath, defaultTag }) {
+    if (filePath.endsWith("/frontend/js/legacy/widget.ts")) return "legacy-widget";
+    return defaultTag;
+  },
+});
+```
+
+Use `resolveTag()` to override the default Tag derivation or exclude a file entirely by returning `false`. In `registeredTag` mode (the default), `defaultTag` is the Tag read from the file's static `customElements.define(...)` call. Returning `defaultTag` keeps that value unchanged.
+
+When more than one discovered file resolves to the same Tag, plugin compilation fails. Use `resolveTag` to disambiguate or return `false` to exclude one file.
 
 ## Common Mistakes
 
@@ -154,9 +181,80 @@ The plugin loads the module but the custom element never upgrades without `custo
 
 Source: src/runtime.ts — loader() is called but registration is the file's responsibility
 
-### HIGH Filename without a hyphen is skipped as an invalid custom element tag
+### HIGH No static `customElements.define(...)` call in the Island file
 
 Wrong:
+
+```ts
+// frontend/js/islands/CartDrawer.ts
+export class CartDrawer extends HTMLElement {}
+// missing customElements.define — compile will fail
+```
+
+Correct:
+
+```ts
+// frontend/js/islands/CartDrawer.ts
+export class CartDrawer extends HTMLElement {}
+
+if (!customElements.get("cart-drawer")) {
+  customElements.define("cart-drawer", CartDrawer);
+}
+```
+
+In `registeredTag` mode (the default), the plugin reads a static
+`customElements.define("...", ...)` call from each Island file at compile time.
+If no call is found, or more than one is found, compilation fails with an error.
+This is a plugin constraint for keeping one Island file as one lazy-loaded module
+boundary, not a Web Components platform restriction.
+
+Source: src/revive-compile.ts — registeredTag mode tag derivation
+
+### HIGH Multiple `customElements.define(...)` calls in one Island file
+
+Wrong:
+
+```ts
+// frontend/js/islands/CartDrawer.ts
+customElements.define("cart-drawer", CartDrawer);
+customElements.define("cart-drawer-legacy", CartDrawerLegacy); // second define
+```
+
+Correct — split into separate Island files, one define each:
+
+```ts
+// frontend/js/islands/CartDrawer.ts
+customElements.define("cart-drawer", CartDrawer);
+```
+
+In `registeredTag` mode this plugin requires each Island file to have exactly one
+static `customElements.define(...)` so Tag ownership and lazy-load boundaries stay
+unambiguous. If you need to define two custom elements, put them in separate files.
+
+This applies to inheritance chains too — if a base class and its subclass are both
+custom elements, they must live in separate Island files:
+
+```ts
+// frontend/js/islands/CartItems.ts
+export class CartItems extends HTMLElement {}
+customElements.define("cart-items", CartItems); // one define per file
+```
+
+```ts
+// frontend/js/islands/CartDrawerItems.ts
+import { CartItems } from "./CartItems";
+class CartDrawerItems extends CartItems {}
+customElements.define("cart-drawer-items", CartDrawerItems); // separate file
+```
+
+The browser does allow multiple `customElements.define(...)` calls in one source
+file; this one-per-Island-file rule is specific to the plugin's performance model.
+
+Source: src/revive-compile.ts — registeredTag mode tag derivation
+
+### MEDIUM Filename without a hyphen in `filename` mode
+
+Wrong (when `tagSource: "filename"` is configured):
 
 ```ts
 // frontend/js/islands/cartdrawer.ts
@@ -169,13 +267,13 @@ Correct:
 ```ts
 // frontend/js/islands/cart-drawer.ts
 class CartDrawer extends HTMLElement {}
-
-if (!customElements.get("cart-drawer")) {
-  customElements.define("cart-drawer", CartDrawer);
-}
+customElements.define("cart-drawer", CartDrawer);
 ```
 
-The runtime derives the tag name from the filename and skips non-hyphenated names with a warning. Use valid custom element tag names in filenames.
+In `tagSource: "filename"` mode the Tag is derived from the filename. Custom
+element tag names must contain a hyphen — a non-hyphenated filename is skipped
+with a warning. In the default `registeredTag` mode the filename is irrelevant
+and may use any casing; only the `customElements.define(...)` tag matters.
 
 Source: src/contract.ts — defaultKeyToTag()
 

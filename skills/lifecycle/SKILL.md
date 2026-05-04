@@ -1,24 +1,31 @@
 ---
 name: lifecycle
 description: >
-  Island lifecycle events and SPA teardown. onIslandLoad and onIslandError
+  Island lifecycle events, subtree helpers, and teardown. onIslandLoad and onIslandError
   helpers from vite-plugin-shopify-theme-islands/events — prefer these over
   raw document.addEventListener for guaranteed type safety. Raw DOM events
   islands:load and islands:error on document. islands:load detail includes tag,
   duration (ms), and attempt (1-based). islands:error detail includes tag,
   error, and attempt, including custom directive failures and directiveTimeout
-  expiry. disconnect() from the virtual module revive for SPA navigation
-  teardown, including before DOMContentLoaded — it now prevents init from ever
-  starting if called early. Startup, DOM walking, mutation observation, and
+  expiry. `./revive` now exports scan(), observe(), unobserve(), and disconnect().
+  disconnect() prevents init from ever starting if called early. Startup, DOM walking, mutation observation, and
   parent/child activation gating are now owned by src/lifecycle.ts, while
-  runtime observability and event dispatch are routed through src/runtime-surface.ts.
+  subtree/runtime helper coordination is owned by src/runtime-ownership.ts.
+  Event dispatch is via src/runtime-surface.ts; debug-only diagnostics live in
+  src/runtime-observability.ts. Shopify section/block events bridged by default.
 type: core
 library: vite-plugin-shopify-theme-islands
-library_version: "1.3.2"
+library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-ownership.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-observability.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-surface.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/lifecycle.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/retry-scheduler.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/cancellable-watchers.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/activation-session.ts
+  - Rees1993/vite-plugin-shopify-theme-islands:src/shopify-lifecycle.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/revive-module.ts
@@ -82,33 +89,50 @@ onIslandError(({ tag, error, attempt }) => {
 
 `onIslandError` fires on each retry attempt, on custom directive failures, and when `directiveTimeout` expires. `attempt` tells you which attempt failed — 1 is the initial load, 2 is the first retry, etc.
 
-### Teardown for SPA navigation
+### Subtree control and teardown
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
+import { disconnect, observe, scan, unobserve } from "vite-plugin-shopify-theme-islands/revive";
+
+scan(container);
+observe(container);
+unobserve(container);
 
 // Before navigating away / unmounting the page
 disconnect();
 ```
 
-`disconnect()` stops the MutationObserver and prevents new islands from activating. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later. Call it before SPA page transitions to avoid activating islands from the previous page's DOM.
+`disconnect()` stops the shared runtime entirely and removes the Shopify Theme Editor lifecycle listeners registered by default. `unobserve(root)` is the narrower tool: it pauses one subtree and cancels pending built-in waits, retries, and custom directive cleanup inside it. If the runtime has not initialized yet because the document is still loading, `disconnect()` also unregisters the pending DOMContentLoaded startup listener so init never runs later.
 
 The startup walk itself is now lifecycle-owned. The runtime resolves the root lazily at init time, then the lifecycle coordinator performs the initial walk, begins observing subtree additions, and keeps child islands gated behind queued parents until the parent resolves.
 
 Load/error events and debug-ready groups are dispatched through the runtime surface, but the user-facing lifecycle behavior remains the same: startup is lazy, activation is subtree-aware, and teardown prevents later observation.
 
+### Shopify Theme Editor lifecycle (on by default)
+
+The shared runtime registers listeners for Theme Editor section and block events and maps them to subtree helpers on the resolved DOM root:
+
+| Event | Action |
+| --- | --- |
+| `shopify:section:load` | `observe(root)` |
+| `shopify:section:unload` | `unobserve(root)` |
+| `shopify:section:reorder`, `shopify:section:select`, `shopify:section:deselect` | `scan(root)` |
+| `shopify:block:select`, `shopify:block:deselect` | `scan(root)` |
+
+Roots are resolved from `event.detail` (`sectionId` / `blockId`) and `event.target` via `src/shopify-lifecycle.ts` (`resolveLifecycleRoot`). This keeps islands aligned when sections are swapped or reordered in the editor.
+
 ### Raw DOM events (when type augmentation is in scope)
 
 ```ts
-// DocumentEventMap augmentation is exported from the main package
-import type {} from "vite-plugin-shopify-theme-islands";
+// app/types/vite-plugin-shopify-theme-islands.d.ts
+import "vite-plugin-shopify-theme-islands";
 
 document.addEventListener("islands:load", (e) => {
   console.log(e.detail.tag, e.detail.duration, e.detail.attempt);
 });
 ```
 
-The `DocumentEventMap` augmentation is declared in `contract.ts` and re-exported via the main package entry. It is only in scope when the import is present in the same tsconfig compilation.
+The `DocumentEventMap` augmentation is declared in `contract.ts` and re-exported via the main package entry. Your app-side tsconfig has to include that import for the event typing to be available.
 
 ## Common Mistakes
 
@@ -137,24 +161,23 @@ onIslandLoad(({ tag }) => {
 
 Source: src/events.ts
 
-### CRITICAL `disconnect` imported from wrong entry point
+### CRITICAL lifecycle helpers imported from wrong entry point
 
 Wrong:
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/runtime";
 import { disconnect } from "vite-plugin-shopify-theme-islands/island";
 ```
 
 Correct:
 
 ```ts
-import { disconnect } from "vite-plugin-shopify-theme-islands/revive";
+import { disconnect, scan, observe, unobserve } from "vite-plugin-shopify-theme-islands/revive";
 ```
 
-Only the virtual module (`/revive`) exports the `disconnect` bound to the plugin-managed `revive()` instance. Importing from other entry points references a different or nonexistent instance.
+Only the virtual module (`/revive`) exports the shared helper surface bound to the plugin-managed runtime instance.
 
-Source: src/revive-module.ts — buildReviveModuleSource() emits `export const { disconnect } = _islands(payload)`
+Source: src/revive-module.ts — `buildReviveModuleSource()` emits `export const { disconnect, scan, observe, unobserve } = runtime`
 
 ### MEDIUM `onIslandError` fires on every retry, not just final failure
 
@@ -180,7 +203,7 @@ onIslandError(({ tag, error, attempt }) => {
 
 With `retry: { retries: 3 }`, a single island can fire `islands:error` up to 4 times before exhausting retries. Use `attempt` to distinguish the initial failure from retries.
 
-Source: src/runtime.ts — runtimeSurface.dispatchError(...) inside the loader failure path before retry check
+Source: src/activation-session.ts — surface.dispatchError(...) inside the loader failure path before retry check
 
 ### MEDIUM `islands:error` fires for custom directive failures too
 
@@ -195,10 +218,10 @@ onIslandError(({ tag, error }) => {
 
 `islands:error` fires when any custom directive throws, rejects, or times out, not only when the island module's `import()` fails. The `error` value may be a directive error rather than a network or chunk error.
 
-Source: src/runtime.ts — handleDirectiveError dispatches `islands:error`
+Source: src/activation-session.ts — handleDirectiveError dispatches `islands:error`
 
 ### LOW Removed elements waiting on `client:visible` / `client:interaction` do not emit `islands:error`
 
 If an element is removed from the DOM before a cancellable built-in directive resolves, the lifecycle coordinator cancels that activation attempt and the runtime treats it as expected teardown. No `islands:error` event is dispatched.
 
-Source: src/lifecycle.ts — cancelDetached() with watchCancellable() ownership
+Source: src/cancellable-watchers.ts — cancelDetached() / watch() registry, called from src/lifecycle.ts
