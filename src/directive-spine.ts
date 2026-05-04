@@ -62,10 +62,114 @@ function parseStrictIntegerAttribute(
   return { value: Number.parseInt(trimmed, 10), invalid: false };
 }
 
+export type GateWarning =
+  | { kind: "emptyMediaQuery"; attribute: string }
+  | { kind: "invalidIdleValue"; attribute: string; rawValue: string; defaultMs: number }
+  | { kind: "invalidDeferValue"; attribute: string; rawValue: string; defaultMs: number }
+  | { kind: "emptyInteractionTokens"; attribute: string }
+  | {
+      kind: "invalidInteractionTokens";
+      attribute: string;
+      invalidTokens: string[];
+      usedDefaultEvents: boolean;
+    };
+
+export type BuiltInGateResult = Exclude<GateResult, { kind: "custom" }>;
+export type CustomGateResult = Extract<GateResult, { kind: "custom" }>;
+
+export interface GatePlan {
+  /** All gates in built-in order followed by custom directives. */
+  gates: GateResult[];
+  /** Custom directive gates only, for custom directive execution. */
+  customGates: CustomGateResult[];
+  /** Canonical description used for same-Tag conflict detection. */
+  conflictSignature: string;
+  /** Raw-value description parts for pre-Activation debug logging. */
+  initialDiagnosticParts: string[];
+  /** Structured warning facts from invalid built-in Gate states. */
+  warnings: GateWarning[];
+}
+
 export interface DirectiveSpine {
   readGates(el: HTMLElement): GateResult[];
+  planGates(el: HTMLElement): GatePlan;
   describe(el: HTMLElement): string;
   attributeNames: ReadonlySet<string>;
+}
+
+function buildGatePlan(gates: GateResult[]): GatePlan {
+  const customGates: CustomGateResult[] = [];
+  const warnings: GateWarning[] = [];
+  const initialDiagnosticParts: string[] = [];
+
+  for (const gate of gates) {
+    switch (gate.kind) {
+      case "visible": {
+        const part = gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+        initialDiagnosticParts.push(part);
+        break;
+      }
+      case "media": {
+        if (gate.rawValue) initialDiagnosticParts.push(`${gate.attribute}="${gate.rawValue}"`);
+        if (gate.query === null)
+          warnings.push({ kind: "emptyMediaQuery", attribute: gate.attribute });
+        break;
+      }
+      case "idle": {
+        const part = gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+        initialDiagnosticParts.push(part);
+        if (gate.invalid)
+          warnings.push({
+            kind: "invalidIdleValue",
+            attribute: gate.attribute,
+            rawValue: gate.rawValue,
+            defaultMs: gate.timeout,
+          });
+        break;
+      }
+      case "defer": {
+        const part = gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+        initialDiagnosticParts.push(part);
+        if (gate.invalid)
+          warnings.push({
+            kind: "invalidDeferValue",
+            attribute: gate.attribute,
+            rawValue: gate.rawValue,
+            defaultMs: gate.delay,
+          });
+        break;
+      }
+      case "interaction": {
+        const part = gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
+        initialDiagnosticParts.push(part);
+        if (gate.emptyTokens) {
+          warnings.push({ kind: "emptyInteractionTokens", attribute: gate.attribute });
+        } else if (gate.invalidTokens.length > 0) {
+          warnings.push({
+            kind: "invalidInteractionTokens",
+            attribute: gate.attribute,
+            invalidTokens: gate.invalidTokens,
+            usedDefaultEvents: gate.usedDefaultEvents,
+          });
+        }
+        break;
+      }
+      case "custom": {
+        const part = gate.value ? `${gate.attribute}="${gate.value}"` : gate.attribute;
+        initialDiagnosticParts.push(part);
+        customGates.push(gate);
+        break;
+      }
+    }
+  }
+
+  return {
+    gates,
+    customGates,
+    conflictSignature: describeGates(gates),
+    initialDiagnosticParts,
+    warnings,
+  };
 }
 
 function formatEffectiveGate(gate: GateResult): string | null {
@@ -105,6 +209,9 @@ export function createDirectiveSpine(
   ]);
 
   return {
+    planGates(el) {
+      return buildGatePlan(this.readGates(el));
+    },
     readGates(el) {
       const gates: GateResult[] = [];
 
@@ -225,6 +332,9 @@ export function extendDirectiveSpine(
         }
       }
       return gates;
+    },
+    planGates(el) {
+      return buildGatePlan(this.readGates(el));
     },
     describe(el) {
       return describeGates(this.readGates(el));

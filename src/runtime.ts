@@ -24,7 +24,7 @@ import {
 import { createIslandLifecycleCoordinator } from "./lifecycle.js";
 import { getRuntimeSurface } from "./runtime-surface.js";
 import { createRuntimeObservability } from "./runtime-observability.js";
-import { createRootOwnershipCoordinator } from "./runtime-ownership.js";
+import { createObservedRootSession } from "./runtime-ownership.js";
 
 function isRevivePayload(v: unknown): v is RevivePayload {
   return typeof v === "object" && v !== null && "islands" in v && !Array.isArray(v);
@@ -58,7 +58,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     retryDelay: opts.retry.delay,
   });
   const observability = createRuntimeObservability({
-    spine,
     debug: opts.debug,
     isObserved: (element) => lifecycle.isObserved(element),
     console,
@@ -84,7 +83,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     },
   });
 
-  return createRootOwnershipCoordinator({
+  return createObservedRootSession({
     islandMap,
     lifecycle,
     session,

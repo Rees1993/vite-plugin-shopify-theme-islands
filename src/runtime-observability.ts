@@ -1,20 +1,21 @@
-import type { DirectiveSpine, GateResult } from "./directive-spine.js";
-
 export interface RuntimeObservability {
-  noteInitialWaits(tagName: string, element: HTMLElement, initialWalkComplete: boolean): void;
-  warnOnConflictingLoadGate(tagName: string, element: HTMLElement): void;
+  noteInitialWaits(
+    tagName: string,
+    initialDiagnosticParts: string[],
+    initialWalkComplete: boolean,
+  ): void;
+  warnOnConflictingLoadGate(tagName: string, element: HTMLElement, conflictSignature: string): void;
   clear(tagNames?: Iterable<string>): void;
 }
 
 export interface RuntimeObservabilityDeps {
-  spine: DirectiveSpine;
   debug: boolean;
   isObserved(element: Element): boolean;
   console: Pick<Console, "log" | "warn">;
 }
 
 export function createRuntimeObservability(deps: RuntimeObservabilityDeps): RuntimeObservability {
-  const discoveredElementsByTag = new Map<string, Set<HTMLElement>>();
+  const discoveredElementsByTag = new Map<string, Map<HTMLElement, string>>();
   const warnedLoadGateSignatures = new Map<string, string>();
 
   const clear = (tagNames?: Iterable<string>): void => {
@@ -30,51 +31,34 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
     warnedLoadGateSignatures.clear();
   };
 
-  const describeInitialGate = (gate: GateResult): string | null => {
-    switch (gate.kind) {
-      case "visible":
-        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
-      case "media":
-        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : null;
-      case "idle":
-      case "defer":
-      case "interaction":
-        return gate.rawValue ? `${gate.attribute}="${gate.rawValue}"` : gate.attribute;
-      case "custom":
-        return gate.value ? `${gate.attribute}="${gate.value}"` : gate.attribute;
-    }
-  };
-
   return {
-    noteInitialWaits(tagName, element, initialWalkComplete) {
+    noteInitialWaits(tagName, initialDiagnosticParts, initialWalkComplete) {
       if (!deps.debug || initialWalkComplete) return;
-
-      const parts = deps.spine
-        .readGates(element)
-        .map(describeInitialGate)
-        .filter((part): part is string => part !== null);
-
-      if (parts.length > 0)
-        deps.console.log("[islands]", `<${tagName}> waiting · ${parts.join(", ")}`);
+      if (initialDiagnosticParts.length > 0)
+        deps.console.log(
+          "[islands]",
+          `<${tagName}> waiting · ${initialDiagnosticParts.join(", ")}`,
+        );
     },
 
-    warnOnConflictingLoadGate(tagName, element) {
+    warnOnConflictingLoadGate(tagName, element, conflictSignature) {
       if (!deps.debug) return;
 
-      const elements = discoveredElementsByTag.get(tagName) ?? new Set<HTMLElement>();
-      elements.add(element);
-      discoveredElementsByTag.set(tagName, elements);
+      const elementSignatures =
+        discoveredElementsByTag.get(tagName) ?? new Map<HTMLElement, string>();
+      elementSignatures.set(element, conflictSignature);
+      discoveredElementsByTag.set(tagName, elementSignatures);
 
       const gates = new Set<string>();
-      for (const candidate of elements) {
+      for (const [candidate, sig] of elementSignatures) {
         if (!candidate.isConnected || !deps.isObserved(candidate)) {
-          elements.delete(candidate);
+          elementSignatures.delete(candidate);
           continue;
         }
-        gates.add(deps.spine.describe(candidate));
+        gates.add(sig);
       }
 
-      if (elements.size === 0) {
+      if (elementSignatures.size === 0) {
         discoveredElementsByTag.delete(tagName);
         warnedLoadGateSignatures.delete(tagName);
         return;

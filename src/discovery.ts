@@ -90,17 +90,21 @@ function toAbsoluteDirs(root: string, resolvedDirs: string[]): string[] {
   );
 }
 
+/** True when file content declares Island membership and the file is not inside a managed directory. */
+export function isIslandMember(code: string, absolutePath: string, absDirs: string[]): boolean {
+  return ISLAND_IMPORT_RE.test(code) && !inDirectory(absolutePath, absDirs);
+}
+
 /** Scan from root for files containing the island import; returns paths (not in absDirs). */
 export function discoverIslandFiles(root: string, absDirs: string[]): Set<string> {
   const found = new Set<string>();
   walkDir(root, (_, full) => {
     try {
-      if (ISLAND_IMPORT_RE.test(readFileSync(full, "utf-8"))) found.add(full);
+      if (isIslandMember(readFileSync(full, "utf-8"), full, absDirs)) found.add(full);
     } catch {
       // skip unreadable
     }
   });
-  for (const f of [...found]) if (inDirectory(f, absDirs)) found.delete(f);
   return found;
 }
 
@@ -134,11 +138,7 @@ export function createIslandInventory(rawDirectories: string[]) {
 
   const updateIslandFile = (id: string, code: string): IslandInventoryChange | null => {
     if (!TS_JS_RE.test(id)) return null;
-    if (
-      code.includes("shopify-theme-islands/island") &&
-      ISLAND_IMPORT_RE.test(code) &&
-      !inDirectory(id, absDirs)
-    ) {
+    if (isIslandMember(code, id, absDirs)) {
       const sizeBefore = islandFiles.size;
       islandFiles.add(id);
       return islandFiles.size !== sizeBefore ? { type: "detected", file: id } : null;

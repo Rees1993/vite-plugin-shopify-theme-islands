@@ -137,6 +137,48 @@ describe("lifecycle", () => {
     expect(insideCancel).toHaveBeenCalledTimes(1);
   });
 
+  it("allows a nested included root to override an excluded parent root", () => {
+    const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
+    const tags: string[] = [];
+    const islandMap = new Map<string, () => Promise<unknown>>([
+      ["nested-island", mock(async () => {})],
+    ]);
+
+    document.body.innerHTML = `
+      <div id="parent">
+        <div id="child">
+          <nested-island></nested-island>
+        </div>
+      </div>
+    `;
+
+    const parent = document.getElementById("parent") as HTMLElement;
+    const child = document.getElementById("child") as HTMLElement;
+    const island = document.querySelector("nested-island") as HTMLElement;
+
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate(tagName) {
+          tags.push(tagName);
+        },
+      }).disconnect,
+    );
+
+    expect(tags).toEqual(["nested-island"]);
+    lifecycle.clear(["nested-island"]);
+    lifecycle.excludeRoot(parent);
+    expect(lifecycle.isObserved(island)).toBe(false);
+
+    lifecycle.includeRoot(child);
+    expect(lifecycle.isObserved(island)).toBe(true);
+
+    tags.length = 0;
+    lifecycle.walk(child);
+    expect(tags).toEqual(["nested-island"]);
+  });
+
   it("delegates retry cancellation through settleSuccess, settleFailure, and clear", () => {
     type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
     const timers: FakeTimer[] = [];

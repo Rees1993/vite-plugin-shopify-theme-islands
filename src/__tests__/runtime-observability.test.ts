@@ -12,7 +12,6 @@ describe("runtime-observability", () => {
     document.body.append(alpha, beta);
 
     const observability = createRuntimeObservability({
-      spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
       isObserved: () => true,
       console: {
@@ -21,15 +20,18 @@ describe("runtime-observability", () => {
       },
     });
 
-    observability.warnOnConflictingLoadGate("same-tag", alpha);
-    observability.warnOnConflictingLoadGate("same-tag", beta);
-    observability.warnOnConflictingLoadGate("same-tag", beta);
+    const alphaSignature = DEFAULT_DIRECTIVE_SPINE.planGates(alpha).conflictSignature;
+    const betaSignature = DEFAULT_DIRECTIVE_SPINE.planGates(beta).conflictSignature;
+
+    observability.warnOnConflictingLoadGate("same-tag", alpha, alphaSignature);
+    observability.warnOnConflictingLoadGate("same-tag", beta, betaSignature);
+    observability.warnOnConflictingLoadGate("same-tag", beta, betaSignature);
 
     expect(warn).toHaveBeenCalledTimes(1);
 
     observability.clear(["same-tag"]);
-    observability.warnOnConflictingLoadGate("same-tag", alpha);
-    observability.warnOnConflictingLoadGate("same-tag", beta);
+    observability.warnOnConflictingLoadGate("same-tag", alpha, alphaSignature);
+    observability.warnOnConflictingLoadGate("same-tag", beta, betaSignature);
 
     expect(warn).toHaveBeenCalledTimes(2);
   });
@@ -40,7 +42,6 @@ describe("runtime-observability", () => {
     element.setAttribute("client:defer", "200");
 
     const observability = createRuntimeObservability({
-      spine: DEFAULT_DIRECTIVE_SPINE,
       debug: true,
       isObserved: () => true,
       console: {
@@ -49,8 +50,10 @@ describe("runtime-observability", () => {
       },
     });
 
-    observability.noteInitialWaits("deferred-tag", element, false);
-    observability.noteInitialWaits("deferred-tag", element, true);
+    const plan = DEFAULT_DIRECTIVE_SPINE.planGates(element);
+
+    observability.noteInitialWaits("deferred-tag", plan.initialDiagnosticParts, false);
+    observability.noteInitialWaits("deferred-tag", plan.initialDiagnosticParts, true);
 
     expect(log).toHaveBeenCalledTimes(1);
     expect(log).toHaveBeenCalledWith("[islands]", '<deferred-tag> waiting · client:defer="200"');

@@ -334,6 +334,27 @@ describe("runtime lifecycle", () => {
 
       expect(loader).toHaveBeenCalledTimes(1);
     });
+
+    it("observe(childRoot) re-enables a nested subtree even while its parent stays unobserved", async () => {
+      const loader = mock(async () => {});
+      document.body.innerHTML = '<div id="parent"><div id="child"></div></div>';
+      const parentRoot = document.getElementById("parent") as HTMLElement;
+      const childRoot = document.getElementById("child") as HTMLElement;
+      const runtime = runtimeHarness.start(
+        runtimeHarness.payload({ "/islands/nested-widget.ts": loader }),
+      );
+
+      runtime.unobserve(parentRoot);
+      childRoot.appendChild(document.createElement("nested-widget"));
+      runtime.scan(document.body);
+      await flush();
+      expect(loader).not.toHaveBeenCalled();
+
+      runtime.observe(childRoot);
+      await flush();
+
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("Shopify theme lifecycle", () => {

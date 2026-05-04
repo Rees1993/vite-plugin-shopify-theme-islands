@@ -6,12 +6,45 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { createIslandInventory, inDirectory, getIslandPathsForLoad } from "../discovery";
+import {
+  createIslandInventory,
+  inDirectory,
+  getIslandPathsForLoad,
+  isIslandMember,
+} from "../discovery";
 
 const ISLAND_CONTENT =
   'import Island from "vite-plugin-shopify-theme-islands/island";\nexport default class X extends Island(HTMLElement) {}';
 
 describe("discovery", () => {
+  describe("isIslandMember", () => {
+    const absDirs = ["/project/islands"];
+
+    it("returns true when code contains island import and file is outside managed dirs", () => {
+      expect(isIslandMember(ISLAND_CONTENT, "/project/src/widget.ts", absDirs)).toBe(true);
+    });
+
+    it("returns false when file is inside a managed directory", () => {
+      expect(isIslandMember(ISLAND_CONTENT, "/project/islands/widget.ts", absDirs)).toBe(false);
+    });
+
+    it("returns false when code does not contain the island import", () => {
+      expect(
+        isIslandMember(
+          "export default class X extends HTMLElement {}",
+          "/project/src/widget.ts",
+          absDirs,
+        ),
+      ).toBe(false);
+    });
+
+    it("returns false when code has island substring but not the full import path", () => {
+      expect(
+        isIslandMember('import Island from "some-other-island-lib"', "/project/src/x.ts", absDirs),
+      ).toBe(false);
+    });
+  });
+
   describe("inDirectory", () => {
     it("returns true when file is under one of the absolute dirs", () => {
       const absDirs = ["/project/root/frontend/js/islands", "/project/root/other"];

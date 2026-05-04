@@ -41,13 +41,16 @@ export function createIslandLifecycleCoordinator(opts: {
     platform: opts.platform,
   });
   const cancellableWatchers = createCancellableWatchers();
-  const excludedRoots = new Set<HTMLElement>();
+  const rootPolicies = new Map<HTMLElement, "include" | "exclude">();
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
   const isExcluded = (el: Element): boolean => {
-    for (const root of excludedRoots) {
-      if (el === root || root.contains(el)) return true;
+    let current: Element | null = el;
+    while (current) {
+      const policy = rootPolicies.get(current as HTMLElement);
+      if (policy) return policy === "exclude";
+      current = current.parentElement;
     }
     return false;
   };
@@ -173,11 +176,11 @@ export function createIslandLifecycleCoordinator(opts: {
 
   return {
     excludeRoot(root) {
-      excludedRoots.add(root);
+      rootPolicies.set(root, "exclude");
       cancellableWatchers.cancelInRoot(root);
     },
     includeRoot(root) {
-      excludedRoots.delete(root);
+      rootPolicies.set(root, "include");
     },
     isObserved(el) {
       return !isExcluded(el);
