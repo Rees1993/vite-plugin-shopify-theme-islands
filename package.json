@@ -63,7 +63,6 @@
     "check": "tsc --noEmit",
     "prepublishOnly": "bun run build",
     "test:plugin": "bun test src/__tests__/plugin.test.ts",
-    "test:runtime": "bun test ./src/__tests__/runtime.test.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "oxlint src/",

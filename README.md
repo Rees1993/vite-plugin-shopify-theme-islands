@@ -634,6 +634,39 @@ shopifyThemeIslands({
 
 New projects should use the default `registeredTag` mode — it keeps the plugin's ownership model in sync with the browser's own source of truth.
 
+### The public `./runtime` entrypoint was removed
+
+In v1.x, the package exported `vite-plugin-shopify-theme-islands/runtime` for direct runtime consumers. In v2.0 that public subpath is no longer exported.
+
+For normal plugin usage, nothing changes: keep importing the virtual entrypoint:
+
+```ts
+import "vite-plugin-shopify-theme-islands/revive";
+```
+
+If you were importing `vite-plugin-shopify-theme-islands/runtime` directly, switch to the plugin-managed `./revive` flow instead.
+
+### `revive()` no longer accepts the legacy positional overload
+
+In v1.x, direct runtime consumers could call:
+
+```ts
+revive(islands, options, customDirectives);
+```
+
+In v2.0, `revive()` only accepts a payload object:
+
+```ts
+revive({
+  islands,
+  options,
+  customDirectives,
+  resolvedTags,
+});
+```
+
+If you only use the plugin's virtual `./revive` module, you do not need to change anything for this.
+
 ## License
 
 MIT
