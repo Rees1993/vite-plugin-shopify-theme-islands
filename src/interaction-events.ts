@@ -51,3 +51,17 @@ export function partitionInteractionEventTokens(
   }
   return { valid, invalid };
 }
+
+export function formatUnsupportedInteractionTokenWarning(params: {
+  attribute: string;
+  invalidTokens: readonly string[];
+  usedDefaultEvents: boolean;
+}): string {
+  const { attribute, invalidTokens, usedDefaultEvents } = params;
+  const countSuffix = invalidTokens.length === 1 ? "" : "s";
+  const invalidTokenList = invalidTokens.join(", ");
+  if (!usedDefaultEvents) {
+    return `${attribute} contains unsupported event token${countSuffix} (${invalidTokenList}) — ignoring invalid token${countSuffix}; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`;
+  }
+  return `${attribute} contains no supported event tokens (${invalidTokenList}) — using default events; supported tokens: ${INTERACTION_EVENT_NAMES_LABEL}`;
+}

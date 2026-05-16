@@ -5,10 +5,12 @@
  * key→tag semantics, options normalization, and payload → island map.
  * No Vite or DOM required.
  */
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
+  deriveDefaultTag,
   defaultKeyToTag,
   buildIslandMap,
+  compileResolvedTags,
   normalizeReviveOptions,
   DEFAULT_DIRECTIVES,
   type RevivePayload,
@@ -17,6 +19,11 @@ import { DEFAULT_INTERACTION_EVENTS } from "../interaction-events";
 
 describe("contract", () => {
   describe("key→tag (path-like keys become tag names)", () => {
+    it("deriveDefaultTag strips the extension without warning or skip logic", () => {
+      expect(deriveDefaultTag("/frontend/js/islands/product-form.ts")).toBe("product-form");
+      expect(deriveDefaultTag("/islands/myisland.ts")).toBe("myisland");
+    });
+
     it("path-like keys yield tag = last segment with extension stripped", () => {
       expect(defaultKeyToTag("/frontend/js/islands/product-form.ts").tag).toBe("product-form");
       expect(defaultKeyToTag("/islands/my-counter.js").tag).toBe("my-counter");
@@ -115,7 +122,7 @@ describe("contract", () => {
       expect(map.has("invalid")).toBe(false);
     });
 
-    it("first key wins when multiple keys yield the same tag name", () => {
+    it("throws when multiple keys yield the same tag name", () => {
       const first = async () => ({});
       const second = async () => ({});
       const payload: RevivePayload = {
@@ -125,8 +132,79 @@ describe("contract", () => {
         },
         options: {},
       };
+      expect(() => buildIslandMap(payload)).toThrow(
+        "Multiple island entrypoints resolve to <my-island>",
+      );
+    });
+
+    it("uses resolvedTags overrides when provided", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/productForm.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/productForm.ts": "product-form",
+        },
+        options: {},
+      };
+
       const map = buildIslandMap(payload);
-      expect(map.get("my-island")).toBe(first);
+      expect(map.get("product-form")).toBe(loader);
+    });
+
+    it("skips entries whose resolvedTags override is false", () => {
+      const loader = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/product-form.ts": loader,
+        },
+        resolvedTags: {
+          "/islands/product-form.ts": false,
+        },
+        options: {},
+      };
+
+      const map = buildIslandMap(payload);
+      expect(map.size).toBe(0);
+    });
+
+    it("throws when resolvedTags overrides collide on the same final tag", () => {
+      const first = async () => ({});
+      const second = async () => ({});
+      const payload: RevivePayload = {
+        islands: {
+          "/islands/legacy-widget.ts": first,
+          "/islands/new-widget.ts": second,
+        },
+        resolvedTags: {
+          "/islands/legacy-widget.ts": "shared-widget",
+          "/islands/new-widget.ts": "shared-widget",
+        },
+        options: {},
+      };
+
+      expect(() => buildIslandMap(payload)).toThrow(
+        "Multiple island entrypoints resolve to <shared-widget>",
+      );
+    });
+  });
+
+  describe("resolvedTags compilation", () => {
+    it("keeps only non-default overrides and explicit exclusions", () => {
+      expect(
+        compileResolvedTags(
+          ["/islands/productForm.ts", "/src/widget.ts", "/src/other.js"],
+          ({ filePath, defaultTag }) => {
+            if (filePath.endsWith("productForm.ts")) return "product-form";
+            if (filePath.endsWith("other.js")) return false;
+            return defaultTag;
+          },
+        ),
+      ).toEqual({
+        "/islands/productForm.ts": "product-form",
+        "/src/other.js": false,
+      });
     });
   });
 });

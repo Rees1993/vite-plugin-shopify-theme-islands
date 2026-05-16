@@ -50,11 +50,19 @@ export interface ClientDirectiveOptions {
   value: string;
 }
 
-/** Custom directive function at runtime (load, opts, element). */
+export interface ClientDirectiveContext {
+  /** Aborted when the directive should stop waiting and clean up any side effects. */
+  signal: AbortSignal;
+  /** Registers cleanup work that should run when the directive is aborted or resolves. */
+  onCleanup(cleanup: () => void): void;
+}
+
+/** Custom directive function at runtime (load, opts, element, ctx). */
 export type ClientDirective = (
   load: () => Promise<void>,
   options: ClientDirectiveOptions,
   el: HTMLElement,
+  ctx: ClientDirectiveContext,
 ) => void | Promise<void>;
 
 /** Event detail for the `islands:load` DOM event. */
@@ -94,6 +102,7 @@ export interface RevivePayload {
   islands: Record<string, IslandLoader>;
   options?: ReviveOptions;
   customDirectives?: Map<string, ClientDirective>;
+  resolvedTags?: Record<string, string | false>;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +165,9 @@ export function normalizeReviveOptions(options?: ReviveOptions): NormalizedReviv
 // ---------------------------------------------------------------------------
 
 export type KeyToTagResult = { tag: string; skip?: boolean };
+export type ResolvedTagOverride = string | false;
+export type ResolveTagInput = { filePath: string; defaultTag: string };
+export type ResolveTagOverrideFn = (input: ResolveTagInput) => ResolvedTagOverride;
 
 /**
  * Maps a glob key (e.g. "/frontend/js/islands/product-form.ts") to a custom element tag.
@@ -165,10 +177,16 @@ export type KeyToTagFn = (key: string) => KeyToTagResult;
 
 const basename = (key: string) => key.split("/").pop() ?? key;
 
+/** Derives the default tag name from a glob key without warning or skipping. */
+export function deriveDefaultTag(key: string): string {
+  const filename = basename(key);
+  return filename.replace(/\.(ts|js)$/, "");
+}
+
 /** Default: last path segment, extension stripped; skip (and warn) when tag has no hyphen. */
 export function defaultKeyToTag(key: string): KeyToTagResult {
   const filename = basename(key);
-  const tag = filename.replace(/\.(ts|js)$/, "");
+  const tag = deriveDefaultTag(key);
   const skip = !tag.includes("-");
   if (skip && tag)
     console.warn(
@@ -177,20 +195,54 @@ export function defaultKeyToTag(key: string): KeyToTagResult {
   return { tag, skip };
 }
 
+function duplicateTagOwnershipError(tag: string, filePaths: string[]): Error {
+  return new Error(
+    `[islands] Multiple island entrypoints resolve to <${tag}>:\n- ${filePaths.join(
+      "\n- ",
+    )}\nTag ownership must be unique before calling revive(...). Remove one entry or disambiguate the final tag.`,
+  );
+}
+
+export function compileResolvedTags(
+  filePaths: Iterable<string>,
+  resolveTag: ResolveTagOverrideFn,
+): Record<string, ResolvedTagOverride> | null {
+  const entries: Array<[string, ResolvedTagOverride]> = [];
+  for (const filePath of filePaths) {
+    const defaultTag = deriveDefaultTag(filePath);
+    const resolvedTag = resolveTag({ filePath, defaultTag });
+    if (resolvedTag === defaultTag) continue;
+    entries.push([filePath, resolvedTag]);
+  }
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
 // ---------------------------------------------------------------------------
 // 4. Build island map (internal complexity hidden by contract consumer)
 // ---------------------------------------------------------------------------
 
 /**
  * Builds tag → loader map from payload.
- * Applies the default key→tag derivation and deduplicates by tag (first wins).
+ * Applies the default key→tag derivation and requires unique tag ownership.
  */
 export function buildIslandMap(payload: RevivePayload): Map<string, IslandLoader> {
   const map = new Map<string, IslandLoader>();
+  const sourceKeys = new Map<string, string>();
   for (const [key, loader] of Object.entries(payload.islands)) {
-    const { tag, skip } = defaultKeyToTag(key);
+    const resolvedTag = payload.resolvedTags?.[key];
+    const { tag, skip } =
+      resolvedTag !== undefined
+        ? resolvedTag === false
+          ? { tag: "", skip: true }
+          : { tag: resolvedTag }
+        : defaultKeyToTag(key);
     if (skip) continue;
-    if (!map.has(tag)) map.set(tag, loader);
+    if (!map.has(tag)) {
+      map.set(tag, loader);
+      sourceKeys.set(tag, key);
+      continue;
+    }
+    throw duplicateTagOwnershipError(tag, [sourceKeys.get(tag) ?? key, key]);
   }
   return map;
 }

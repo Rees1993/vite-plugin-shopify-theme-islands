@@ -3,7 +3,7 @@
 ## Library
 
 - **Name:** vite-plugin-shopify-theme-islands
-- **Version target:** 1.2.0
+- **Version target:** 2.0.0
 - **Repository:** https://github.com/Rees1993/vite-plugin-shopify-theme-islands
 - **Type:** Vite plugin (node) + browser runtime
 

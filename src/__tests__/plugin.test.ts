@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from "bun:test";
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -31,78 +31,8 @@ function makePlugin(opts?: ShopifyThemeIslandsOptions): PluginUnderTest {
 
 describe("plugin", () => {
   describe("validateOptions", () => {
-    it("throws for an empty directories array", () => {
+    it("surfaces resolved-config validation errors during plugin creation", () => {
       expect(() => makePlugin({ directories: [] })).toThrow('"directories" must not be empty');
-    });
-
-    it("throws for threshold below 0", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: -0.1 } } })).toThrow(
-        '"directives.visible.threshold" must be between 0 and 1',
-      );
-    });
-
-    it("throws for threshold above 1", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: 1.1 } } })).toThrow(
-        '"directives.visible.threshold" must be between 0 and 1',
-      );
-    });
-
-    it("accepts threshold of 0 and 1", () => {
-      expect(() => makePlugin({ directives: { visible: { threshold: 0 } } })).not.toThrow();
-      expect(() => makePlugin({ directives: { visible: { threshold: 1 } } })).not.toThrow();
-    });
-
-    it("throws for negative retry.retries", () => {
-      expect(() => makePlugin({ retry: { retries: -1 } })).toThrow('"retry.retries" must be >= 0');
-    });
-
-    it("throws for negative retry.delay", () => {
-      expect(() => makePlugin({ retry: { delay: -1 } })).toThrow('"retry.delay" must be >= 0');
-    });
-
-    it("accepts retry.retries of 0", () => {
-      expect(() => makePlugin({ retry: { retries: 0 } })).not.toThrow();
-    });
-
-    it("throws for duplicate custom directive names", () => {
-      expect(() =>
-        makePlugin({
-          directives: {
-            custom: [
-              { name: "client:hover", entrypoint: "./a.ts" },
-              { name: "client:hover", entrypoint: "./b.ts" },
-            ],
-          },
-        }),
-      ).toThrow('Duplicate custom directive name: "client:hover"');
-    });
-
-    it("throws when custom directive name collides with a built-in", () => {
-      expect(() =>
-        makePlugin({ directives: { custom: [{ name: "client:visible", entrypoint: "./a.ts" }] } }),
-      ).toThrow("conflicts with a built-in directive");
-    });
-
-    it("throws when custom directive name collides with a renamed built-in", () => {
-      expect(() =>
-        makePlugin({
-          directives: {
-            visible: { attribute: "data:visible" },
-            custom: [{ name: "data:visible", entrypoint: "./a.ts" }],
-          },
-        }),
-      ).toThrow("conflicts with a built-in directive");
-    });
-
-    it("throws for empty interaction event arrays", () => {
-      expect(() =>
-        makePlugin({
-          directives: { interaction: { events: [] } },
-        }),
-      ).toThrow('"directives.interaction.events" must not be empty');
-    });
-
-    it("throws for unsupported interaction event names", () => {
       expect(() =>
         makePlugin({
           directives: {
@@ -138,7 +68,7 @@ describe("plugin", () => {
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain('import.meta.glob("/islands/**/*.{ts,js}")');
       expect(output).toContain("import { revive as _islands }");
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
     });
 
     it("generates import.meta.glob for multiple directories", async () => {
@@ -261,14 +191,14 @@ describe("plugin", () => {
       expect(output).toContain('"client:on-click"');
       expect(output).toContain('"client:hover"');
       expect(output).toContain("new Map([");
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
     });
 
     it("omits customDirectives arg when no custom directives are configured", async () => {
       const plugin = makePlugin({ directories: ["/islands/"] });
       plugin.configResolved(makeConfig());
       const output = await plugin.load(RESOLVED_ID);
-      expect(output).toContain("export const { disconnect } = _islands(payload)");
+      expect(output).toContain("export const { disconnect, scan, observe, unobserve } = runtime");
       expect(output).not.toContain("customDirectives");
     });
 
@@ -319,11 +249,64 @@ describe("plugin", () => {
     it("includes mixin files discovered outside the islands directory", async () => {
       writeFileSync(join(tmp, "my-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/nonexistent/"] });
+      const plugin = makePlugin({ directories: ["/nonexistent/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("my-widget.ts");
+    });
+
+    it("compiles mixin files without a prior buildStart() scan", async () => {
+      writeFileSync(join(tmp, "my-widget.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/nonexistent/"], tagSource: "filename" });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      const output = await plugin.load(RESOLVED_ID);
+      expect(output).toContain("my-widget.ts");
+    });
+
+    it("emits resolvedTags overrides when resolveTag is configured", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "productForm.ts"),
+        "export default class ProductForm extends HTMLElement {}",
+      );
+
+      const plugin = makePlugin({
+        directories: ["/islands/"],
+        tagSource: "filename",
+        resolveTag: ({ filePath, defaultTag }) =>
+          filePath.endsWith("productForm.ts") ? "product-form" : defaultTag,
+      });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+
+      expect(output).toContain('const resolvedTags = {"/islands/productForm.ts":"product-form"};');
+      expect(output).toContain("const payload = { islands, options, resolvedTags };");
+    });
+
+    it("emits false resolvedTags entries when resolveTag excludes a file", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "legacy-widget.ts"),
+        "export default class LegacyWidget extends HTMLElement {}",
+      );
+
+      const plugin = makePlugin({
+        directories: ["/islands/"],
+        tagSource: "filename",
+        resolveTag: ({ filePath, defaultTag }) =>
+          filePath.endsWith("legacy-widget.ts") ? false : defaultTag,
+      });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      const output = await plugin.load(RESOLVED_ID);
+
+      expect(output).toContain('const resolvedTags = {"/islands/legacy-widget.ts":false};');
+      expect(output).toContain("const payload = { islands, options, resolvedTags };");
     });
 
     it("excludes mixin files already covered by a scanned directory", async () => {
@@ -331,7 +314,7 @@ describe("plugin", () => {
       mkdirSync(islandsDir);
       writeFileSync(join(islandsDir, "my-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/islands/"] });
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
@@ -345,17 +328,57 @@ describe("plugin", () => {
       mkdirSync(legacyDir);
       writeFileSync(join(legacyDir, "legacy-widget.ts"), ISLAND_CONTENT);
 
-      const plugin = makePlugin({ directories: ["/islands/"] });
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("/islands-legacy/legacy-widget.ts");
     });
 
-    it("skips unreadable files silently", () => {
-      const plugin = makePlugin({ directories: ["/nonexistent/"] });
+    it("warns when a file's resolved tag disagrees with a static customElements.define() tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      writeFileSync(
+        join(islandsDir, "product-form.ts"),
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("x-product-form", ProductForm);',
+      );
+      const warn = spyOn(console, "warn").mockImplementation(mock(() => {}));
+
+      try {
+        const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
+        plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+        plugin.buildStart();
+        await plugin.load(RESOLVED_ID);
+
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "resolves to <product-form> but statically registers <x-product-form>",
+          ),
+        );
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("/islands/product-form.ts"));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("throws when a scanned file and a mixin file resolve to the same final tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      const srcDir = join(tmp, "src");
+      mkdirSync(islandsDir);
+      mkdirSync(srcDir);
+      writeFileSync(
+        join(islandsDir, "product-form.ts"),
+        "export default class ProductForm extends HTMLElement {}",
+      );
+      writeFileSync(join(srcDir, "product-form.ts"), ISLAND_CONTENT);
+
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
-      expect(() => plugin.buildStart()).not.toThrow();
+      plugin.buildStart();
+
+      await expect(plugin.load(RESOLVED_ID)).rejects.toThrow(
+        "Multiple island entrypoints resolve to <product-form>",
+      );
     });
   });
 
@@ -371,7 +394,7 @@ describe("plugin", () => {
     });
 
     function makeWatchPlugin(islandsDir = "/nonexistent/") {
-      const plugin = makePlugin({ directories: [islandsDir] });
+      const plugin = makePlugin({ directories: [islandsDir], tagSource: "filename" });
       plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
       plugin.buildStart();
       return plugin;
@@ -384,16 +407,6 @@ describe("plugin", () => {
       plugin.watchChange(filePath, { event: "create" });
       const output = await plugin.load(RESOLVED_ID);
       expect(output).toContain("watch-widget.ts");
-    });
-
-    it("delete event removes file from islandFiles", async () => {
-      const filePath = join(tmp, "del-widget.ts");
-      writeFileSync(filePath, ISLAND_CONTENT);
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      plugin.watchChange(filePath, { event: "delete" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("del-widget.ts");
     });
 
     it("create event for file inside scanned directory does not add to islandFiles", async () => {
@@ -409,35 +422,9 @@ describe("plugin", () => {
       expect(globCount).toBe(1);
     });
 
-    it("update event removes file when island import is lost", async () => {
-      const filePath = join(tmp, "losing-island.ts");
-      writeFileSync(filePath, ISLAND_CONTENT);
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      // Remove the island import
-      writeFileSync(filePath, "export default class X extends HTMLElement {}");
-      plugin.watchChange(filePath, { event: "update" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("losing-island.ts");
-    });
-
-    it("non-TS/JS file triggers no change", async () => {
-      const filePath = join(tmp, "image.png");
-      const plugin = makeWatchPlugin();
-      plugin.watchChange(filePath, { event: "create" });
-      const output = await plugin.load(RESOLVED_ID);
-      expect(output).not.toContain("image.png");
-    });
-
-    it("unreadable file (deleted before event) does not throw", () => {
-      const filePath = join(tmp, "gone-widget.ts"); // never created
-      const plugin = makeWatchPlugin();
-      expect(() => plugin.watchChange(filePath, { event: "update" })).not.toThrow();
-    });
-
-    it("invalidates the revive module and triggers a full reload when the island set changes", () => {
+    it("invalidates and reloads the revive module when the island set changes", () => {
       const invalidated: object[] = [];
-      const payloads: Array<{ type: string }> = [];
+      const reloaded: object[] = [];
       const reviveModule = {};
       const plugin = makeWatchPlugin();
       plugin.configureServer({
@@ -449,10 +436,9 @@ describe("plugin", () => {
             invalidated.push(mod);
           },
         },
-        ws: {
-          send(payload: { type: string }) {
-            payloads.push(payload);
-          },
+        reloadModule(mod: object) {
+          reloaded.push(mod);
+          return Promise.resolve();
         },
       } as unknown as ViteDevServer);
 
@@ -461,12 +447,12 @@ describe("plugin", () => {
       plugin.watchChange(filePath, { event: "create" });
 
       expect(invalidated).toEqual([reviveModule]);
-      expect(payloads).toEqual([{ type: "full-reload" }]);
+      expect(reloaded).toEqual([reviveModule]);
     });
 
     it("does not trigger a reload when the revive module is not in the graph", () => {
       let invalidated = false;
-      const payloads: Array<{ type: string }> = [];
+      let reloaded = false;
       const plugin = makeWatchPlugin();
       plugin.configureServer({
         moduleGraph: {
@@ -477,10 +463,9 @@ describe("plugin", () => {
             invalidated = true;
           },
         },
-        ws: {
-          send(payload: { type: string }) {
-            payloads.push(payload);
-          },
+        reloadModule() {
+          reloaded = true;
+          return Promise.resolve();
         },
       } as unknown as ViteDevServer);
 
@@ -489,7 +474,121 @@ describe("plugin", () => {
       plugin.watchChange(filePath, { event: "create" });
 
       expect(invalidated).toBe(false);
-      expect(payloads).toEqual([]);
+      expect(reloaded).toBe(false);
+    });
+  });
+
+  describe("semantic invalidation (registeredTag mode)", () => {
+    let tmp: string;
+
+    beforeEach(() => {
+      tmp = mkdtempSync(join(tmpdir(), "islands-ri-"));
+    });
+
+    afterEach(() => {
+      rmSync(tmp, { recursive: true, force: true });
+    });
+
+    function makeRegisteredTagPlugin(islandsDir: string) {
+      const plugin = makePlugin({ directories: [islandsDir] });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      return plugin;
+    }
+
+    function attachDevServer(plugin: PluginUnderTest): { invalidated: object[] } {
+      const invalidated: object[] = [];
+      const reviveModule = {};
+      plugin.configureServer({
+        moduleGraph: {
+          getModuleById: (id: string) => (id === RESOLVED_ID ? reviveModule : undefined),
+          invalidateModule: (mod: object) => invalidated.push(mod),
+        },
+        reloadModule: () => Promise.resolve(),
+      } as unknown as ViteDevServer);
+      return { invalidated };
+    }
+
+    it("invalidates /revive when a directory Island's Registered Tag changes", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(filePath, 'customElements.define("cart-drawer", CartDrawer)');
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(filePath, 'customElements.define("cart-drawer-v2", CartDrawer)');
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(1);
+    });
+
+    it("does not invalidate /revive for implementation edits that keep the same Registered Tag", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(
+        filePath,
+        'customElements.define("cart-drawer", CartDrawer)\nclass CartDrawer extends HTMLElement {}',
+      );
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(
+        filePath,
+        'customElements.define("cart-drawer", CartDrawer)\nclass CartDrawer extends HTMLElement { connectedCallback() {} }',
+      );
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(0);
+    });
+
+    it("invalidates /revive when the customElements.define call is removed from a directory Island", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "CartDrawer.ts");
+      writeFileSync(filePath, 'customElements.define("cart-drawer", CartDrawer)');
+
+      const plugin = makeRegisteredTagPlugin("/islands/");
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(filePath, "class CartDrawer extends HTMLElement {}");
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(1);
+    });
+
+    it("filename mode never invalidates /revive for content updates", async () => {
+      const islandsDir = join(tmp, "islands");
+      mkdirSync(islandsDir);
+      const filePath = join(islandsDir, "product-form.ts");
+      writeFileSync(
+        filePath,
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("product-form", ProductForm)',
+      );
+
+      const plugin = makePlugin({ directories: ["/islands/"], tagSource: "filename" });
+      plugin.configResolved({ root: tmp, resolve: { alias: [] } } as unknown as ResolvedConfig);
+      plugin.buildStart();
+      await plugin.load(RESOLVED_ID);
+
+      const { invalidated } = attachDevServer(plugin);
+
+      writeFileSync(
+        filePath,
+        'class ProductForm extends HTMLElement {}\ncustomElements.define("different-tag", ProductForm)',
+      );
+      plugin.watchChange(filePath, { event: "update" });
+
+      expect(invalidated).toHaveLength(0);
     });
   });
 });

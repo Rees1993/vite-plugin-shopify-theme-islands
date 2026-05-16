@@ -1,12 +1,13 @@
 /// <reference lib="dom" />
 import { describe, expect, it, mock, afterEach } from "bun:test";
 import { createIslandLifecycleCoordinator } from "../lifecycle";
-
-const flush = (ms = 20) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+import { createCleanupQueue, flush, mockMutationObserver } from "./utils/harness";
 
 describe("lifecycle", () => {
+  const cleanups = createCleanupQueue();
+
   afterEach(() => {
-    document.body.innerHTML = "";
+    cleanups.cleanup({ resetDom: true });
   });
 
   it("walks initial DOM, defers children behind queued parents, and rewinds them after success", async () => {
@@ -26,13 +27,15 @@ describe("lifecycle", () => {
     const parent = document.querySelector("parent-island") as HTMLElement;
     const child = document.querySelector("child-island") as HTMLElement;
 
-    lifecycle.start({
-      getRoot: () => document.body,
-      islandMap,
-      onActivate(tagName) {
-        tags.push(tagName);
-      },
-    });
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate(tagName) {
+          tags.push(tagName);
+        },
+      }).disconnect,
+    );
 
     expect(tags).toEqual(["parent-island"]);
     expect(lifecycle.isQueued("parent-island")).toBe(true);
@@ -53,41 +56,188 @@ describe("lifecycle", () => {
       ["dynamic-island", mock(async () => {})],
     ]);
     let moCallback: MutationCallback | undefined;
-    const OriginalMO = globalThis.MutationObserver;
-    globalThis.MutationObserver = class {
-      constructor(cb: MutationCallback) {
-        moCallback = cb;
-      }
-      observe() {}
-      disconnect() {}
-    } as unknown as typeof MutationObserver;
+    cleanups.track(
+      mockMutationObserver(
+        class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver,
+      ),
+    );
 
-    try {
-      document.body.innerHTML = "<root-shell></root-shell>";
+    document.body.innerHTML = "<root-shell></root-shell>";
 
-      const { disconnect } = lifecycle.start({
+    const disconnect = cleanups.track(
+      lifecycle.start({
         getRoot: () => document.body,
         islandMap,
         onActivate(tagName) {
           tags.push(tagName);
         },
-      });
+      }).disconnect,
+    );
 
-      const el = document.createElement("dynamic-island");
-      document.body.appendChild(el);
-      moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
+    const el = document.createElement("dynamic-island");
+    document.body.appendChild(el);
+    moCallback?.([{ addedNodes: [el] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
 
-      disconnect();
-      const later = document.createElement("dynamic-island");
-      document.body.appendChild(later);
-      moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
-      await flush();
-      expect(tags).toEqual(["dynamic-island"]);
-    } finally {
-      globalThis.MutationObserver = OriginalMO;
-    }
+    disconnect();
+    const later = document.createElement("dynamic-island");
+    document.body.appendChild(later);
+    moCallback?.([{ addedNodes: [later] } as unknown as MutationRecord], {} as MutationObserver);
+    await flush();
+    expect(tags).toEqual(["dynamic-island"]);
+  });
+
+  it("delegates cancellable-watcher firing through MutationObserver and excludeRoot", () => {
+    const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
+    let moCallback: MutationCallback | undefined;
+    cleanups.track(
+      mockMutationObserver(
+        class {
+          constructor(cb: MutationCallback) {
+            moCallback = cb;
+          }
+          observe() {}
+          disconnect() {}
+        } as unknown as typeof MutationObserver,
+      ),
+    );
+
+    document.body.innerHTML = "<scope-root><inside-island></inside-island></scope-root>";
+    const root = document.querySelector("scope-root") as HTMLElement;
+    const inside = document.querySelector("inside-island") as HTMLElement;
+    const detached = document.createElement("detached-island");
+    document.body.appendChild(detached);
+
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap: new Map(),
+        onActivate() {},
+      }).disconnect,
+    );
+
+    // Path 1: MutationObserver callback fires cancelDetached().
+    const detachedCancel = mock(() => {});
+    lifecycle.watchCancellable(detached, detachedCancel);
+    document.body.removeChild(detached);
+    moCallback?.([{ addedNodes: [] } as unknown as MutationRecord], {} as MutationObserver);
+    expect(detachedCancel).toHaveBeenCalledTimes(1);
+
+    // Path 2: excludeRoot() fires cancelInRoot() for descendants.
+    const insideCancel = mock(() => {});
+    lifecycle.watchCancellable(inside, insideCancel);
+    lifecycle.excludeRoot(root);
+    expect(insideCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows a nested included root to override an excluded parent root", () => {
+    const lifecycle = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 100 });
+    const tags: string[] = [];
+    const islandMap = new Map<string, () => Promise<unknown>>([
+      ["nested-island", mock(async () => {})],
+    ]);
+
+    document.body.innerHTML = `
+      <div id="parent">
+        <div id="child">
+          <nested-island></nested-island>
+        </div>
+      </div>
+    `;
+
+    const parent = document.getElementById("parent") as HTMLElement;
+    const child = document.getElementById("child") as HTMLElement;
+    const island = document.querySelector("nested-island") as HTMLElement;
+
+    cleanups.track(
+      lifecycle.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate(tagName) {
+          tags.push(tagName);
+        },
+      }).disconnect,
+    );
+
+    expect(tags).toEqual(["nested-island"]);
+    lifecycle.clear(["nested-island"]);
+    lifecycle.excludeRoot(parent);
+    expect(lifecycle.isObserved(island)).toBe(false);
+
+    lifecycle.includeRoot(child);
+    expect(lifecycle.isObserved(island)).toBe(true);
+
+    tags.length = 0;
+    lifecycle.walk(child);
+    expect(tags).toEqual(["nested-island"]);
+  });
+
+  it("delegates retry cancellation through settleSuccess, settleFailure, and clear", () => {
+    type FakeTimer = { fn: () => void; delay: number; cleared: boolean };
+    const timers: FakeTimer[] = [];
+    const lifecycle = createIslandLifecycleCoordinator({
+      retries: 2,
+      retryDelay: 50,
+      platform: {
+        setTimeout(fn, delay) {
+          const timer: FakeTimer = { fn, delay, cleared: false };
+          timers.push(timer);
+          return timer as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimeout(timer) {
+          (timer as unknown as FakeTimer).cleared = true;
+        },
+      },
+    });
+
+    // settleSuccess clears the pending retry timer for that tag.
+    lifecycle.settleFailure(
+      "alpha",
+      mock(() => {}),
+    );
+    expect(timers).toHaveLength(1);
+    lifecycle.settleSuccess("alpha");
+    expect(timers[0].cleared).toBe(true);
+
+    // settleFailure with exhausted retries removes the tag from the queue.
+    const giveUp = createIslandLifecycleCoordinator({ retries: 0, retryDelay: 50 });
+    document.body.innerHTML = "<gone-island></gone-island>";
+    const islandMap = new Map<string, () => Promise<unknown>>([
+      ["gone-island", mock(async () => {})],
+    ]);
+    cleanups.track(
+      giveUp.start({
+        getRoot: () => document.body,
+        islandMap,
+        onActivate() {},
+      }).disconnect,
+    );
+    expect(giveUp.isQueued("gone-island")).toBe(true);
+    const result = giveUp.settleFailure(
+      "gone-island",
+      mock(() => {}),
+    );
+    expect(result).toEqual({ attempt: 1, willRetry: false });
+    expect(giveUp.isQueued("gone-island")).toBe(false);
+
+    // clear() cancels all pending retry timers.
+    lifecycle.settleFailure(
+      "beta",
+      mock(() => {}),
+    );
+    lifecycle.settleFailure(
+      "gamma",
+      mock(() => {}),
+    );
+    lifecycle.clear();
+    expect(timers.every((timer) => timer.cleared)).toBe(true);
   });
 
   it("resolves the root lazily and skips startup callbacks when disconnected before init", () => {
@@ -113,16 +263,18 @@ describe("lifecycle", () => {
     document.removeEventListener = removeSpy as typeof document.removeEventListener;
 
     try {
-      const { disconnect } = lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
-      });
+      const disconnect = cleanups.track(
+        lifecycle.start({
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual([]);
       expect(beforeWalk).not.toHaveBeenCalled();
@@ -136,16 +288,18 @@ describe("lifecycle", () => {
       expect(afterWalk).not.toHaveBeenCalled();
 
       readyState = "interactive";
-      lifecycle.start({
-        getRoot: () => {
-          rootCalls.push("called");
-          return document.body;
-        },
-        islandMap: new Map(),
-        onActivate() {},
-        onBeforeInitialWalk: beforeWalk,
-        onInitialWalkComplete: afterWalk,
-      });
+      cleanups.track(
+        lifecycle.start({
+          getRoot: () => {
+            rootCalls.push("called");
+            return document.body;
+          },
+          islandMap: new Map(),
+          onActivate() {},
+          onBeforeInitialWalk: beforeWalk,
+          onInitialWalkComplete: afterWalk,
+        }).disconnect,
+      );
 
       expect(rootCalls).toEqual(["called"]);
       expect(beforeWalk).toHaveBeenCalledTimes(1);

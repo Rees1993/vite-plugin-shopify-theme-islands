@@ -1,23 +1,29 @@
-import { DEFAULT_DIRECTIVES, type ReviveOptions } from "./contract.js";
+import {
+  DEFAULT_DIRECTIVES,
+  type NormalizedReviveOptions,
+  type ReviveOptions,
+} from "./contract.js";
+import type { IslandInventoryState } from "./discovery.js";
+import { createDirectiveSpine } from "./directive-spine.js";
 import { validateInteractionEvents } from "./interaction-events.js";
-import type {
-  ClientDirectiveDefinition,
-  DirectivesConfig,
-  ShopifyThemeIslandsOptions,
-} from "./options.js";
+import type { DirectivesConfig, ShopifyThemeIslandsOptions } from "./options.js";
+import type { ReviveCompileInputs } from "./revive-compile.js";
 
 const PREFIX = "[vite-plugin-shopify-theme-islands]";
 
-export interface ResolvedThemeIslandsPolicy {
+export interface ThemeIslandsPluginConfig {
   plugin: {
     directives: DirectivesConfig;
-    customDirectives: ClientDirectiveDefinition[];
     debug: boolean;
   };
-  runtime: ReviveOptions;
 }
 
-function mergeDirectives(directives?: DirectivesConfig): DirectivesConfig {
+export interface CompiledThemeIslandsConfig extends ThemeIslandsPluginConfig {
+  runtimeOptions(): ReviveOptions;
+  compileInputs(input: IslandInventoryState): ReviveCompileInputs;
+}
+
+function mergeDirectives(directives?: DirectivesConfig): NormalizedReviveOptions["directives"] {
   return {
     visible: { ...DEFAULT_DIRECTIVES.visible, ...directives?.visible },
     idle: { ...DEFAULT_DIRECTIVES.idle, ...directives?.idle },
@@ -27,7 +33,10 @@ function mergeDirectives(directives?: DirectivesConfig): DirectivesConfig {
   };
 }
 
-function validateOptions(options: ShopifyThemeIslandsOptions, directives: DirectivesConfig): void {
+function validateOptions(
+  options: ShopifyThemeIslandsOptions,
+  directives: NormalizedReviveOptions["directives"],
+): void {
   const customDefs = options.directives?.custom ?? [];
   if (Array.isArray(options.directories) && options.directories.length === 0) {
     throw new Error(`${PREFIX} "directories" must not be empty`);
@@ -43,6 +52,14 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
   const interactionEvents = options.directives?.interaction?.events;
   validateInteractionEvents(interactionEvents);
 
+  if (
+    options.tagSource !== undefined &&
+    options.tagSource !== "registeredTag" &&
+    options.tagSource !== "filename"
+  ) {
+    throw new Error(`${PREFIX} "tagSource" must be "registeredTag" or "filename"`);
+  }
+
   if (options.retry !== undefined) {
     const { retries, delay } = options.retry;
     if (retries !== undefined && retries < 0) {
@@ -53,13 +70,7 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
     }
   }
 
-  const builtinAttributes = new Set([
-    directives.visible!.attribute!,
-    directives.idle!.attribute!,
-    directives.media!.attribute!,
-    directives.defer!.attribute!,
-    directives.interaction!.attribute!,
-  ]);
+  const builtinAttributes = createDirectiveSpine(directives).attributeNames;
   const seen = new Set<string>();
   for (const def of customDefs) {
     if (seen.has(def.name)) {
@@ -74,9 +85,9 @@ function validateOptions(options: ShopifyThemeIslandsOptions, directives: Direct
   }
 }
 
-export function resolveThemeIslandsPolicy(
+export function resolveThemeIslandsConfig(
   options: ShopifyThemeIslandsOptions = {},
-): ResolvedThemeIslandsPolicy {
+): CompiledThemeIslandsConfig {
   const directives = mergeDirectives(options.directives);
   validateOptions(options, directives);
 
@@ -94,9 +105,17 @@ export function resolveThemeIslandsPolicy(
   return {
     plugin: {
       directives,
-      customDirectives,
       debug,
     },
-    runtime,
+    runtimeOptions: () => runtime,
+    compileInputs: (input) => ({
+      ...input,
+      tagSource: options.tagSource ?? "registeredTag",
+      resolveTag: options.resolveTag,
+      customDirectives,
+      reviveOptions: runtime,
+    }),
   };
 }
+
+export const compileThemeIslandsConfig = resolveThemeIslandsConfig;
