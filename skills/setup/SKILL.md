@@ -92,6 +92,12 @@ shopifyThemeIslands({
 });
 ```
 
+Only add directories when you want every `.ts`/`.js` file in that folder to be
+treated as an island by convention. Files that import
+`vite-plugin-shopify-theme-islands/island` are discovered independently, even
+outside `/frontend/js/islands/`; listing their parent folder in `directories` is
+redundant and broadens discovery to sibling files that may not be islands.
+
 ### Override the derived Tag
 
 ```ts
@@ -205,6 +211,29 @@ shopifyThemeIslands();
 ```
 
 All options are optional and default to sensible values. Only include options that differ from the defaults.
+
+### HIGH Agent adds mixin component folders to `directories`
+
+Wrong:
+
+```ts
+// frontend/js/components/navigation/account-dropdown.ts already imports the Island mixin
+shopifyThemeIslands({
+  directories: ["/frontend/js/islands/", "/frontend/js/components/navigation/"],
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands();
+```
+
+Mixin-marked files are discovered from the project root by their
+`vite-plugin-shopify-theme-islands/island` import. `directories` is for
+non-mixin, convention-scanned files; adding a mixin file's folder does not make
+that file more discoverable and can accidentally include unrelated files in the
+same folder.
 
 ### HIGH Agent overwrites existing `vite.config.ts` instead of appending
 
