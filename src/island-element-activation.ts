@@ -217,12 +217,7 @@ interface LoaderRunContext {
   loader: IslandLoader;
   ownership: Pick<
     IslandElementOwnership,
-    | "isObserved"
-    | "evict"
-    | "settleSuccess"
-    | "settleFailure"
-    | "takePendingRewalkRoots"
-    | "walk"
+    "isObserved" | "evict" | "settleSuccess" | "settleFailure" | "takePendingRewalkRoots" | "walk"
   >;
   surface: Pick<RuntimeSurface, "dispatchLoad" | "dispatchError">;
   platform: IslandElementPlatform;
