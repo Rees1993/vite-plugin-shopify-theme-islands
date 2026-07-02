@@ -20,6 +20,7 @@ export interface IslandLifecycle {
   evict(tag: string): void;
   clear(tags?: Iterable<string>): void;
   isQueued(tag: string): boolean;
+  takePendingRewalkRoots(tag: string): HTMLElement[];
   readonly initialWalkComplete: boolean;
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
@@ -42,6 +43,7 @@ export function createIslandLifecycleCoordinator(opts: {
   });
   const cancellableWatchers = createCancellableWatchers();
   const rootPolicies = new Map<HTMLElement, "include" | "exclude">();
+  const pendingRewalkRoots = new Map<string, Set<HTMLElement>>();
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
@@ -59,6 +61,18 @@ export function createIslandLifecycleCoordinator(opts: {
     if (queued.has(tag) || loaded.has(tag)) return false;
     queued.add(tag);
     return true;
+  };
+
+  const addPendingRewalkRoot = (tag: string, root: HTMLElement): void => {
+    const roots = pendingRewalkRoots.get(tag) ?? new Set<HTMLElement>();
+    roots.add(root);
+    pendingRewalkRoots.set(tag, roots);
+  };
+
+  const takePendingRewalkRoots = (tag: string): HTMLElement[] => {
+    const roots = pendingRewalkRoots.get(tag);
+    pendingRewalkRoots.delete(tag);
+    return [...(roots ?? [])].filter((root) => root.isConnected && !isExcluded(root));
   };
 
   const settleSuccess = (tag: string): number => {
@@ -81,6 +95,7 @@ export function createIslandLifecycleCoordinator(opts: {
   const evict = (tag: string): void => {
     retryScheduler.cancel(tag);
     queued.delete(tag);
+    pendingRewalkRoots.delete(tag);
   };
 
   const clear = (tags?: Iterable<string>): void => {
@@ -91,6 +106,7 @@ export function createIslandLifecycleCoordinator(opts: {
 
     retryScheduler.cancelAll();
     queued.clear();
+    pendingRewalkRoots.clear();
   };
 
   const isQueued = (tag: string): boolean => queued.has(tag);
@@ -122,6 +138,10 @@ export function createIslandLifecycleCoordinator(opts: {
         ancestor = ancestor.parentElement;
       }
 
+      if (queued.has(tagName)) {
+        addPendingRewalkRoot(tagName, el);
+        return;
+      }
       if (!queue(tagName)) return;
       input.onActivate(tagName, el, loader);
     };
@@ -190,6 +210,7 @@ export function createIslandLifecycleCoordinator(opts: {
     evict,
     clear,
     isQueued,
+    takePendingRewalkRoots,
     get initialWalkComplete() {
       return initialWalkComplete;
     },

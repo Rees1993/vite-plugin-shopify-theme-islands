@@ -18,6 +18,7 @@ export interface IslandElementOwnership {
   settleSuccess(tag: string): number;
   settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
   evict(tag: string): void;
+  takePendingRewalkRoots(tag: string): HTMLElement[];
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
 }
@@ -216,7 +217,12 @@ interface LoaderRunContext {
   loader: IslandLoader;
   ownership: Pick<
     IslandElementOwnership,
-    "isObserved" | "evict" | "settleSuccess" | "settleFailure" | "walk"
+    | "isObserved"
+    | "evict"
+    | "settleSuccess"
+    | "settleFailure"
+    | "takePendingRewalkRoots"
+    | "walk"
   >;
   surface: Pick<RuntimeSurface, "dispatchLoad" | "dispatchError">;
   platform: IslandElementPlatform;
@@ -243,7 +249,10 @@ function createLoaderRunner(ctx: LoaderRunContext): () => Promise<void> {
           duration: platform.now() - startedAt,
           attempt,
         } satisfies IslandLoadDetail);
-        if (element.children.length > 0) ownership.walk(element);
+        const rewalkRoots = [element, ...ownership.takePendingRewalkRoots(tagName)];
+        for (const root of rewalkRoots) {
+          if (root.children.length > 0) ownership.walk(root);
+        }
       })
       .catch((error) => {
         platform.console.error(`[islands] Failed to load <${tagName}>:`, error);

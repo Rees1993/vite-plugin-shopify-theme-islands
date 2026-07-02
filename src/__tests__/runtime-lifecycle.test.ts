@@ -122,6 +122,45 @@ describe("runtime lifecycle", () => {
       expect(childLoader).toHaveBeenCalledTimes(1);
     });
 
+    it("rewalks every same-tag parent instance after the shared parent loader resolves", async () => {
+      let resolveParent!: () => void;
+      const parentLoader = mock(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveParent = resolve;
+          }),
+      );
+      const firstChildLoader = mock(async () => {});
+      const secondChildLoader = mock(async () => {});
+
+      document.body.innerHTML = `
+        <parent-repeat>
+          <first-repeat-child></first-repeat-child>
+        </parent-repeat>
+        <parent-repeat>
+          <second-repeat-child></second-repeat-child>
+        </parent-repeat>
+      `;
+
+      suite.runtime.start(
+        suite.runtime.payload({
+          "/islands/parent-repeat.ts": parentLoader,
+          "/islands/first-repeat-child.ts": firstChildLoader,
+          "/islands/second-repeat-child.ts": secondChildLoader,
+        }),
+      );
+
+      await flush();
+      expect(parentLoader).toHaveBeenCalledTimes(1);
+      expect(firstChildLoader).not.toHaveBeenCalled();
+      expect(secondChildLoader).not.toHaveBeenCalled();
+
+      resolveParent();
+      await flush();
+      expect(firstChildLoader).toHaveBeenCalledTimes(1);
+      expect(secondChildLoader).toHaveBeenCalledTimes(1);
+    });
+
     it("grandchild loads only after mid-child cascade resolves", async () => {
       let resolveGrandParent!: () => void;
       const grandParentLoader = mock(
