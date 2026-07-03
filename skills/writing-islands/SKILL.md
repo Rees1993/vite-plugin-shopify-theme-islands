@@ -13,9 +13,10 @@ description: >
   overrides run after tag source derivation in both modes. Duplicate final tags
   fail at compile time. Ordinary implementation edits do not invalidate /revive;
   only Tag ownership changes do.
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts

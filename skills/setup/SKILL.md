@@ -16,9 +16,10 @@ description: >
   `client:interaction` values are runtime-validated against the same curated
   set: unsupported tokens warn and are ignored; if no supported tokens remain,
   the runtime falls back to the configured default events.
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/index.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts

@@ -13,9 +13,10 @@ description: >
   subtree/runtime helper coordination is owned by src/runtime-ownership.ts.
   Event dispatch is via src/runtime-surface.ts; debug-only diagnostics live in
   src/runtime-observability.ts. Shopify section/block events bridged by default.
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/events.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/runtime-ownership.ts

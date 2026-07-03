@@ -10,9 +10,10 @@ description: >
   cleanup via ctx.signal and ctx.onCleanup(). Matching is resolved by
   src/directive-spine.ts; cleanup, AND-latch, and timeout policy are owned by
   src/activation-session.ts.
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/contract.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
