@@ -18,6 +18,7 @@ export interface ActivationOwnership {
   settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
   evict(tag: string): void;
   clear(tags?: Iterable<string>): void;
+  takePendingRewalkRoots(tag: string): HTMLElement[];
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
 }

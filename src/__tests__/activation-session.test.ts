@@ -46,6 +46,7 @@ describe("activation-session", () => {
         settleFailure: () => ({ willRetry: false, attempt: 1 }),
         evict: mock((_tag: string) => {}),
         clear: mock((_tags?: Iterable<string>) => {}),
+        takePendingRewalkRoots: mock((_tag: string) => []),
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
@@ -96,6 +97,7 @@ describe("activation-session", () => {
         settleFailure: () => ({ willRetry: false, attempt: 1 }),
         evict: mock((_tag: string) => {}),
         clear: mock((_tags?: Iterable<string>) => {}),
+        takePendingRewalkRoots: mock((_tag: string) => []),
         watchCancellable: mock(() => () => {}),
         walk,
       },
@@ -166,6 +168,7 @@ describe("activation-session", () => {
         settleFailure: () => ({ willRetry: false, attempt: 1 }),
         evict: mock((_tag: string) => {}),
         clear: mock((_tags?: Iterable<string>) => {}),
+        takePendingRewalkRoots: mock((_tag: string) => []),
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
@@ -238,6 +241,7 @@ describe("activation-session", () => {
         settleFailure: () => ({ willRetry: false, attempt: 1 }),
         evict,
         clear: mock((_tags?: Iterable<string>) => {}),
+        takePendingRewalkRoots: mock((_tag: string) => []),
         watchCancellable: mock((_el, abort) => {
           cancel = abort;
           return () => {
@@ -300,6 +304,7 @@ describe("activation-session", () => {
         settleFailure: () => ({ willRetry: true, attempt: 1 }),
         evict,
         clear,
+        takePendingRewalkRoots: mock((_tag: string) => []),
         watchCancellable: mock(() => () => {}),
         walk: mock((_root: HTMLElement) => {}),
       },
