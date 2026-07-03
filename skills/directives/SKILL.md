@@ -17,7 +17,7 @@ description: >
 metadata:
   type: core
   library: vite-plugin-shopify-theme-islands
-  library_version: "2.0.0"
+  library_version: "2.0.1"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-waiters.ts
