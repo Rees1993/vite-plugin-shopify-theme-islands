@@ -44,6 +44,13 @@ domains:
           (directories, rootMargin, attribute names, etc.) instead of using
           zero-config. Produces noisy config and makes future changes confusing.
         priority: HIGH
+      - id: mixin-folder-added-to-directories
+        description: >
+          Agent sees a mixin-marked component outside the default islands
+          directory and adds its parent folder to directories. The mixin import
+          is already sufficient; directories is for convention-scanned folders
+          where every TS/JS file should be treated as an island.
+        priority: HIGH
       - id: not-reading-existing-config
         description: >
           Agent adds the plugin without reading the existing vite.config.ts.
@@ -62,6 +69,13 @@ domains:
           Agent moves island file outside the configured directories without
           adding the Island mixin import. Plugin cannot discover the file.
         priority: HIGH
+      - id: mixin-discovery-treated-as-directory-discovery
+        description: >
+          Agent treats Island mixin discovery and configured directory scanning
+          as cumulative requirements. A file with the Island import is already
+          discovered outside the islands directory; adding its folder to
+          directories broadens convention discovery to sibling files.
+        priority: MEDIUM
       - id: no-custom-elements-define
         description: >
           Agent exports a class but forgets to call customElements.define.

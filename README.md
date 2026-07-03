@@ -500,6 +500,11 @@ shopifyThemeIslands({
 });
 ```
 
+Use multiple directories when every `.ts`/`.js` file in each folder should be
+treated as an island by convention. Components that import
+`vite-plugin-shopify-theme-islands/island` are discovered independently, so you
+do not need to add their parent folder to `directories`.
+
 ### Using Vite aliases
 
 ```ts

@@ -14,9 +14,10 @@ description: >
   intentionally narrowed to the curated set `mouseenter`, `touchstart`, and
   `focusin`. Implementation: src/directive-spine.ts (gates), src/directive-waiters.ts
   (built-in waits), src/activation-session.ts (sequencing, custom latch, loader).
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-spine.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/directive-waiters.ts

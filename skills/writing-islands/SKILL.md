@@ -13,9 +13,10 @@ description: >
   overrides run after tag source derivation in both modes. Duplicate final tags
   fail at compile time. Ordinary implementation edits do not invalidate /revive;
   only Tag ownership changes do.
-type: core
-library: vite-plugin-shopify-theme-islands
-library_version: "2.0.0"
+metadata:
+  type: core
+  library: vite-plugin-shopify-theme-islands
+  library_version: "2.0.0"
 sources:
   - Rees1993/vite-plugin-shopify-theme-islands:src/island.ts
   - Rees1993/vite-plugin-shopify-theme-islands:src/discovery.ts
@@ -69,6 +70,11 @@ if (!customElements.get("cart-drawer")) {
 ```
 
 The plugin scans all TS/JS files for the `Island` import at build time and includes matches as lazy chunks. During dev, adding or removing a mixin island invalidates the virtual `vite-plugin-shopify-theme-islands/revive` module so the recompile picks up the new island set; Vite reloads that module when `reloadModule` exists, otherwise it falls back to a full reload. You do not need to restart the Vite process manually.
+
+Do not also add the mixin file's parent folder to `directories` just because it
+lives outside `/frontend/js/islands/`. The mixin import is sufficient; adding
+the folder switches that folder to convention discovery and may include sibling
+files that were not intended to be islands.
 
 For both directory-scanned files and mixin-marked files, the default Tag comes
 from the file's static `customElements.define("your-tag", ...)` call
@@ -153,6 +159,27 @@ customElements.define("search-bar", SearchBar);
 Without the `Island` import the plugin cannot detect the file. The element appears in the DOM but the module is never lazy-loaded.
 
 Source: src/discovery.ts — ISLAND_IMPORT_RE, discoverIslandFiles
+
+### MEDIUM Mixin file's folder added to `directories`
+
+Wrong:
+
+```ts
+// search-bar.ts already imports vite-plugin-shopify-theme-islands/island
+shopifyThemeIslands({
+  directories: ["/frontend/js/islands/", "/frontend/js/components/"],
+});
+```
+
+Correct:
+
+```ts
+shopifyThemeIslands();
+```
+
+Use `directories` only for folders where every `.ts`/`.js` file should be an
+island by convention. A mixin-marked component outside the default islands
+directory is already auto-discovered.
 
 ### HIGH Missing `customElements.define` call
 
