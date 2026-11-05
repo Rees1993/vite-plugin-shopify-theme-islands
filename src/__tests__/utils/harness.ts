@@ -173,6 +173,7 @@ export function installVisibilityDriver(cleanups: CleanupQueue): VisibilityDrive
           options = init;
         }
         observe(): void {}
+        unobserve(): void {}
         disconnect = disconnect;
       } as unknown as typeof IntersectionObserver,
     ),

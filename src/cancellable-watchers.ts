@@ -12,10 +12,12 @@ export interface CancellableWatchers {
    * removes just this callback (other callbacks for the same element stay).
    */
   watch(el: Element, cancel: () => void): () => void;
-  /** Fire and forget every callback whose element is no longer connected. */
-  cancelDetached(): void;
-  /** Fire and forget every callback whose element is inside `root`. */
-  cancelInRoot(root: Element): void;
+  /** Cancel detached elements and elements excluded by the current root policy. */
+  cancelDetached(shouldCancel?: (el: Element) => boolean): void;
+  /** Cancel the entire session, including explicitly included descendants. */
+  cancelAll(): void;
+  /** Cancel callbacks inside `root` that match the optional policy. */
+  cancelInRoot(root: Element, shouldCancel?: (el: Element) => boolean): void;
 }
 
 export function createCancellableWatchers(): CancellableWatchers {
@@ -34,19 +36,26 @@ export function createCancellableWatchers(): CancellableWatchers {
       };
     },
 
-    cancelDetached() {
+    cancelDetached(shouldCancel = () => false) {
       if (cancellableElements.size === 0) return;
       for (const [el, cancels] of cancellableElements) {
-        if (!el.isConnected) {
+        if (!el.isConnected || shouldCancel(el)) {
           cancellableElements.delete(el);
           for (const cancel of cancels) cancel();
         }
       }
     },
 
-    cancelInRoot(root) {
+    cancelAll() {
       for (const [el, cancels] of cancellableElements) {
-        if (el === root || root.contains(el)) {
+        cancellableElements.delete(el);
+        for (const cancel of cancels) cancel();
+      }
+    },
+
+    cancelInRoot(root, shouldCancel = () => true) {
+      for (const [el, cancels] of cancellableElements) {
+        if ((el === root || root.contains(el)) && shouldCancel(el)) {
           cancellableElements.delete(el);
           for (const cancel of cancels) cancel();
         }

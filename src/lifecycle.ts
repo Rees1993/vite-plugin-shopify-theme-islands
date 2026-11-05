@@ -1,11 +1,11 @@
 import { createCancellableWatchers } from "./cancellable-watchers.js";
 import type { IslandLoader } from "./contract.js";
-import { createRetryScheduler, type RetryPlatform } from "./retry-scheduler.js";
 
 export interface IslandLifecycleStartInput {
   getRoot(): HTMLElement | null;
   islandMap: Map<string, IslandLoader>;
   onActivate(tagName: string, el: HTMLElement, loader: () => Promise<unknown>): void;
+  isPending(tagName: string): boolean;
   onDiscover?(tagName: string, el: HTMLElement): void;
   onBeforeInitialWalk?: () => void;
   onInitialWalkComplete?: () => void;
@@ -15,35 +15,16 @@ export interface IslandLifecycle {
   excludeRoot(root: HTMLElement): void;
   includeRoot(root: HTMLElement): void;
   isObserved(el: Element): boolean;
-  settleSuccess(tag: string): number;
-  settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
-  evict(tag: string): void;
-  clear(tags?: Iterable<string>): void;
-  isQueued(tag: string): boolean;
-  takePendingRewalkRoots(tag: string): HTMLElement[];
   readonly initialWalkComplete: boolean;
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
   start(input: IslandLifecycleStartInput): { disconnect: () => void };
 }
 
-export interface IslandLifecyclePlatform extends RetryPlatform {}
-
-export function createIslandLifecycleCoordinator(opts: {
-  retries: number;
-  retryDelay: number;
-  platform?: IslandLifecyclePlatform;
-}): IslandLifecycle {
-  const queued = new Set<string>();
-  const loaded = new Set<string>();
-  const retryScheduler = createRetryScheduler({
-    retries: opts.retries,
-    retryDelay: opts.retryDelay,
-    platform: opts.platform,
-  });
+export function createIslandLifecycleCoordinator(): IslandLifecycle {
   const cancellableWatchers = createCancellableWatchers();
-  const rootPolicies = new Map<HTMLElement, "include" | "exclude">();
-  const pendingRewalkRoots = new Map<string, Set<HTMLElement>>();
+  let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
+  let stopped = false;
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
@@ -57,67 +38,14 @@ export function createIslandLifecycleCoordinator(opts: {
     return false;
   };
 
-  const queue = (tag: string): boolean => {
-    if (queued.has(tag) || loaded.has(tag)) return false;
-    queued.add(tag);
-    return true;
-  };
-
-  const addPendingRewalkRoot = (tag: string, root: HTMLElement): void => {
-    const roots = pendingRewalkRoots.get(tag) ?? new Set<HTMLElement>();
-    roots.add(root);
-    pendingRewalkRoots.set(tag, roots);
-  };
-
-  const takePendingRewalkRoots = (tag: string): HTMLElement[] => {
-    const roots = pendingRewalkRoots.get(tag);
-    pendingRewalkRoots.delete(tag);
-    return [...(roots ?? [])].filter((root) => root.isConnected && !isExcluded(root));
-  };
-
-  const settleSuccess = (tag: string): number => {
-    const attempt = retryScheduler.attemptOf(tag);
-    retryScheduler.cancel(tag);
-    queued.delete(tag);
-    loaded.add(tag);
-    return attempt;
-  };
-
-  const settleFailure = (
-    tag: string,
-    retry: () => void,
-  ): { willRetry: boolean; attempt: number } => {
-    const result = retryScheduler.scheduleRetry(tag, retry);
-    if (!result.willRetry) queued.delete(tag);
-    return result;
-  };
-
-  const evict = (tag: string): void => {
-    retryScheduler.cancel(tag);
-    queued.delete(tag);
-    pendingRewalkRoots.delete(tag);
-  };
-
-  const clear = (tags?: Iterable<string>): void => {
-    if (tags) {
-      for (const tag of tags) evict(tag);
-      return;
-    }
-
-    retryScheduler.cancelAll();
-    queued.clear();
-    pendingRewalkRoots.clear();
-  };
-
-  const isQueued = (tag: string): boolean => queued.has(tag);
-
   const start = (input: IslandLifecycleStartInput): { disconnect: () => void } => {
+    stopped = false;
     let disconnected = false;
     let initialized = false;
 
     const customElementFilter: NodeFilter = {
       acceptNode: (node) => {
-        if (isExcluded(node as Element)) return NodeFilter.FILTER_REJECT;
+        if (isExcluded(node as Element)) return NodeFilter.FILTER_SKIP;
         const tag = (node as Element).tagName.toLowerCase();
         if (!tag.includes("-")) return NodeFilter.FILTER_SKIP;
         if (!input.islandMap.has(tag)) return NodeFilter.FILTER_SKIP;
@@ -126,7 +54,7 @@ export function createIslandLifecycleCoordinator(opts: {
     };
 
     const activate = (el: HTMLElement): void => {
-      if (isExcluded(el)) return;
+      if (stopped || !el.isConnected || isExcluded(el)) return;
       const tagName = el.tagName.toLowerCase();
       const loader = input.islandMap.get(tagName);
       if (!loader) return;
@@ -134,15 +62,10 @@ export function createIslandLifecycleCoordinator(opts: {
 
       let ancestor = el.parentElement;
       while (ancestor) {
-        if (isQueued(ancestor.tagName.toLowerCase())) return;
+        if (input.isPending(ancestor.tagName.toLowerCase())) return;
         ancestor = ancestor.parentElement;
       }
 
-      if (queued.has(tagName)) {
-        addPendingRewalkRoot(tagName, el);
-        return;
-      }
-      if (!queue(tagName)) return;
       input.onActivate(tagName, el, loader);
     };
 
@@ -163,7 +86,7 @@ export function createIslandLifecycleCoordinator(opts: {
     };
 
     const observer = new MutationObserver((mutations) => {
-      cancellableWatchers.cancelDetached();
+      cancellableWatchers.cancelDetached(isExcluded);
       handleAdditions(mutations);
     });
 
@@ -187,6 +110,9 @@ export function createIslandLifecycleCoordinator(opts: {
 
     const disconnect = (): void => {
       disconnected = true;
+      stopped = true;
+      cancellableWatchers.cancelAll();
+      rootPolicies = new WeakMap();
       document.removeEventListener("DOMContentLoaded", init);
       observer.disconnect();
     };
@@ -197,20 +123,14 @@ export function createIslandLifecycleCoordinator(opts: {
   return {
     excludeRoot(root) {
       rootPolicies.set(root, "exclude");
-      cancellableWatchers.cancelInRoot(root);
+      cancellableWatchers.cancelInRoot(root, isExcluded);
     },
     includeRoot(root) {
       rootPolicies.set(root, "include");
     },
     isObserved(el) {
-      return !isExcluded(el);
+      return !stopped && el.isConnected && !isExcluded(el);
     },
-    settleSuccess,
-    settleFailure,
-    evict,
-    clear,
-    isQueued,
-    takePendingRewalkRoots,
     get initialWalkComplete() {
       return initialWalkComplete;
     },

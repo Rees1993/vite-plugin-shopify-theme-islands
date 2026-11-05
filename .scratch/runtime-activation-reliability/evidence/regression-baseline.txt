@@ -1,0 +1,67 @@
+bun test v1.4.4 (38afee6c8)
+
+.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts:
+(pass) Activation reliability prerequisites > control: activates a different Tag after a pending Island element is removed [8.30ms]
+55 |       { addedNodes: [added], removedNodes: [removed] } as unknown as MutationRecord,
+56 |     ]);
+57 |     await flush(0);
+58 |     runtime.scan(added);
+59 |     await flush(0);
+60 |     expect(loader).toHaveBeenCalledTimes(1);
+                        ^
+error: expect(received).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 0
+
+      at <anonymous> (/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts:60:20)
+(fail) Activation reliability prerequisites > activates a same-Tag replacement after pending Gate cancellation [6.04ms]
+65 |     document.body.innerHTML =
+66 |       "<competing-gates client:visible></competing-gates><competing-gates></competing-gates>";
+67 |     const loader = mock(async () => {});
+68 |     suite.runtime.start(suite.runtime.payload({ "/competing-gates.ts": loader }));
+69 |     await flush(0);
+70 |     expect(loader).toHaveBeenCalledTimes(1);
+                        ^
+error: expect(received).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 0
+
+      at <anonymous> (/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts:70:20)
+(fail) Activation reliability prerequisites > allows an eligible same-Tag occurrence to activate before a visibility-waiting occurrence [1.54ms]
+(pass) Activation reliability prerequisites > control: exhausted retries do not grant a parked occurrence another automatic attempt [2.00ms]
+(pass) Activation reliability prerequisites > control: successful automatic retry releases both earlier parent Subtrees [6.32ms]
+142 |     document.body.append(fresh);
+143 |     mutations.add(fresh);
+144 |     await flush(0);
+145 |     expect(parent).toHaveBeenCalledTimes(2);
+146 |     expect(gamma).toHaveBeenCalledTimes(1);
+147 |     expect(alpha).toHaveBeenCalledTimes(1);
+                        ^
+error: expect(received).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 0
+
+      at <anonymous> (/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts:147:19)
+(fail) Activation reliability prerequisites > releases earlier same-Tag children when a fresh parent succeeds after exhaustion [3.76ms]
+159 |     runtime.observe(parent);
+160 |     runtime.observe(child);
+161 |     runtime.unobserve(parent);
+162 |     timers.advance(10);
+163 |     await flush(0);
+164 |     expect(loader).toHaveBeenCalledTimes(1);
+                         ^
+error: expect(received).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 1
+Received number of calls: 0
+
+      at <anonymous> (/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts:164:20)
+(fail) Activation reliability prerequisites > keeps pending Gate work in an explicitly included child when its parent is unobserved [1.81ms]
+
+ 3 pass
+ 4 fail
+ 12 expect() calls
+Ran 7 tests across 1 file. [202.00ms]

@@ -19,7 +19,8 @@ interface OwnershipActivationCandidate {
 interface OwnershipSession {
   discover(tagName: string, element: HTMLElement): void;
   activate(candidate: OwnershipActivationCandidate): Promise<void>;
-  clear(tagNames?: Iterable<string>): void;
+  isPending(tagName: string): boolean;
+  clear(): void;
 }
 
 export interface ObservedRootSessionDeps {
@@ -33,24 +34,11 @@ export interface ObservedRootSessionDeps {
 export function createObservedRootSession(deps: ObservedRootSessionDeps): ObservedRootSession {
   let disconnected = false;
   let endReadyLog: (() => void) | undefined;
-  const membershipByRoot = new Map<HTMLElement, Map<HTMLElement, string>>();
-
-  const tagsStillObservedOutside = (ignoredRoot: HTMLElement): Set<string> => {
-    const tags = new Set<string>();
-    for (const [root, membership] of membershipByRoot) {
-      if (root === ignoredRoot) continue;
-      for (const tagName of membership.values()) tags.add(tagName);
-    }
-    return tags;
-  };
-
   const disconnectLifecycle = deps.lifecycle.start({
     getRoot: () => document.body,
     islandMap: deps.islandMap,
+    isPending: (tag) => deps.session.isPending(tag),
     onDiscover: (tagName, element) => {
-      for (const [root, membership] of membershipByRoot) {
-        if (root.contains(element)) membership.set(element, tagName);
-      }
       deps.session.discover(tagName, element);
     },
     onActivate: (tagName, element, loader) => {
@@ -70,10 +58,9 @@ export function createObservedRootSession(deps: ObservedRootSessionDeps): Observ
   });
 
   const disconnectRoot = (root: HTMLElement | null = document.body): void => {
-    if (root !== document.body) return;
+    if (disconnected || root !== document.body) return;
     deps.lifecycle.excludeRoot(document.body);
     disconnected = true;
-    membershipByRoot.clear();
     deps.session.clear();
     endReadyLog?.();
     endReadyLog = undefined;
@@ -89,23 +76,16 @@ export function createObservedRootSession(deps: ObservedRootSessionDeps): Observ
     observe(root = document.body) {
       if (disconnected || !root) return;
       if (root !== document.body) {
-        membershipByRoot.set(root, membershipByRoot.get(root) ?? new Map());
         deps.lifecycle.includeRoot(root);
       }
       deps.lifecycle.walk(root);
     },
 
     unobserve(root = document.body) {
+      if (disconnected) return;
       if (root && root !== document.body) {
-        const membership = membershipByRoot.get(root);
-        const retainedTags = tagsStillObservedOutside(root);
-        const tagsToClear = new Set<string>();
-        for (const tagName of membership?.values() ?? []) {
-          if (!retainedTags.has(tagName)) tagsToClear.add(tagName);
-        }
-        membershipByRoot.delete(root);
         deps.lifecycle.excludeRoot(root);
-        deps.session.clear(tagsToClear);
+
         return;
       }
       disconnectRoot(root);

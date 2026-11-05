@@ -1,3 +1,4 @@
+import { createRetryScheduler } from "./retry-scheduler.js";
 import type { IslandLoader } from "./contract.js";
 import type { DirectiveSpine } from "./directive-spine.js";
 import { type DirectiveWaiters } from "./directive-waiters.js";
@@ -14,11 +15,6 @@ export interface ActivationCandidate {
 export interface ActivationOwnership {
   readonly initialWalkComplete: boolean;
   isObserved(el: Element): boolean;
-  settleSuccess(tag: string): number;
-  settleFailure(tag: string, retry: () => void): { willRetry: boolean; attempt: number };
-  evict(tag: string): void;
-  clear(tags?: Iterable<string>): void;
-  takePendingRewalkRoots(tag: string): HTMLElement[];
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
 }
@@ -31,6 +27,7 @@ export interface ActivationPlatform {
 export interface ActivationSessionDeps {
   spine: DirectiveSpine;
   directiveTimeout: number;
+  retry: { retries: number; delay: number };
   waiters?: DirectiveWaiters;
   ownership: ActivationOwnership;
   surface: {
@@ -48,20 +45,41 @@ export interface ActivationSessionDeps {
 export interface ActivationSession {
   discover(tagName: string, element: HTMLElement): void;
   activate(candidate: ActivationCandidate): Promise<void>;
-  clear(tagNames?: Iterable<string>): void;
+  isPending(tagName: string): boolean;
+  clear(): void;
 }
 
 export function createActivationSession(deps: ActivationSessionDeps): ActivationSession {
-  const clear = (tagNames?: Iterable<string>): void => {
-    if (tagNames) {
-      const tags = [...tagNames];
-      deps.ownership.clear(tags);
-      deps.observability.clear(tags);
-      return;
-    }
-
-    deps.ownership.clear();
+  interface PendingElement {
+    controller: AbortController;
+    unwatch(): void;
+  }
+  interface TagActivation {
+    phase: "waiting" | "loading" | "retrying" | "exhausted" | "loaded";
+    elements: Map<HTMLElement, PendingElement>;
+  }
+  const tags = new Map<string, TagActivation>();
+  const retries = createRetryScheduler({
+    retries: deps.retry.retries,
+    retryDelay: deps.retry.delay,
+  });
+  let stopped = false;
+  const clear = (): void => {
+    stopped = true;
+    retries.cancelAll();
+    for (const tag of tags.keys()) release(tag);
     deps.observability.clear();
+  };
+
+  const release = (tag: string): void => {
+    const state = tags.get(tag);
+    tags.delete(tag);
+    retries.cancel(tag);
+    deps.observability.clear([tag]);
+    for (const work of state?.elements.values() ?? []) {
+      work.controller.abort();
+      work.unwatch();
+    }
   };
 
   const discover = (tagName: string, element: HTMLElement): void => {
@@ -70,7 +88,90 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
   };
 
   const activate = async ({ tagName, element, loader }: ActivationCandidate): Promise<void> => {
+    if (stopped || !deps.ownership.isObserved(element)) return;
+    let state = tags.get(tagName);
+    if (!state) {
+      state = { phase: "waiting", elements: new Map() };
+      tags.set(tagName, state);
+    }
+    if (state.phase === "loaded" || state.elements.has(element)) return;
+    const current = state;
+    const controller = new AbortController();
+    const unwatch = deps.ownership.watchCancellable(element, () => {
+      if (current.elements.get(element)?.controller !== controller) return;
+      current.elements.delete(element);
+      controller.abort();
+      if (current.elements.size === 0 && current.phase !== "loading") {
+        release(tagName);
+      }
+    });
+    state.elements.set(element, { controller, unwatch });
+    if (state.phase === "exhausted") state.phase = "waiting";
+    const isActive = (): boolean => {
+      if (stopped || tags.get(tagName) !== current) return false;
+      if (
+        [...current.elements.keys()].some(
+          (root) => root.isConnected && deps.ownership.isObserved(root),
+        )
+      )
+        return true;
+      release(tagName);
+      return false;
+    };
+    const run = async (): Promise<void> => {
+      if (
+        controller.signal.aborted ||
+        !element.isConnected ||
+        !deps.ownership.isObserved(element) ||
+        current.phase !== "waiting" ||
+        !isActive()
+      )
+        return;
+      current.phase = "loading";
+      const attempt = async (): Promise<void> => {
+        if (!isActive()) return;
+        current.phase = "loading";
+        const startedAt = deps.platform.now();
+        try {
+          await loader();
+        } catch (error) {
+          if (!isActive()) return;
+          deps.platform.console.error(`[islands] Failed to load <${tagName}>:`, error);
+          const result = retries.scheduleRetry(tagName, () => {
+            void attempt();
+          });
+          current.phase = result.willRetry ? "retrying" : "exhausted";
+          if (!result.willRetry) {
+            for (const work of current.elements.values()) work.controller.abort();
+          }
+          deps.surface.dispatchError({ tag: tagName, error, attempt: result.attempt });
+          return;
+        }
+        if (!isActive()) return;
+        current.phase = "loaded";
+        const attemptNumber = retries.attemptOf(tagName);
+        retries.cancel(tagName);
+        const roots = [...current.elements.keys()];
+        const pending = [...current.elements.values()];
+        current.elements.clear();
+        for (const work of pending) work.unwatch();
+        for (const work of pending) work.controller.abort();
+        if (stopped || tags.get(tagName) !== current) return;
+        deps.surface.dispatchLoad({
+          tag: tagName,
+          duration: deps.platform.now() - startedAt,
+          attempt: attemptNumber,
+        });
+        for (const root of roots) {
+          if (root.isConnected && deps.ownership.isObserved(root) && root.children.length)
+            deps.ownership.walk(root);
+        }
+      };
+      await attempt();
+    };
+    if (current.phase === "loading" || current.phase === "retrying") return;
     const plan = deps.spine.planGates(element);
+    const log = deps.surface.createLogger(tagName);
     deps.observability.noteInitialWaits(
       tagName,
       plan.initialDiagnosticParts,
@@ -80,19 +181,42 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     await activateIslandElement({
       tagName,
       element,
-      loader,
+      run,
+      onError: (error, attribute) => {
+        if (controller.signal.aborted || tags.get(tagName) !== current) return;
+        controller.abort();
+        if (
+          current.phase === "waiting" &&
+          [...current.elements.values()].every((work) => work.controller.signal.aborted)
+        )
+          current.phase = "exhausted";
+        deps.platform.console.error(
+          attribute === null
+            ? `[islands] Built-in directive failed for <${tagName}>:`
+            : `[islands] Custom directive ${attribute} failed for <${tagName}>:`,
+          error,
+        );
+        deps.surface.dispatchError({ tag: tagName, error, attempt: 1 });
+        log.flush(
+          attribute === null ? "aborted (directive error)" : "aborted (custom directive error)",
+        );
+      },
+      signal: controller.signal,
+      log,
+      console: deps.platform.console,
       plan,
       directiveTimeout: deps.directiveTimeout,
       waiters: deps.waiters,
-      ownership: deps.ownership,
-      surface: deps.surface,
-      platform: deps.platform,
     });
   };
 
   return {
     discover,
     activate,
+    isPending: (tagName) => {
+      const state = tags.get(tagName);
+      return !!state && state.phase !== "loaded";
+    },
     clear,
   };
 }

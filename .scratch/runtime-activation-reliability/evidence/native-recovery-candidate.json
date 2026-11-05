@@ -1,0 +1,113 @@
+{
+  "capturedAt": "2026-11-05T23:38:48.234Z",
+  "pluginCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+  "runtimeBundleSha256": "debbe53d063f2e6cd93ab313fa268d7ae46f812d29248e2978f99bcf2f2955ac",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-recovery.html",
+  "methodology": "Native Chromium functional fixture with real customElements registration and MutationObserver",
+  "results": [
+    {
+      "mode": "initial-success",
+      "actual": {
+        "parent": 1,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": []
+      },
+      "expected": {
+        "parent": 1,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "stop",
+      "actual": {
+        "parent": 1,
+        "alpha": 0,
+        "beta": 0,
+        "gamma": 0,
+        "parentRegistered": false,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 1,
+        "alpha": 0,
+        "beta": 0,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "retry",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "fresh",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1
+      },
+      "pass": true
+    },
+    {
+      "mode": "fresh-and-scan",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1
+      },
+      "pass": true
+    }
+  ]
+}

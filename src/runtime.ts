@@ -15,6 +15,7 @@
  */
 
 import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./contract.js";
+import { createDirectiveWaiters } from "./directive-waiters.js";
 import { createActivationSession } from "./activation-session.js";
 import {
   createDirectiveSpine,
@@ -53,10 +54,7 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     : DEFAULT_DIRECTIVE_SPINE;
   const spine = extendDirectiveSpine(baseSpine, payload.customDirectives);
 
-  const lifecycle = createIslandLifecycleCoordinator({
-    retries: opts.retry.retries,
-    retryDelay: opts.retry.delay,
-  });
+  const lifecycle = createIslandLifecycleCoordinator();
   const observability = createRuntimeObservability({
     debug: opts.debug,
     isObserved: (element) => lifecycle.isObserved(element),
@@ -71,6 +69,8 @@ export function revive(payload: RevivePayload): ReviveRuntime {
   const session = createActivationSession({
     spine,
     directiveTimeout: opts.directiveTimeout,
+    retry: opts.retry,
+    waiters: createDirectiveWaiters(),
     ownership: lifecycle,
     surface: debugBoundSurface,
     observability,

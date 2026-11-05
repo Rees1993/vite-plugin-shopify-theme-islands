@@ -1,0 +1,20 @@
+{
+  "pluginCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+  "bunVersion": "1.4.4",
+  "standardSuite": {
+    "passed": 336,
+    "failed": 0,
+    "files": 26
+  },
+  "typeCheck": "pass",
+  "lint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "optInRegressionPack": {
+    "passedControls": 3,
+    "failedDesiredBehaviorCases": 4,
+    "command": "bun test ./.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts"
+  },
+  "sourceChanges": false
+}

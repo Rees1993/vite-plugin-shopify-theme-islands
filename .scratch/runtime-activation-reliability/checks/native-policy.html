@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Observed root policy</title><body><script type="module">
+import { revive } from './runtime.js';
+window.addEventListener('load', async () => {
+  document.body.innerHTML = '<section id="excluded"><section id="included"></section></section>';
+  let calls = 0;
+  const runtime = revive({ islands: { '/native-nested.ts': async () => { calls++; customElements.define('native-nested', class extends HTMLElement {}); } } });
+  const parent = document.getElementById('excluded');
+  const child = document.getElementById('included');
+  runtime.observe(child);
+  runtime.unobserve(parent);
+  child.innerHTML = '<native-nested></native-nested>';
+  runtime.scan();
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const result = { mode: 'scan-included-child-through-excluded-parent', pass: calls === 1, calls };
+  runtime.disconnect();
+  const output = document.createElement('pre'); output.id = 'results'; output.textContent = JSON.stringify([result]); document.body.replaceChildren(output);
+});
+</script></body></html>

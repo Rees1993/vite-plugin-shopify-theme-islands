@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-11-05T23:39:26.673Z",
+  "pluginCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+  "runtimeBundleSha256": "debbe53d063f2e6cd93ab313fa268d7ae46f812d29248e2978f99bcf2f2955ac",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-policy.html",
+  "methodology": "Native Chromium functional fixture with real customElements registration and MutationObserver",
+  "results": [
+    {
+      "mode": "scan-included-child-through-excluded-parent",
+      "pass": true,
+      "calls": 1
+    }
+  ]
+}
