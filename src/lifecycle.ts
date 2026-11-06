@@ -24,11 +24,13 @@ export interface IslandLifecycle {
 export function createIslandLifecycleCoordinator(): IslandLifecycle {
   const cancellableWatchers = createCancellableWatchers();
   let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
+  let hasExclusions = false;
   let stopped = false;
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
 
   const isExcluded = (el: Element): boolean => {
+    if (!hasExclusions) return false;
     let current: Element | null = el;
     while (current) {
       const policy = rootPolicies.get(current as HTMLElement);
@@ -113,6 +115,7 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
       stopped = true;
       cancellableWatchers.cancelAll();
       rootPolicies = new WeakMap();
+      hasExclusions = false;
       document.removeEventListener("DOMContentLoaded", init);
       observer.disconnect();
     };
@@ -122,6 +125,7 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
 
   return {
     excludeRoot(root) {
+      hasExclusions = true;
       rootPolicies.set(root, "exclude");
       cancellableWatchers.cancelInRoot(root, isExcluded);
     },
