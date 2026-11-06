@@ -40,6 +40,27 @@ window.addEventListener('load', async () => {
   results.push({ mode: 'included-child-pending-gate-survives-parent-exclusion', pass: includedCalls === 1 && !!customElements.get('native-included-pending'), calls: includedCalls });
   included.disconnect();
 
+  document.body.innerHTML = '<section id="cascade-parent"><native-excluded-parent><section id="cascade-child"><native-retained-child></native-retained-child></section><native-excluded-child></native-excluded-child></native-excluded-parent></section>';
+  let finishParent;
+  let retainedCalls = 0;
+  let excludedCalls = 0;
+  const cascade = revive({ islands: {
+    '/native-excluded-parent.ts': async () => {
+      await new Promise(resolve => { finishParent = resolve; });
+      customElements.define('native-excluded-parent', class extends HTMLElement {});
+    },
+    '/native-retained-child.ts': async () => { retainedCalls++; customElements.define('native-retained-child', class extends HTMLElement {}); },
+    '/native-excluded-child.ts': async () => { excludedCalls++; customElements.define('native-excluded-child', class extends HTMLElement {}); },
+  } });
+  await waitFor(() => !!finishParent);
+  cascade.observe(document.getElementById('cascade-child'));
+  cascade.unobserve(document.getElementById('cascade-parent'));
+  const beforeParentSuccess = retainedCalls;
+  finishParent();
+  await waitFor(() => retainedCalls === 1);
+  results.push({ mode: 'included-child-resumes-after-excluded-ancestor-import', pass: beforeParentSuccess === 0 && retainedCalls === 1 && excludedCalls === 0 && !!customElements.get('native-retained-child'), beforeParentSuccess, retainedCalls, excludedCalls });
+  cascade.disconnect();
+
   const output = document.createElement('pre'); output.id = 'results'; output.textContent = JSON.stringify(results); document.body.replaceChildren(output);
 });
 </script></body></html>

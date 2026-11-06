@@ -1,0 +1,1427 @@
+{
+  "capturedAt": "2026-11-06T22:11:18.067Z",
+  "reference": "921958693f0386cee7fec1c945e617e4342c256d",
+  "browser": "Chrome/157.0.8103.38",
+  "hashes": {
+    "reference": "97d7e1583071f1e7dd319606a52b1ce108ad7218457ffbfb9564e5533448afd2",
+    "candidate": "c49989682d4544a005b08083ddb1906de42ab5a5b08fa3ee30867a60d168c5ac"
+  },
+  "methodology": "Synthetic 1000 repeated child Islands behind one unresolved Island import. 5 warmups then 40 samples, alternating variant order, CPU1/4. DOM construction excluded. Setup synchronous; settlement drains 12 microtasks; mutation drains two checkpoints after adding an unrelated span. No custom element registration, network or debug diagnostics. Timings informational.",
+  "samples": [
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 1,
+      "setup": 0.5,
+      "mutation": 0.09999990463256836,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 1,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 2,
+      "setup": 0.40000009536743164,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 2,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 1.3000000715255737
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 3,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.5
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 3,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 0.9000000953674316
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 4,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.0999999046325684
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 4,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 5,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 5,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.0999999046325684
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 6,
+      "setup": 0.2999999523162842,
+      "mutation": 0.10000002384185791,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 6,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.100000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 7,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 7,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 8,
+      "setup": 0.3999999761581421,
+      "mutation": 0.10000002384185791,
+      "settlement": 0.8000000715255737
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 8,
+      "setup": 0.3999999761581421,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.100000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 9,
+      "setup": 0.3999999761581421,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.5
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 9,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 0.7999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 10,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 10,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 11,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 11,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 12,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 12,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.600000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 13,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 13,
+      "setup": 0.5999999046325684,
+      "mutation": 0,
+      "settlement": 0.9000000953674316
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 14,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 14,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.600000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 15,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 15,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 0.8999999761581421
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 16,
+      "setup": 0.3999999761581421,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.600000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 16,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 17,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.3000000715255737
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 17,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 18,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 18,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 19,
+      "setup": 0.5999999046325684,
+      "mutation": 0,
+      "settlement": 1.600000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 19,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 20,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.100000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 20,
+      "setup": 0.5,
+      "mutation": 0.09999990463256836,
+      "settlement": 1.3000000715255737
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 21,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.6999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 21,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 22,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 22,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 23,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 23,
+      "setup": 0.5999999046325684,
+      "mutation": 0,
+      "settlement": 0.9000000953674316
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 24,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 24,
+      "setup": 0.3999999761581421,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.8000000715255737
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 25,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 25,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 26,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.0999999046325684
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 26,
+      "setup": 0.5999999046325684,
+      "mutation": 0,
+      "settlement": 1.7000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 27,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 27,
+      "setup": 0.3999999761581421,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 28,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.0999999046325684
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 28,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 29,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.5
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 29,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 30,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 30,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 31,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.7000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 31,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 32,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 32,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 33,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.7000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 33,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 34,
+      "setup": 0.5999999046325684,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 34,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.399999976158142
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 35,
+      "setup": 0.6000000238418579,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.5
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 35,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.2000000476837158
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 36,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1.1999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 36,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 2.200000047683716
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 37,
+      "setup": 0.5,
+      "mutation": 0.09999990463256836,
+      "settlement": 1.4000000953674316
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 37,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.100000023841858
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 38,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 38,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.5
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 39,
+      "setup": 0.5,
+      "mutation": 0,
+      "settlement": 1.6999999284744263
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 39,
+      "setup": 0.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "reference",
+      "sample": 40,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1
+    },
+    {
+      "cpuRate": 1,
+      "label": "candidate",
+      "sample": 40,
+      "setup": 0.6000000238418579,
+      "mutation": 0,
+      "settlement": 1.2999999523162842
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 1,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 4.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 1,
+      "setup": 1.600000023841858,
+      "mutation": 0,
+      "settlement": 4.599999904632568
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 2,
+      "setup": 1.5,
+      "mutation": 0.20000004768371582,
+      "settlement": 2.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 2,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 3.5
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 3,
+      "setup": 1.899999976158142,
+      "mutation": 0,
+      "settlement": 3.8000000715255737
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 3,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 2.6999999284744263
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 4,
+      "setup": 1.3000000715255737,
+      "mutation": 0,
+      "settlement": 3.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 4,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 4.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 5,
+      "setup": 1.600000023841858,
+      "mutation": 0,
+      "settlement": 5.600000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 5,
+      "setup": 1.0999999046325684,
+      "mutation": 0.10000002384185791,
+      "settlement": 2.600000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 6,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 3
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 6,
+      "setup": 0.8000000715255737,
+      "mutation": 0.7999999523162842,
+      "settlement": 4.300000071525574
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 7,
+      "setup": 1.6999999284744263,
+      "mutation": 0,
+      "settlement": 4.800000071525574
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 7,
+      "setup": 1.5,
+      "mutation": 0.09999990463256836,
+      "settlement": 3
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 8,
+      "setup": 1.6999999284744263,
+      "mutation": 0,
+      "settlement": 4
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 8,
+      "setup": 2,
+      "mutation": 0.2999999523162842,
+      "settlement": 5.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 9,
+      "setup": 26.899999976158142,
+      "mutation": 0.10000002384185791,
+      "settlement": 5.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 9,
+      "setup": 2.600000023841858,
+      "mutation": 0.3999999761581421,
+      "settlement": 4.100000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 10,
+      "setup": 2,
+      "mutation": 0,
+      "settlement": 3.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 10,
+      "setup": 1.899999976158142,
+      "mutation": 0,
+      "settlement": 3.799999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 11,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 4.300000071525574
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 11,
+      "setup": 1.8000000715255737,
+      "mutation": 0,
+      "settlement": 3.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 12,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 3.5
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 12,
+      "setup": 1.6999999284744263,
+      "mutation": 0,
+      "settlement": 5.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 13,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 4.199999928474426
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 13,
+      "setup": 1.7999999523162842,
+      "mutation": 0,
+      "settlement": 3.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 14,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 3.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 14,
+      "setup": 1.899999976158142,
+      "mutation": 0,
+      "settlement": 4.300000071525574
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 15,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 4.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 15,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 3.1999999284744263
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 16,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 4.799999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 16,
+      "setup": 2,
+      "mutation": 0.2999999523162842,
+      "settlement": 3.600000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 17,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 4.100000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 17,
+      "setup": 1.5999999046325684,
+      "mutation": 0,
+      "settlement": 2.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 18,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 3.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 18,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 3.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 19,
+      "setup": 1.6999999284744263,
+      "mutation": 0,
+      "settlement": 4
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 19,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 4.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 20,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 2.799999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 20,
+      "setup": 1.3000000715255737,
+      "mutation": 0,
+      "settlement": 3.5999999046325684
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 21,
+      "setup": 2,
+      "mutation": 0.10000002384185791,
+      "settlement": 3.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 21,
+      "setup": 1.3000000715255737,
+      "mutation": 0,
+      "settlement": 3.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 22,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 2.6999999284744263
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 22,
+      "setup": 1.3000000715255737,
+      "mutation": 0,
+      "settlement": 4.199999928474426
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 23,
+      "setup": 1.1999999284744263,
+      "mutation": 0.5,
+      "settlement": 3.600000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 23,
+      "setup": 1.100000023841858,
+      "mutation": 0,
+      "settlement": 3.0999999046325684
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 24,
+      "setup": 1.600000023841858,
+      "mutation": 0,
+      "settlement": 2.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 24,
+      "setup": 1.600000023841858,
+      "mutation": 0,
+      "settlement": 3.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 25,
+      "setup": 1.5999999046325684,
+      "mutation": 0,
+      "settlement": 3.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 25,
+      "setup": 1.7999999523162842,
+      "mutation": 0,
+      "settlement": 2.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 26,
+      "setup": 1.5,
+      "mutation": 0.20000004768371582,
+      "settlement": 2.5
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 26,
+      "setup": 2.1999999284744263,
+      "mutation": 0,
+      "settlement": 3.399999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 27,
+      "setup": 1.600000023841858,
+      "mutation": 0.10000002384185791,
+      "settlement": 3.6999999284744263
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 27,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 2.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 28,
+      "setup": 1.7999999523162842,
+      "mutation": 0,
+      "settlement": 2.5
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 28,
+      "setup": 1.7999999523162842,
+      "mutation": 0,
+      "settlement": 4
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 29,
+      "setup": 1.5999999046325684,
+      "mutation": 0.40000009536743164,
+      "settlement": 3.799999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 29,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 3.1999999284744263
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 30,
+      "setup": 1.399999976158142,
+      "mutation": 0.10000002384185791,
+      "settlement": 2.299999952316284
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 30,
+      "setup": 1.899999976158142,
+      "mutation": 0,
+      "settlement": 3.899999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 31,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 4.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 31,
+      "setup": 2.1999999284744263,
+      "mutation": 0,
+      "settlement": 2.3000000715255737
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 32,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 3
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 32,
+      "setup": 1.7000000476837158,
+      "mutation": 0,
+      "settlement": 5.399999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 33,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 3.899999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 33,
+      "setup": 1.2000000476837158,
+      "mutation": 0.10000002384185791,
+      "settlement": 3.899999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 34,
+      "setup": 1.600000023841858,
+      "mutation": 0.09999990463256836,
+      "settlement": 3.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 34,
+      "setup": 2.399999976158142,
+      "mutation": 0,
+      "settlement": 5
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 35,
+      "setup": 1.399999976158142,
+      "mutation": 0,
+      "settlement": 4.800000071525574
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 35,
+      "setup": 0.6999999284744263,
+      "mutation": 0,
+      "settlement": 3.8000000715255737
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 36,
+      "setup": 1.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 3.100000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 36,
+      "setup": 1.3000000715255737,
+      "mutation": 0,
+      "settlement": 4.599999904632568
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 37,
+      "setup": 1.600000023841858,
+      "mutation": 0,
+      "settlement": 4.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 37,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 3.5
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 38,
+      "setup": 1.899999976158142,
+      "mutation": 0.10000002384185791,
+      "settlement": 2.8000000715255737
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 38,
+      "setup": 1.5,
+      "mutation": 0.10000002384185791,
+      "settlement": 4.399999976158142
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 39,
+      "setup": 1.600000023841858,
+      "mutation": 0.10000002384185791,
+      "settlement": 4.200000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 39,
+      "setup": 1.6999999284744263,
+      "mutation": 0,
+      "settlement": 2.700000047683716
+    },
+    {
+      "cpuRate": 4,
+      "label": "reference",
+      "sample": 40,
+      "setup": 1.5,
+      "mutation": 0,
+      "settlement": 3.100000023841858
+    },
+    {
+      "cpuRate": 4,
+      "label": "candidate",
+      "sample": 40,
+      "setup": 1.2999999523162842,
+      "mutation": 0,
+      "settlement": 4.100000023841858
+    }
+  ],
+  "errors": [],
+  "summary": [
+    {
+      "cpuRate": 1,
+      "metric": "setup",
+      "label": "reference",
+      "median": 0.5,
+      "p90": 0.6000000238418579,
+      "range": [
+        0.2999999523162842,
+        0.6000000238418579
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "metric": "setup",
+      "label": "candidate",
+      "median": 0.5,
+      "p90": 0.6000000238418579,
+      "range": [
+        0.3999999761581421,
+        0.6000000238418579
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "metric": "mutation",
+      "label": "reference",
+      "median": 0,
+      "p90": 0.10000002384185791,
+      "range": [
+        0,
+        0.10000002384185791
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "metric": "mutation",
+      "label": "candidate",
+      "median": 0,
+      "p90": 0.10000002384185791,
+      "range": [
+        0,
+        0.10000002384185791
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "metric": "settlement",
+      "label": "reference",
+      "median": 1,
+      "p90": 1.1999999284744263,
+      "range": [
+        0.7999999523162842,
+        1.600000023841858
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "metric": "settlement",
+      "label": "candidate",
+      "median": 1.399999976158142,
+      "p90": 1.7000000476837158,
+      "range": [
+        1.100000023841858,
+        2.200000047683716
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "setup",
+      "label": "reference",
+      "median": 1.5,
+      "p90": 1.8000000715255737,
+      "range": [
+        0.6999999284744263,
+        2.600000023841858
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "setup",
+      "label": "candidate",
+      "median": 1.600000023841858,
+      "p90": 2,
+      "range": [
+        0.8000000715255737,
+        26.899999976158142
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "mutation",
+      "label": "reference",
+      "median": 0,
+      "p90": 0.10000002384185791,
+      "range": [
+        0,
+        0.3999999761581421
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "mutation",
+      "label": "candidate",
+      "median": 0,
+      "p90": 0.2999999523162842,
+      "range": [
+        0,
+        0.7999999523162842
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "settlement",
+      "label": "reference",
+      "median": 3.100000023841858,
+      "p90": 4,
+      "range": [
+        2.299999952316284,
+        4.799999952316284
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "metric": "settlement",
+      "label": "candidate",
+      "median": 4.199999928474426,
+      "p90": 5.299999952316284,
+      "range": [
+        3.399999976158142,
+        5.700000047683716
+      ]
+    }
+  ]
+}

@@ -14,6 +14,52 @@ beforeEach(() => suite.reset());
 afterEach(() => suite.cleanup());
 
 describe("shared Tag Activation", () => {
+  it("releases an explicitly included child when its excluded ancestor's import finishes", async () => {
+    let finish!: () => void;
+    const child = mock(async () => {});
+    document.body.innerHTML =
+      '<section id="parent-root"><excluded-parent><section id="child-root"><retained-child></retained-child></section></excluded-parent></section>';
+    const runtime = suite.runtime.start(
+      suite.runtime.payload({
+        "/excluded-parent.ts": () => new Promise<void>((resolve) => (finish = resolve)),
+        "/retained-child.ts": child,
+      }),
+    );
+    await flush(0);
+    runtime.observe(document.getElementById("child-root")!);
+    runtime.unobserve(document.getElementById("parent-root")!);
+    expect(child).not.toHaveBeenCalled();
+    finish();
+    await flush(0);
+    expect(child).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["exclude-child", "disconnect", "detach-child"])(
+    "does not release a blocked included child after %s",
+    async (action) => {
+      let finish!: () => void;
+      const child = mock(async () => {});
+      document.body.innerHTML =
+        '<section id="parent-root"><excluded-parent><section id="child-root"><retained-child></retained-child></section></excluded-parent></section>';
+      const runtime = suite.runtime.start(
+        suite.runtime.payload({
+          "/excluded-parent.ts": () => new Promise<void>((resolve) => (finish = resolve)),
+          "/retained-child.ts": child,
+        }),
+      );
+      await flush(0);
+      const included = document.getElementById("child-root")!;
+      runtime.observe(included);
+      runtime.unobserve(document.getElementById("parent-root")!);
+      if (action === "exclude-child") runtime.unobserve(included);
+      else if (action === "disconnect") runtime.disconnect();
+      else included.remove();
+      finish();
+      await flush(0);
+      expect(child).not.toHaveBeenCalled();
+    },
+  );
+
   it("keeps the first observed occurrence's Gate policy until it opens or is cancelled", async () => {
     const visibility = installVisibilityDriver(suite.cleanups);
     document.body.innerHTML =

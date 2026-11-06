@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-11-06T22:06:14.507Z",
+  "pluginCommit": "921958693f0386cee7fec1c945e617e4342c256d",
+  "sourceRoot": "/tmp/islands-parent-reference",
+  "runtimeBundleSha256": "97d7e1583071f1e7dd319606a52b1ce108ad7218457ffbfb9564e5533448afd2",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-policy.html",
+  "errors": [
+    "Native case failed: included-child-resumes-after-excluded-ancestor-import"
+  ],
+  "results": [
+    {
+      "mode": "scan-included-child-through-excluded-parent",
+      "pass": true,
+      "calls": 1
+    },
+    {
+      "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+      "pass": true,
+      "beforeRemoval": 0,
+      "calls": 1
+    },
+    {
+      "mode": "included-child-pending-gate-survives-parent-exclusion",
+      "pass": true,
+      "calls": 1
+    },
+    {
+      "mode": "included-child-resumes-after-excluded-ancestor-import",
+      "pass": false,
+      "beforeParentSuccess": 0,
+      "retainedCalls": 0,
+      "excludedCalls": 0
+    }
+  ],
+  "methodology": "Native Chromium runtime-only fixtures; timings informational; deterministic correctness and resource budgets enforced"
+}

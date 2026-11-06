@@ -17,6 +17,7 @@ export interface ActivationOwnership {
   isObserved(el: Element): boolean;
   watchCancellable(el: Element, cancel: () => void): () => void;
   walk(root: HTMLElement): void;
+  resumeBlocked(tagName: string): void;
 }
 
 export interface ActivationPlatform {
@@ -82,6 +83,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
       work.controller?.abort();
       work.unwatch();
     }
+    if (!stopped) deps.ownership.resumeBlocked(tag);
   };
 
   const discover = (tagName: string, element: HTMLElement): void => {
@@ -191,6 +193,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
           if (root.isConnected && deps.ownership.isObserved(root) && root.children.length)
             deps.ownership.walk(root);
         }
+        deps.ownership.resumeBlocked(tagName);
       };
       await attempt();
     };

@@ -63,6 +63,7 @@ export function validateNativeReport(report) {
       "scan-included-child-through-excluded-parent",
       "cancelled-owner-transfers-through-native-mutation-observer",
       "included-child-pending-gate-survives-parent-exclusion",
+      "included-child-resumes-after-excluded-ancestor-import",
     ],
   }[report.fixture];
   if (

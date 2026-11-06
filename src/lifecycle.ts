@@ -17,6 +17,7 @@ export interface IslandLifecycle {
   isObserved(el: Element): boolean;
   readonly initialWalkComplete: boolean;
   watchCancellable(el: Element, cancel: () => void): () => void;
+  resumeBlocked(tagName: string): void;
   walk(root: HTMLElement): void;
   start(input: IslandLifecycleStartInput): { disconnect: () => void };
 }
@@ -25,9 +26,12 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
   const cancellableWatchers = createCancellableWatchers();
   let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
   let hasExclusions = false;
+  let hasIncludes = false;
   let stopped = false;
   let initialWalkComplete = false;
   let walkImpl: ((root: HTMLElement) => void) | undefined;
+  let resumeBlockedImpl: ((tagName: string) => void) | undefined;
+  const blockedByTag = new Map<string, Set<HTMLElement>>();
 
   const isExcluded = (el: Element): boolean => {
     if (!hasExclusions) return false;
@@ -62,9 +66,21 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
       if (!loader) return;
       input.onDiscover?.(tagName, el);
 
+      let explicitlyIncluded = hasIncludes && rootPolicies.get(el) === "include";
       let ancestor = el.parentElement;
       while (ancestor) {
-        if (input.isPending(ancestor.tagName.toLowerCase())) return;
+        const ancestorTag = ancestor.tagName.toLowerCase();
+        if (input.isPending(ancestorTag)) {
+          // Ordinary descendants are recovered by the parent's subtree walk.
+          // Explicit includes can survive exclusion of that parent and lose it.
+          if (explicitlyIncluded) {
+            let blocked = blockedByTag.get(ancestorTag);
+            if (!blocked) blockedByTag.set(ancestorTag, (blocked = new Set()));
+            blocked.add(el);
+          }
+          return;
+        }
+        if (hasIncludes && rootPolicies.get(ancestor) === "include") explicitlyIncluded = true;
         ancestor = ancestor.parentElement;
       }
 
@@ -78,6 +94,11 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
       while ((node = walker.nextNode())) activate(node as HTMLElement);
     };
     walkImpl = walk;
+    resumeBlockedImpl = (tagName) => {
+      const blocked = blockedByTag.get(tagName);
+      blockedByTag.delete(tagName);
+      for (const element of blocked ?? []) activate(element);
+    };
 
     const handleAdditions = (mutations: MutationRecord[]): void => {
       for (const { addedNodes } of mutations) {
@@ -89,6 +110,7 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
 
     const observer = new MutationObserver((mutations) => {
       cancellableWatchers.cancelDetached(isExcluded);
+      pruneBlocked();
       handleAdditions(mutations);
     });
 
@@ -113,9 +135,11 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
     const disconnect = (): void => {
       disconnected = true;
       stopped = true;
+      blockedByTag.clear();
       cancellableWatchers.cancelAll();
       rootPolicies = new WeakMap();
       hasExclusions = false;
+      hasIncludes = false;
       document.removeEventListener("DOMContentLoaded", init);
       observer.disconnect();
     };
@@ -123,13 +147,24 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
     return { disconnect };
   };
 
+  const pruneBlocked = (): void => {
+    for (const [tagName, elements] of blockedByTag) {
+      for (const element of elements) {
+        if (!element.isConnected || isExcluded(element)) elements.delete(element);
+      }
+      if (!elements.size) blockedByTag.delete(tagName);
+    }
+  };
+
   return {
     excludeRoot(root) {
       hasExclusions = true;
       rootPolicies.set(root, "exclude");
       cancellableWatchers.cancelInRoot(root, isExcluded);
+      pruneBlocked();
     },
     includeRoot(root) {
+      hasIncludes = true;
       rootPolicies.set(root, "include");
     },
     isObserved(el) {
@@ -139,6 +174,9 @@ export function createIslandLifecycleCoordinator(): IslandLifecycle {
       return initialWalkComplete;
     },
     watchCancellable: cancellableWatchers.watch,
+    resumeBlocked(tagName) {
+      resumeBlockedImpl?.(tagName);
+    },
     walk(root) {
       walkImpl?.(root);
     },
