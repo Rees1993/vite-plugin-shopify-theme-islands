@@ -57,3 +57,27 @@ the helper adds closing-animation support. See
 No competition implementation resumed. Evaluate a separate cost-bounded prototype
 against the verified fast-path runtime; retain existing complete-policy/retry and
 cleanup acceptance. A theme-specific earlier helper-loading policy is also an option.
+
+## Prototype outcome — 2026-11-06
+
+Primary source captured on throwaway branch `codex/prototype-gate-competition`,
+commit `a119bf4b82763e069264787e0bb4ce1532c0e74a`, based on verified main `9fd1996`.
+The branch contains the experimental runtime, self-contained `prototype.html`,
+resource probes and raw evidence under `.scratch/runtime-gate-competition-revisit/`.
+
+Verdict: reject subscription pooling alone. The actual Golfballs development theme
+verified early menu accordion registration before FAQ visibility, with the closing
+helper active. Existing targeted checks pass 55/55 and native recovery 5/5. But at
+4× CPU, 1,000-interaction setup measures 2.4 → 6.2 ms and disconnect 0.9 → 30.2 ms.
+The prototype uses five document interaction listeners instead of per-occurrence
+ones, yet still allocates 1,000 controllers/abort subscriptions versus one. Visibility
+uses one observer but observes 1,000 targets rather than one. Cleanup releases the
+counted subscriptions/targets. A separate native event-order probe also shows
+capture delegation bypasses an earlier target stopImmediatePropagation listener.
+
+No prototype source adopted into main. Golfballs local dev configuration was
+restored to the verified main plugin. A further design must reduce pending
+pipelines/controllers as well as subscription count, and preserve event semantics.
+Policy-cohort scheduling remains an unvalidated idea, not an accepted implementation.
+For Golfballs' optional closing-animation helper, an earlier theme-specific loading
+policy remains a smaller alternative to a generic competition feature.
