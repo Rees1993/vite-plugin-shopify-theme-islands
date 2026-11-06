@@ -2,7 +2,7 @@
 
 Baseline: 77856c7. Main implementation: a9992ef (approved glossary/workflow
 migration and durable research), 3920db3 (quality gates). Isolated prototype:
-edbfac0 on codex/prototype-common-path-performance. Main runtime source unchanged.
+edbfac0 on prototype/common-path-performance. Main runtime source unchanged.
 
 ## Verification
 

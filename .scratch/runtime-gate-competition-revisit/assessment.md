@@ -52,7 +52,7 @@ one optional enhancement to justify its additional machinery.
 
 ## Captured experiment
 
-The first isolated experiment is committed on `codex/prototype-gate-competition`
+The first isolated experiment is committed on `prototype/gate-competition`
 at `a119bf4b82763e069264787e0bb4ce1532c0e74a`. Its EXPERIMENT.md, standalone
 prototype.html and raw native evidence are the primary source. Pooling document
 listeners/visibility observers alone was rejected: it fixed early readiness on

@@ -60,7 +60,7 @@ cleanup acceptance. A theme-specific earlier helper-loading policy is also an op
 
 ## Prototype outcome — 2026-11-06
 
-Primary source captured on throwaway branch `codex/prototype-gate-competition`,
+Primary source captured on throwaway branch `prototype/gate-competition`,
 commit `a119bf4b82763e069264787e0bb4ce1532c0e74a`, based on verified main `9fd1996`.
 The branch contains the experimental runtime, self-contained `prototype.html`,
 resource probes and raw evidence under `.scratch/runtime-gate-competition-revisit/`.
