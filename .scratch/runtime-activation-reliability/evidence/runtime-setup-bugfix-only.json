@@ -1,0 +1,535 @@
+{
+  "capturedAt": "2026-11-06T10:22:30.878Z",
+  "pluginCommit": "64e98c1bee7cc881a75f1da49bb6f9376ad2df34",
+  "runtimeBundleSha256": "f6b3bf2956e125aba7d06a66edbbaa68d4c3785d11961b431446f9e9ed3450bf",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-scale.html",
+  "methodology": "Native Chromium; normal CPU/network; real hidden visibility targets and real interaction listeners; five setup samples per fixture; synthetic runtime-only setup, not page speed",
+  "results": [
+    {
+      "fixture": "one-visible",
+      "count": 1,
+      "uniqueTags": 1,
+      "sample": 1,
+      "synchronousSetupMs": 1.0999999046325684,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "one-visible",
+      "count": 1,
+      "uniqueTags": 1,
+      "sample": 2,
+      "synchronousSetupMs": 0.20000004768371582,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "one-visible",
+      "count": 1,
+      "uniqueTags": 1,
+      "sample": 3,
+      "synchronousSetupMs": 0.10000002384185791,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "one-visible",
+      "count": 1,
+      "uniqueTags": 1,
+      "sample": 4,
+      "synchronousSetupMs": 0.10000002384185791,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "one-visible",
+      "count": 1,
+      "uniqueTags": 1,
+      "sample": 5,
+      "synchronousSetupMs": 0.19999992847442627,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-same-visible",
+      "count": 100,
+      "uniqueTags": 1,
+      "sample": 1,
+      "synchronousSetupMs": 0.6000000238418579,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-same-visible",
+      "count": 100,
+      "uniqueTags": 1,
+      "sample": 2,
+      "synchronousSetupMs": 0.6000000238418579,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-same-visible",
+      "count": 100,
+      "uniqueTags": 1,
+      "sample": 3,
+      "synchronousSetupMs": 0.8999999761581421,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-same-visible",
+      "count": 100,
+      "uniqueTags": 1,
+      "sample": 4,
+      "synchronousSetupMs": 0.8999999761581421,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-same-visible",
+      "count": 100,
+      "uniqueTags": 1,
+      "sample": 5,
+      "synchronousSetupMs": 1.3000000715255737,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-visible",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 1,
+      "synchronousSetupMs": 7,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-visible",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 2,
+      "synchronousSetupMs": 4.300000071525574,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-visible",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 3,
+      "synchronousSetupMs": 3.200000047683716,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-visible",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 4,
+      "synchronousSetupMs": 3.5,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-visible",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 5,
+      "synchronousSetupMs": 3.700000047683716,
+      "active": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 1,
+        "observations": 1,
+        "disconnections": 1,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-unique-visible",
+      "count": 100,
+      "uniqueTags": 100,
+      "sample": 1,
+      "synchronousSetupMs": 2.100000023841858,
+      "active": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 100,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-unique-visible",
+      "count": 100,
+      "uniqueTags": 100,
+      "sample": 2,
+      "synchronousSetupMs": 1,
+      "active": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 100,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-unique-visible",
+      "count": 100,
+      "uniqueTags": 100,
+      "sample": 3,
+      "synchronousSetupMs": 0.5,
+      "active": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 100,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-unique-visible",
+      "count": 100,
+      "uniqueTags": 100,
+      "sample": 4,
+      "synchronousSetupMs": 0.8000000715255737,
+      "active": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 100,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "hundred-unique-visible",
+      "count": 100,
+      "uniqueTags": 100,
+      "sample": 5,
+      "synchronousSetupMs": 0.5,
+      "active": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 0,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 100,
+        "observations": 100,
+        "disconnections": 100,
+        "interactionAdds": 0,
+        "interactionRemoves": 0
+      }
+    },
+    {
+      "fixture": "thousand-same-interaction",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 1,
+      "synchronousSetupMs": 1.399999976158142,
+      "active": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 3
+      }
+    },
+    {
+      "fixture": "thousand-same-interaction",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 2,
+      "synchronousSetupMs": 1.2000000476837158,
+      "active": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 3
+      }
+    },
+    {
+      "fixture": "thousand-same-interaction",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 3,
+      "synchronousSetupMs": 1.1999999284744263,
+      "active": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 3
+      }
+    },
+    {
+      "fixture": "thousand-same-interaction",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 4,
+      "synchronousSetupMs": 1.5,
+      "active": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 3
+      }
+    },
+    {
+      "fixture": "thousand-same-interaction",
+      "count": 1000,
+      "uniqueTags": 1,
+      "sample": 5,
+      "synchronousSetupMs": 1.600000023841858,
+      "active": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 0
+      },
+      "afterDisconnect": {
+        "observers": 0,
+        "observations": 0,
+        "disconnections": 0,
+        "interactionAdds": 3,
+        "interactionRemoves": 3
+      }
+    }
+  ]
+}

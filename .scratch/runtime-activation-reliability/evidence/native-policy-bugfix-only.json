@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-11-06T10:23:22.570Z",
+  "pluginCommit": "64e98c1bee7cc881a75f1da49bb6f9376ad2df34",
+  "runtimeBundleSha256": "f6b3bf2956e125aba7d06a66edbbaa68d4c3785d11961b431446f9e9ed3450bf",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-policy.html",
+  "methodology": "Native Chromium functional fixture with real customElements registration and MutationObserver",
+  "results": [
+    {
+      "mode": "scan-included-child-through-excluded-parent",
+      "pass": true,
+      "calls": 1
+    },
+    {
+      "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+      "pass": true,
+      "beforeRemoval": 0,
+      "calls": 1
+    },
+    {
+      "mode": "included-child-pending-gate-survives-parent-exclusion",
+      "pass": true,
+      "calls": 1
+    }
+  ]
+}

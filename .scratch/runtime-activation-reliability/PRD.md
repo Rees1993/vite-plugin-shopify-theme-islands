@@ -2,16 +2,18 @@
 
 Baseline revision: `af71a36d58fa21163dd9f5637a7a069132ef93d8` (2.0.1).
 
+Scope revision — 2026-11-06: user requested a bug-fix-only change. Same-Tag Gate competition is deferred in issue 02 until bug fixes pass correctness and setup-cost verification. Preserve first-observed occurrence Gate ownership; transfer only when pending ownership is cancelled. Feature-only tests live in checks/deferred-gate-competition.check.ts and do not define current acceptance.
+
 ## Intended outcome
 
 Make shared Tag Activation reliable across eligible Island elements, cancellation, later successful recovery, and nested Observed roots. Preserve one shared module load, configured retry budgets, built-in Directive ordering, per-element AND semantics, parent-before-child cascade, and Teardown.
 
-The product justification is correctness: controls must not remain inactive because an unrelated occurrence was discovered first, or because an earlier occurrence disappeared. Page-speed improvement is a hypothesis until matched before/after measurements exist.
+The product justification is correctness: pending work must not remain stranded when its owning occurrence disappears; earlier observed parent roots must recover after later success; nested inclusion must govern cancellation consistently. Page-speed improvement is a hypothesis until matched before/after measurements exist.
 
 ## Scope
 
 1. Release or transfer pending Tag work when its initiating Island element is removed.
-2. Let any eligible occurrence of the same Tag trigger the shared Activation, independently of DOM order.
+2. Deferred to issue 02: let eligible same-Tag occurrences compete independently of DOM order. Current scope retains one occurrence’s Gate policy at a time.
 3. Rewalk all still-observed earlier same-Tag parent Subtrees after a later successful load, including recovery after an exhausted attempt.
 4. Respect the nearest include/exclude Observed root policy for both membership and pending Gate cancellation.
 
@@ -21,13 +23,13 @@ The shared ownership and settlement policy should concentrate behind a deep modu
 
 - Built-in Gates remain sequential: visible → media → idle → defer → interaction, then Custom Directives.
 - Each occurrence must satisfy its own complete Gate policy. A partly satisfied Gate from one occurrence must never combine with another occurrence's policy.
-- Eligible occurrences compete to open a shared Tag load; they must never cause overlapping loader calls or bypass the active attempt's retry budget.
+- The first observed occurrence owns the Tag’s pending Gate policy. Later occurrences retain roots for cascade/recovery without running competing Gates. Cancellation may transfer ownership to the next still-observed occurrence. Never overlap loader calls or bypass an active retry budget.
 - Removing one pending occurrence must not strand another observed occurrence of its Tag.
 - Cancelling an Island element's pending Gate is not a loader error. Keep existing error-event distinctions.
 - A final failure stops automatic attempts. Existing parked occurrences do not get free retries. A fresh element may initiate a new activation, as documented in README.md:557.
 - Once that later attempt succeeds, earlier observed same-Tag Subtrees must receive the normal child cascade. This does not grant additional parent-loader attempts.
 - A queued ancestor still holds child Activation until the ancestor's load succeeds. Gate competition must not accidentally remove this ordering rule.
-- On success, cancel/dispose losing Gate work, timers, listeners, Custom Directive signals, and cleanup callbacks exactly once as applicable.
+- On success, dispose active Gate work, timers, listeners, Custom Directive signals and cleanup callbacks exactly once as applicable. Parked same-Tag occurrences allocate no competing Gate resources.
 - Unobserving a parent must preserve pending work in an explicitly included child root. Disconnect must cancel the entire session, including nested included roots.
 - Detached, excluded, or disconnected Subtrees must not be revived by a late completion. A stale callback from an earlier attempt must not evict or settle a newer same-Tag attempt.
 - Preserve per-attempt `islands:load` / `islands:error` details and retry attempt numbering. Debug must not change behavior (ADR-0001).
@@ -40,7 +42,7 @@ Run the opt-in red regression pack separately from the current passing suite:
 bun test ./.scratch/runtime-activation-reliability/checks/runtime-regressions.check.ts
 ```
 
-At the baseline: 3 controls pass; 4 desired-behavior checks fail. The file intentionally uses `.check.ts` so it is not added to the default test discovery. Once implementing, move meaningful cases into existing runtime suites and make them pass.
+Historical full-scope baseline: 3 controls pass; 4 desired-behavior checks fail. One failure is the now-deferred competition enhancement; this historical pack is not the bug-fix-only acceptance command. The file intentionally uses `.check.ts` so it is not added to the default test discovery. Once implementing, move meaningful cases into existing runtime suites and make them pass.
 
 The checks use the actual `revive()` interface with deterministic observer/timer adapters. Their fake loaders avoid happy-dom's element-identity replacement during custom-element registration. Native registration must also pass:
 
@@ -54,7 +56,7 @@ Open the printed localhost URL. Baseline native matrix: initial success PASS; ex
 
 Use Golfballs homepage, `/collections/golf-balls`, `/products/titleist-pro-v1-golf-balls-p01155`, and `/search?q=Pro+V1` at 412 × 823 mobile and 1440 × 900 desktop.
 
-- Homepage mobile menu opens/closes before footer visibility; its accordion Tag must register when its own media Gate matches. Footer scrolling must not be required.
+- Homepage mobile menu opens/closes with the existing first-observed Gate policy. Independent media-Gate activation before footer visibility is deferred with issue 02 and is not current acceptance.
 - Desktop mega-menu keyboard opening/closing works on a fresh desktop load.
 - Collection filtering updates count and product cards; sorting updates URL and order; replacement cards remain usable.
 - Product quantity changes update total; gallery modal opens/closes; current customization route remains intact.
@@ -85,9 +87,9 @@ The script launches an isolated headed Chrome profile in `/tmp/islands-mobile-ba
 ## Delivery gates
 
 - Current standard suite, type check, and lint baseline recorded.
-- Four red cases turn green without breaking the controls; broaden race/cleanup coverage for the implementation's actual changed paths.
+- The three bug regressions turn green without breaking controls; the fourth historical regression (competition) is deferred. Broaden transfer, retry and cleanup coverage for the changed paths.
 - Native recovery matrix passes all five cases.
-- Same-Tag winner ordering, simultaneous Gate completion, removal before/during import, Custom Directive cleanup, retry exhaustion, late completion after disconnect, and excluded/detached roots receive meaningful coverage.
+- First-occurrence Gate ownership and cancellation transfer, one shared in-flight import, Custom Directive cleanup, exhaustion without free retries, late completion after disconnect, and excluded/detached roots receive meaningful coverage.
 - Matched browser functional checks pass. Performance results and their limitations are attached before making performance claims.
 - No publishing, package-version bump, deployment, or unrelated Compile/Discovery refactor in prerequisite work.
 

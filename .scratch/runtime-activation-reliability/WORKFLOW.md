@@ -1,4 +1,6 @@
-# Restarted implementation
+# Runtime reliability workflow
+
+Current revision — 2026-11-06: **bug-fix-only separation verified**. Same-Tag Gate competition is deferred in issue 02. Current checks: 320 standard tests, typecheck/lint/build, native recovery 5/5 and policy/transfer 3/3. See the final section below for measurements and scope. Earlier implementation results below describe historical commit 64e98c1 and are superseded for current behavior.
 
 Previous implementation discarded on user request; tracked source restored to baseline af71a36d58fa21163dd9f5637a7a069132ef93d8. Prerequisite evidence retained.
 
@@ -81,3 +83,55 @@ Investigation: evaluating each eligible occurrence necessarily creates more per-
 Gate competition intentionally permits earlier module loading than DOM-order ownership. Every winning occurrence must satisfy its own complete policy; registration then upgrades matching elements normally. Consumers with same-Tag Gates that previously relied on first DOM occurrence timing may observe earlier initialization/events. This behavior merits an explicit release note and compatibility assessment before publishing; no release/version decision is made here.
 
 The candidate has not been deployed to Golfballs. Existing storefront baseline interactions do not validate this candidate. Issue 05 retains mobile/desktop functional checks, candidate asset/theme identification and matched page-performance comparison. Baseline product Lighthouse capture warnings remain provisional. No storefront speed, field INP or conversion claim is made.
+
+## Bug-fix-only separation — 2026-11-06
+
+User requested separating Gate competition, retaining cancellation/recovery/root-inclusion fixes, and verifying those before later performance-safe competition ideation.
+
+The first occurrence owns pending Gates. Later same-Tag occurrences retain root membership for successful cascade/recovery, without starting Gate evaluation, timers, observers or interaction listeners. Pending cancellation transfers to the next observed occurrence. Exhausted occurrences cannot become automatic owners; a new occurrence may begin a fresh attempt. A regression specifically prevents cancellation of a fresh waiting owner from granting older exhausted roots another attempt.
+
+Removed competition-specific visibility pooling and restored the original observer-per-active-Tag arrangement. Retained the shared Activation session and correctness fixes. Corrected the visibility test adapter to route entries only to targets actually observed. Feature-only assertions are preserved in opt-in checks/deferred-gate-competition.check.ts, outside standard test discovery. Issue 02 is needs-triage and explicitly deferred; no solution ideation or replacement competition implementation has been performed in this revision.
+
+TDD: the first-owner policy preservation test failed against 64e98c1 before the separation patch, then passed. The exhausted-owner cancellation case failed before its transfer-eligibility guard, then passed. Transfer to an already-observed root and existing recovery/root regressions are green controls.
+
+Validation:
+
+- **320 pass, 0 fail**, 631 assertions, 23 standard test files.
+- Typecheck, lint (zero warnings/errors), build and whitespace checks pass.
+- Real native registration recovery: **5/5 pass**.
+- Real native policy checks: **3/3 pass**, including MutationObserver-driven cancellation transfer and a pending explicitly included child surviving parent exclusion.
+- Native 1,000 repeated visible occurrences: **1 observer / 1 observed target**; repeated interaction: **3 listeners**. Every allocated observer/listener is released on disconnect.
+- Exact candidate bundle hashes agree between the matched setup comparison and native resource-count run.
+
+## Standards — separation review
+
+No actionable standards findings. Ownership/settlement remains in Activation session; parked roots retain cancellation membership without competing Gate resources. Debug observability remains separate and does not control behavior. Review fixed point: 64e98c1; reviewed working changes before commit.
+
+## Spec — separation review
+
+No concrete code mismatch found. The reviewer identified stale competition acceptance wording in PRD; that wording was corrected. Current scope is issues 01/03/04 with first-occurrence Gate ownership and cancellation transfer. Issue 02 is deferred. Matched candidate storefront validation remains outstanding because no candidate theme has been deployed.
+
+Separation review totals: Standards 0 unresolved; Spec 0 unresolved code findings.
+
+## Bug-fix-only matched setup evidence
+
+Reproduce with:
+
+```sh
+RUNTIME_ARTIFACT_ROOT=/tmp/islands-runtime-comparison node .scratch/runtime-activation-reliability/scripts/compare-runtime-setup.mjs
+```
+
+The script builds the pinned original baseline from git and the current candidate source, then alternates them in one native Chrome process. Five warm-up rounds precede 30 samples per variant/fixture at normal CPU and 4× CPU throttling. These are repeated warm setup measurements, not cold page startup, storefront LCP or real mobile hardware. All samples and source hashes are preserved in evidence/runtime-setup-matched-bugfix-only.json. Native counts and complete cleanup are separately recorded in runtime-setup-bugfix-only.json.
+
+| CPU rate | Fixture | Baseline median / P90, ms | Bug-fix-only median / P90, ms |
+| --- | --- | --- | --- |
+| 1× | 100 interaction | 0.40 / 0.60 | 0.45 / 0.80 |
+| 1× | 1,000 interaction | 1.15 / 1.50 | 1.40 / 1.70 |
+| 1× | 1,000 visible | 1.20 / 1.40 | 1.45 / 1.70 |
+| 4× | 100 interaction | 0.10 / 0.50 | 0.40 / 0.70 |
+| 4× | 1,000 interaction | 2.85 / 3.10 | 3.20 / 3.70 |
+| 4× | 1,000 visible | 2.40 / 2.70 | 2.80 / 3.20 |
+
+The large Gate-competition overhead is removed; the candidate retains a small measured setup cost, including root cancellation bookkeeping, in these stress fixtures. For 1,000 interaction elements at 4× CPU, the current paired medians are 2.85 → 3.20 ms. This is not a claim of zero regression. The earlier competition comparison (3.35 → 8.50 ms in its separate run) is historical context, not a directly paired three-way comparison. No arbitrary percentage threshold was used to declare equivalence.
+
+The future competition design must compare against this verified bug-fix-only reference and demonstrate its benefit without reinstating the setup increase. Ideas are intentionally left for the next stage. No publishing, version bump or deployment occurred. Golfballs candidate preview checks and page-performance comparison remain in issue 05.

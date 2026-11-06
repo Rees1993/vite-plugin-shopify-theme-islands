@@ -15,7 +15,6 @@
  */
 
 import { buildIslandMap, normalizeReviveOptions, type RevivePayload } from "./contract.js";
-import { createDirectiveWaiters } from "./directive-waiters.js";
 import { createActivationSession } from "./activation-session.js";
 import {
   createDirectiveSpine,
@@ -70,7 +69,6 @@ export function revive(payload: RevivePayload): ReviveRuntime {
     spine,
     directiveTimeout: opts.directiveTimeout,
     retry: opts.retry,
-    waiters: createDirectiveWaiters(),
     ownership: lifecycle,
     surface: debugBoundSurface,
     observability,

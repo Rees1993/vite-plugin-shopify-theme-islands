@@ -161,20 +161,31 @@ export interface VisibilityDriver {
 }
 
 export function installVisibilityDriver(cleanups: CleanupQueue): VisibilityDriver {
-  const callbacks: IntersectionObserverCallback[] = [];
+  const callbacks = new Map<IntersectionObserverCallback, Set<Element>>();
   const disconnect = mock(() => {});
   let options: IntersectionObserverInit | undefined;
 
   cleanups.track(
     mockIntersectionObserver(
       class {
-        constructor(callback: IntersectionObserverCallback, init?: IntersectionObserverInit) {
-          callbacks.push(callback);
+        private targets = new Set<Element>();
+        constructor(
+          private callback: IntersectionObserverCallback,
+          init?: IntersectionObserverInit,
+        ) {
+          callbacks.set(callback, this.targets);
           options = init;
         }
-        observe(): void {}
-        unobserve(): void {}
-        disconnect = disconnect;
+        observe(target: Element): void {
+          this.targets.add(target);
+        }
+        unobserve(target: Element): void {
+          this.targets.delete(target);
+        }
+        disconnect(): void {
+          callbacks.delete(this.callback);
+          disconnect();
+        }
       } as unknown as typeof IntersectionObserver,
     ),
   );
@@ -186,8 +197,8 @@ export function installVisibilityDriver(cleanups: CleanupQueue): VisibilityDrive
     },
     trigger(target: Element, isIntersecting = true): void {
       const entry = { isIntersecting, target } as IntersectionObserverEntry;
-      for (const callback of callbacks) {
-        callback([entry], {} as IntersectionObserver);
+      for (const [callback, targets] of callbacks) {
+        if (targets.has(target)) callback([entry], {} as IntersectionObserver);
       }
     },
   };

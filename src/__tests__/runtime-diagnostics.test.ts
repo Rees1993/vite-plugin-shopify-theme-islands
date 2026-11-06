@@ -144,7 +144,7 @@ describe("runtime diagnostics", () => {
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same tag <same-tag>"));
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("first eligible Island element"),
+        expect.stringContaining("first observed Island element"),
       );
 
       runtime.disconnect();

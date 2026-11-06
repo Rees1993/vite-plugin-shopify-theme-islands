@@ -24,3 +24,7 @@ No candidate deployment or package publishing is part of prerequisite work.
 ## Comments
 
 Implementation validation passes (324 tests; native recovery 5/5). Candidate runtime setup evidence and investigated allocation costs are attached. Remaining storefront checks require an identified candidate preview; deployment/publishing was not authorized. Preserve the baseline and its product capture warnings. See ../WORKFLOW.md.
+
+## Separation verification — 2026-11-06
+
+Gate competition has been separated and deferred in issue 02. Bug-fix-only verification passes: 320 standard tests, typecheck/lint/build, native recovery 5/5 and root-policy/transfer 3/3. Resource counts return to one active Gate policy per Tag. A small measured setup residual is documented in ../WORKFLOW.md and the matched sample artifact; no zero-regression or deployed-storefront claim is made.

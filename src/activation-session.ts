@@ -51,12 +51,14 @@ export interface ActivationSession {
 
 export function createActivationSession(deps: ActivationSessionDeps): ActivationSession {
   interface PendingElement {
-    controller: AbortController;
+    controller?: AbortController;
+    canOwn: boolean;
     unwatch(): void;
   }
   interface TagActivation {
     phase: "waiting" | "loading" | "retrying" | "exhausted" | "loaded";
     elements: Map<HTMLElement, PendingElement>;
+    gateElement?: HTMLElement;
   }
   const tags = new Map<string, TagActivation>();
   const retries = createRetryScheduler({
@@ -77,7 +79,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     retries.cancel(tag);
     deps.observability.clear([tag]);
     for (const work of state?.elements.values() ?? []) {
-      work.controller.abort();
+      work.controller?.abort();
       work.unwatch();
     }
   };
@@ -96,17 +98,34 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     }
     if (state.phase === "loaded" || state.elements.has(element)) return;
     const current = state;
-    const controller = new AbortController();
-    const unwatch = deps.ownership.watchCancellable(element, () => {
-      if (current.elements.get(element)?.controller !== controller) return;
+    const work: PendingElement = { canOwn: true, unwatch: () => {} };
+    work.unwatch = deps.ownership.watchCancellable(element, () => {
+      if (current.elements.get(element) !== work) return;
       current.elements.delete(element);
-      controller.abort();
-      if (current.elements.size === 0 && current.phase !== "loading") {
-        release(tagName);
+      if (current.gateElement === element) current.gateElement = undefined;
+      work.controller?.abort();
+      if (tags.get(tagName) !== current) return;
+      if (current.phase === "waiting" && !current.gateElement) {
+        const next = [...current.elements.keys()].find(
+          (root) => current.elements.get(root)!.canOwn && deps.ownership.isObserved(root),
+        );
+        if (next) {
+          const parked = current.elements.get(next)!;
+          current.elements.delete(next);
+          parked.unwatch();
+          void activate({ tagName, element: next, loader });
+          return;
+        }
+        if (current.elements.size > 0) current.phase = "exhausted";
       }
+      if (current.elements.size === 0 && current.phase !== "loading") release(tagName);
     });
-    state.elements.set(element, { controller, unwatch });
-    if (state.phase === "exhausted") state.phase = "waiting";
+    current.elements.set(element, work);
+    if (current.phase === "loading" || current.phase === "retrying" || current.gateElement) return;
+    if (current.phase === "exhausted") current.phase = "waiting";
+    current.gateElement = element;
+    const controller = new AbortController();
+    work.controller = controller;
     const isActive = (): boolean => {
       if (stopped || tags.get(tagName) !== current) return false;
       if (
@@ -142,7 +161,11 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
           });
           current.phase = result.willRetry ? "retrying" : "exhausted";
           if (!result.willRetry) {
-            for (const work of current.elements.values()) work.controller.abort();
+            current.gateElement = undefined;
+            for (const work of current.elements.values()) {
+              work.canOwn = false;
+              work.controller?.abort();
+            }
           }
           deps.surface.dispatchError({ tag: tagName, error, attempt: result.attempt });
           return;
@@ -154,8 +177,9 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
         const roots = [...current.elements.keys()];
         const pending = [...current.elements.values()];
         current.elements.clear();
+        current.gateElement = undefined;
         for (const work of pending) work.unwatch();
-        for (const work of pending) work.controller.abort();
+        for (const work of pending) work.controller?.abort();
         if (stopped || tags.get(tagName) !== current) return;
         deps.surface.dispatchLoad({
           tag: tagName,
@@ -169,7 +193,6 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
       };
       await attempt();
     };
-    if (current.phase === "loading" || current.phase === "retrying") return;
     const plan = deps.spine.planGates(element);
     const log = deps.surface.createLogger(tagName);
     deps.observability.noteInitialWaits(
@@ -187,9 +210,14 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
         controller.abort();
         if (
           current.phase === "waiting" &&
-          [...current.elements.values()].every((work) => work.controller.signal.aborted)
-        )
+          [...current.elements.values()].every(
+            (work) => !work.controller || work.controller.signal.aborted,
+          )
+        ) {
           current.phase = "exhausted";
+          current.gateElement = undefined;
+          for (const work of current.elements.values()) work.canOwn = false;
+        }
         deps.platform.console.error(
           attribute === null
             ? `[islands] Built-in directive failed for <${tagName}>:`

@@ -1,6 +1,9 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><title>Observed root policy</title><body><script type="module">
 import { revive } from './runtime.js';
 window.addEventListener('load', async () => {
+  const results = [];
+  const waitFor = async predicate => { const end = performance.now() + 1500; while (!predicate() && performance.now() < end) await new Promise(resolve => setTimeout(resolve, 10)); };
+
   document.body.innerHTML = '<section id="excluded"><section id="included"></section></section>';
   let calls = 0;
   const runtime = revive({ islands: { '/native-nested.ts': async () => { calls++; customElements.define('native-nested', class extends HTMLElement {}); } } });
@@ -12,7 +15,31 @@ window.addEventListener('load', async () => {
   runtime.scan();
   await new Promise(resolve => setTimeout(resolve, 50));
   const result = { mode: 'scan-included-child-through-excluded-parent', pass: calls === 1, calls };
+  results.push(result);
   runtime.disconnect();
-  const output = document.createElement('pre'); output.id = 'results'; output.textContent = JSON.stringify([result]); document.body.replaceChildren(output);
+
+  document.body.innerHTML = '<native-transfer id="first" client:visible style="display:none"></native-transfer><native-transfer></native-transfer>';
+  let transferCalls = 0;
+  const transfer = revive({ islands: { '/native-transfer.ts': async () => { transferCalls++; customElements.define('native-transfer', class extends HTMLElement {}); } } });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const beforeRemoval = transferCalls;
+  document.getElementById('first').remove();
+  await waitFor(() => transferCalls === 1);
+  results.push({ mode: 'cancelled-owner-transfers-through-native-mutation-observer', pass: beforeRemoval === 0 && transferCalls === 1 && !!customElements.get('native-transfer'), beforeRemoval, calls: transferCalls });
+  transfer.disconnect();
+
+  document.body.innerHTML = '<section id="pending-parent"><section id="pending-child"><native-included-pending client:defer="20"></native-included-pending></section></section>';
+  let includedCalls = 0;
+  const included = revive({ islands: { '/native-included-pending.ts': async () => { includedCalls++; customElements.define('native-included-pending', class extends HTMLElement {}); } } });
+  const pendingParent = document.getElementById('pending-parent');
+  const pendingChild = document.getElementById('pending-child');
+  included.observe(pendingParent);
+  included.observe(pendingChild);
+  included.unobserve(pendingParent);
+  await waitFor(() => includedCalls === 1);
+  results.push({ mode: 'included-child-pending-gate-survives-parent-exclusion', pass: includedCalls === 1 && !!customElements.get('native-included-pending'), calls: includedCalls });
+  included.disconnect();
+
+  const output = document.createElement('pre'); output.id = 'results'; output.textContent = JSON.stringify(results); document.body.replaceChildren(output);
 });
 </script></body></html>

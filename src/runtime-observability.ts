@@ -73,7 +73,7 @@ export function createRuntimeObservability(deps: RuntimeObservabilityDeps): Runt
       if (warnedLoadGateSignatures.get(tagName) === signature) return;
       warnedLoadGateSignatures.set(tagName, signature);
       deps.console.warn(
-        `[islands] Found same tag <${tagName}> with conflicting directive gates (${signature}). Directives load code at the tag level, so the first eligible Island element wins for this tag.`,
+        `[islands] Found same tag <${tagName}> with conflicting directive gates (${signature}). Directives load code at the tag level, so the first observed Island element supplies this tag’s Gate policy.`,
       );
     },
 

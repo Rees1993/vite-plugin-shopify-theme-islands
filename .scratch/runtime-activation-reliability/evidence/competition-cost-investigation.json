@@ -1,0 +1,2890 @@
+{
+  "capturedAt": "2026-11-05T23:45:26.039Z",
+  "browser": "Chrome/157.0.8103.38",
+  "methodology": "One browser; rotating variant order; five warm-up rounds then 30 samples per variant and fixture; synchronous revive setup; no listener-count instrumentation; synthetic, not page speed",
+  "results": [
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 0.3999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 0.40000009536743164
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 0.3999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 0
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 0.09999990463256836
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 0.09999990463256836
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 0
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 0.30000007152557373
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 0.3999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 0.09999990463256836
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 2.3000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 0.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 2.3000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 1.0999999046325684
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 2.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 2.399999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 1
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 2.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 2.1999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 2.6999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 1
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 2.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 2.3000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 2.299999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 2.1999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 0.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 4.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 2.1999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 2.0999999046325684
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 2
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 2.1999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 4.400000095367432
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 1.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 1,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 1,
+      "setupMs": 3.6999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 2,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 2,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 3,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 3,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 4,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 4,
+      "setupMs": 2
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 5,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 5,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 6,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 6,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 7,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 7,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 8,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 8,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 9,
+      "setupMs": 2.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 9,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 10,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 10,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 11,
+      "setupMs": 3.700000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 11,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 12,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 12,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 13,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 13,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 14,
+      "setupMs": 0.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 14,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 15,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 15,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 16,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 16,
+      "setupMs": 1.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 17,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 17,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 18,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 18,
+      "setupMs": 2.3000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 19,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 19,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 20,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 20,
+      "setupMs": 1.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 21,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 21,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 22,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 22,
+      "setupMs": 2
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 23,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 23,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 24,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 24,
+      "setupMs": 2.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 25,
+      "setupMs": 1.9000000953674316
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 25,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 26,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 26,
+      "setupMs": 1.9000000953674316
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 27,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 27,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 28,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 28,
+      "setupMs": 2.1999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 29,
+      "setupMs": 1.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 29,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 30,
+      "setupMs": 0.6999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 1,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 30,
+      "setupMs": 1.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 1.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 0.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 1.0999999046325684
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 0.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 1.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 0.5999999046325684
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 1.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 0.2999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 1.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 0.3999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 1.2999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 0.9000000953674316
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 0.20000004768371582
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 0.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 1.2000000476837158
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 1.2000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 1.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 1.3000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 1
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 0.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 1
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 1.7999999523162842
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 0.7000000476837158
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 0.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 1.0999999046325684
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 0.10000002384185791
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 0.8000000715255737
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 0.6000000238418579
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 1.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 0.7999999523162842
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 0.19999992847442627
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 100,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 8.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 1,
+      "setupMs": 0.8999999761581421
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 3.299999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 2,
+      "setupMs": 8.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 2.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 3,
+      "setupMs": 8
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 4,
+      "setupMs": 8.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 17.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 5,
+      "setupMs": 3.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 11.299999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 6,
+      "setupMs": 8.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 3.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 7,
+      "setupMs": 8.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 2.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 8,
+      "setupMs": 19.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 8.799999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 9,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 4
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 10,
+      "setupMs": 8.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 3.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 11,
+      "setupMs": 7.700000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 2.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 12,
+      "setupMs": 8.099999904632568
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 8.799999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 13,
+      "setupMs": 4.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 4
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 14,
+      "setupMs": 9.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 3.4000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 15,
+      "setupMs": 7.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 3.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 16,
+      "setupMs": 8.400000095367432
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 9.099999904632568
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 17,
+      "setupMs": 3.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 3.4000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 18,
+      "setupMs": 17.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 19,
+      "setupMs": 8.299999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 2.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 20,
+      "setupMs": 15.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 8.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 21,
+      "setupMs": 3.399999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 3.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 22,
+      "setupMs": 10.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 23,
+      "setupMs": 8.799999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 24,
+      "setupMs": 7.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 8.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 25,
+      "setupMs": 4
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 26,
+      "setupMs": 8.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 3.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 27,
+      "setupMs": 9
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 3.399999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 28,
+      "setupMs": 9.599999904632568
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 9.199999928474426
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 29,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "interaction",
+      "sample": 30,
+      "setupMs": 15.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 1,
+      "setupMs": 26.799999952316284
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 1,
+      "setupMs": 3.600000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 2,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 2,
+      "setupMs": 7.600000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 3,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 3,
+      "setupMs": 8
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 4,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 4,
+      "setupMs": 7.299999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 5,
+      "setupMs": 14.400000095367432
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 5,
+      "setupMs": 2.600000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 6,
+      "setupMs": 2.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 6,
+      "setupMs": 7.399999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 7,
+      "setupMs": 3.299999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 7,
+      "setupMs": 7.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 8,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 8,
+      "setupMs": 8.5
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 9,
+      "setupMs": 8.600000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 9,
+      "setupMs": 3.399999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 10,
+      "setupMs": 2.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 10,
+      "setupMs": 7.199999928474426
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 11,
+      "setupMs": 2.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 11,
+      "setupMs": 6.899999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 12,
+      "setupMs": 3.1999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 12,
+      "setupMs": 7.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 13,
+      "setupMs": 16.90000009536743
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 13,
+      "setupMs": 3.0999999046325684
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 14,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 14,
+      "setupMs": 7.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 15,
+      "setupMs": 3.600000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 15,
+      "setupMs": 8.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 16,
+      "setupMs": 2.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 16,
+      "setupMs": 8.700000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 17,
+      "setupMs": 9.199999928474426
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 17,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 18,
+      "setupMs": 2.399999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 18,
+      "setupMs": 7.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 19,
+      "setupMs": 3
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 19,
+      "setupMs": 8
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 20,
+      "setupMs": 3.200000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 20,
+      "setupMs": 8.400000095367432
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 21,
+      "setupMs": 13.199999928474426
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 21,
+      "setupMs": 3.0999999046325684
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 22,
+      "setupMs": 2.799999952316284
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 22,
+      "setupMs": 21.100000023841858
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 23,
+      "setupMs": 3.1999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 23,
+      "setupMs": 8.300000071525574
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 24,
+      "setupMs": 3.100000023841858
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 24,
+      "setupMs": 8
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 25,
+      "setupMs": 7.399999976158142
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 25,
+      "setupMs": 2.9000000953674316
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 26,
+      "setupMs": 3.3000000715255737
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 26,
+      "setupMs": 16.90000009536743
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 27,
+      "setupMs": 3.1999999284744263
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 27,
+      "setupMs": 8.699999928474426
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 28,
+      "setupMs": 2.9000000953674316
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 28,
+      "setupMs": 28.700000047683716
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 29,
+      "setupMs": 8.5
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 29,
+      "setupMs": 3
+    },
+    {
+      "label": "baseline",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 30,
+      "setupMs": 2.899999976158142
+    },
+    {
+      "label": "candidate",
+      "cpuRate": 4,
+      "count": 1000,
+      "gate": "visible",
+      "sample": 30,
+      "setupMs": 7.600000023841858
+    }
+  ],
+  "baselineCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+  "candidateCommit": "64e98c1bee7cc881a75f1da49bb6f9376ad2df34",
+  "note": "Historical Gate-competition implementation, prior to bug-fix-only separation. Diagnostic probe variants excluded."
+}
