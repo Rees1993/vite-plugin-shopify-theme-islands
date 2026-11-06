@@ -22,3 +22,27 @@ jobs:
         run: bun run lint
       - name: Format check
         run: bun run format --check
+
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install dependencies
+        run: bun ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+      - name: Install pinned Chrome
+        run: bunx --no-install puppeteer browsers install chrome
+      - name: Native runtime checks
+        run: bun run test:native
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-runtime-results
+          path: test-results/native
