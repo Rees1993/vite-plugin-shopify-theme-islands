@@ -1,0 +1,216 @@
+{
+  "origin": "http://127.0.0.1:9293",
+  "initial": [
+    {
+      "index": 0,
+      "directives": [
+        [
+          "client:media",
+          "(max-width: 63.9375rem)"
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 0,
+      "labels": [
+        "Golf Balls",
+        "shop by brand",
+        "featured"
+      ]
+    },
+    {
+      "index": 1,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "MAIN",
+      "top": 7755,
+      "labels": [
+        "How fast will my order ship?",
+        "What is your return policy?",
+        "Can I get a shipping estimate before checkout?"
+      ]
+    },
+    {
+      "index": 2,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 9344,
+      "labels": [
+        "Shop",
+        "Corporate",
+        "Support"
+      ]
+    }
+  ],
+  "menuOpen": [
+    {
+      "index": 0,
+      "directives": [
+        [
+          "client:media",
+          "(max-width: 63.9375rem)"
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 0,
+      "labels": [
+        "Golf Balls",
+        "shop by brand",
+        "featured"
+      ]
+    },
+    {
+      "index": 1,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "MAIN",
+      "top": 7755,
+      "labels": [
+        "How fast will my order ship?",
+        "What is your return policy?",
+        "Can I get a shipping estimate before checkout?"
+      ]
+    },
+    {
+      "index": 2,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 9344,
+      "labels": [
+        "Shop",
+        "Corporate",
+        "Support"
+      ]
+    }
+  ],
+  "footerVisible": [
+    {
+      "index": 0,
+      "directives": [
+        [
+          "client:media",
+          "(max-width: 63.9375rem)"
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 0,
+      "labels": [
+        "Golf Balls",
+        "shop by brand",
+        "featured"
+      ]
+    },
+    {
+      "index": 1,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "MAIN",
+      "top": -1195,
+      "labels": [
+        "How fast will my order ship?",
+        "What is your return policy?",
+        "Can I get a shipping estimate before checkout?"
+      ]
+    },
+    {
+      "index": 2,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": false,
+      "region": "NAV",
+      "top": 394,
+      "labels": [
+        "Shop",
+        "Corporate",
+        "Support"
+      ]
+    }
+  ],
+  "footerScrollY": 8950,
+  "faqVisible": [
+    {
+      "index": 0,
+      "directives": [
+        [
+          "client:media",
+          "(max-width: 63.9375rem)"
+        ]
+      ],
+      "defined": true,
+      "region": "NAV",
+      "top": 0,
+      "labels": [
+        "Golf Balls",
+        "shop by brand",
+        "featured"
+      ]
+    },
+    {
+      "index": 1,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": true,
+      "region": "MAIN",
+      "top": 327,
+      "labels": [
+        "How fast will my order ship?",
+        "What is your return policy?",
+        "Can I get a shipping estimate before checkout?"
+      ]
+    },
+    {
+      "index": 2,
+      "directives": [
+        [
+          "client:visible",
+          ""
+        ]
+      ],
+      "defined": true,
+      "region": "NAV",
+      "top": 1916,
+      "labels": [
+        "Shop",
+        "Corporate",
+        "Support"
+      ]
+    }
+  ]
+}

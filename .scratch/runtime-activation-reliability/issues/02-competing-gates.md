@@ -43,3 +43,17 @@ Future acceptance adds:
 - [ ] Verify shopper-visible benefit and performance in an identified candidate theme preview before release claims.
 
 The opt-in checks/deferred-gate-competition.check.ts preserves the feature-specific behavior tests. They are intentionally excluded from the standard bug-fix acceptance suite. The earlier completed checklist/comment describes historical commit 64e98c1 and is superseded by this deferral.
+
+## Reassessment — 2026-11-06
+
+After the fast paths passed real Golfballs integration checks, the current local
+development theme still reproduces delayed accordion enhancement. Menu opening
+works while accordion-rows stays undefined; a direct jump to the visible footer
+also leaves it undefined. Bringing the main FAQ into view registers the Tag and
+upgrades all occurrences. Thus the current location-specific blocker is the FAQ,
+superseding the earlier footer-only description. Native menu/details remain usable;
+the helper adds closing-animation support. See
+../../runtime-gate-competition-revisit/assessment.md and its DOM evidence.
+No competition implementation resumed. Evaluate a separate cost-bounded prototype
+against the verified fast-path runtime; retain existing complete-policy/retry and
+cleanup acceptance. A theme-specific earlier helper-loading policy is also an option.
