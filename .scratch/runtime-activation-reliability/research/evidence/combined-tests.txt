@@ -1,0 +1,6 @@
+(pass) runtime-observability > logs init waits only before the initial walk is complete [0.09ms]
+
+ 320 pass
+ 0 fail
+ 631 expect() calls
+Ran 320 tests across 23 files. [2.79s]

@@ -1,0 +1,98 @@
+--- a/src/activation-session.ts
++++ b/src/activation-session.ts
+@@ -35,7 +35,7 @@
+     dispatchError: RuntimeSurface["dispatchError"];
+     createLogger(tagName: string): RuntimeLogger;
+   };
+-  observability: Pick<
++  observability?: Pick<
+     RuntimeObservability,
+     "noteInitialWaits" | "warnOnConflictingLoadGate" | "clear"
+   >;
+@@ -70,14 +70,14 @@
+     stopped = true;
+     retries.cancelAll();
+     for (const tag of tags.keys()) release(tag);
+-    deps.observability.clear();
++    deps.observability?.clear();
+   };
+ 
+   const release = (tag: string): void => {
+     const state = tags.get(tag);
+     tags.delete(tag);
+     retries.cancel(tag);
+-    deps.observability.clear([tag]);
++    deps.observability?.clear([tag]);
+     for (const work of state?.elements.values() ?? []) {
+       work.controller?.abort();
+       work.unwatch();
+@@ -85,6 +85,7 @@
+   };
+ 
+   const discover = (tagName: string, element: HTMLElement): void => {
++    if (!deps.observability) return;
+     const plan = deps.spine.planGates(element);
+     deps.observability.warnOnConflictingLoadGate(tagName, element, plan.conflictSignature);
+   };
+@@ -195,7 +196,7 @@
+     };
+     const plan = deps.spine.planGates(element);
+     const log = deps.surface.createLogger(tagName);
+-    deps.observability.noteInitialWaits(
++    deps.observability?.noteInitialWaits(
+       tagName,
+       plan.initialDiagnosticParts,
+       deps.ownership.initialWalkComplete,
+--- a/src/runtime.ts
++++ b/src/runtime.ts
+@@ -54,11 +54,13 @@
+   const spine = extendDirectiveSpine(baseSpine, payload.customDirectives);
+ 
+   const lifecycle = createIslandLifecycleCoordinator();
+-  const observability = createRuntimeObservability({
+-    debug: opts.debug,
+-    isObserved: (element) => lifecycle.isObserved(element),
+-    console,
+-  });
++  const observability = opts.debug
++    ? createRuntimeObservability({
++        debug: opts.debug,
++        isObserved: (element) => lifecycle.isObserved(element),
++        console,
++      })
++    : undefined;
+   const debugBoundSurface = {
+     dispatchLoad: runtimeSurface.dispatchLoad,
+     dispatchError: runtimeSurface.dispatchError,
+--- a/src/lifecycle.ts
++++ b/src/lifecycle.ts
+@@ -24,11 +24,13 @@
+ export function createIslandLifecycleCoordinator(): IslandLifecycle {
+   const cancellableWatchers = createCancellableWatchers();
+   let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
++  let hasExclusions = false;
+   let stopped = false;
+   let initialWalkComplete = false;
+   let walkImpl: ((root: HTMLElement) => void) | undefined;
+ 
+   const isExcluded = (el: Element): boolean => {
++    if (!hasExclusions) return false;
+     let current: Element | null = el;
+     while (current) {
+       const policy = rootPolicies.get(current as HTMLElement);
+@@ -113,6 +115,7 @@
+       stopped = true;
+       cancellableWatchers.cancelAll();
+       rootPolicies = new WeakMap();
++      hasExclusions = false;
+       document.removeEventListener("DOMContentLoaded", init);
+       observer.disconnect();
+     };
+@@ -122,6 +125,7 @@
+ 
+   return {
+     excludeRoot(root) {
++      hasExclusions = true;
+       rootPolicies.set(root, "exclude");
+       cancellableWatchers.cancelInRoot(root, isExcluded);
+     },

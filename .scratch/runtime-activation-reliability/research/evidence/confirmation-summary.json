@@ -1,0 +1,610 @@
+{
+  "capturedAt": "2026-11-06T11:03:41.916Z",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "referenceCommit": "77856c7bddfc29aa87b7bcadf089ea08122119cb",
+  "bundleSha256": {
+    "current": "9eece2510e2e3f0365a0c7dfa10f71ad46e6b16b5e7388d282736c02166e4853",
+    "sameBuild": "f6b3bf2956e125aba7d06a66edbbaa68d4c3785d11961b431446f9e9ed3450bf",
+    "combined": "057f6104e242dafa340c4faa6fc5bd8022809face6c6e04dad075aa2a61cf4f3"
+  },
+  "methodology": "One native Chrome process; rotating variant order; five warm-up rounds then 40 samples per variant/scenario at normal CPU and 4x CPU throttling. No network or element registrations. Startup excludes DOM construction. Mutation timings include DOM mutation plus two microtask checkpoints. Synthetic repeated warm runtime measurements, not storefront page performance.",
+  "nativeChecks": [],
+  "summary": [
+    {
+      "cpuRate": 1,
+      "scenario": "setup-interaction-1000",
+      "label": "current",
+      "medianMs": 1,
+      "p90Ms": 1.2000000476837158,
+      "rangeMs": [
+        0.7999999523162842,
+        1.7000000476837158
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-interaction-1000",
+      "label": "sameBuild",
+      "medianMs": 1,
+      "p90Ms": 1.1999999284744263,
+      "rangeMs": [
+        0.7999999523162842,
+        1.399999976158142
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-interaction-1000",
+      "label": "combined",
+      "medianMs": 0.6999999284744263,
+      "p90Ms": 0.8999999761581421,
+      "rangeMs": [
+        0.5,
+        1.2000000476837158
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "current",
+      "medianMs": 1.5,
+      "p90Ms": 1.5999999046325684,
+      "rangeMs": [
+        1.2999999523162842,
+        1.7000000476837158
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "sameBuild",
+      "medianMs": 1.5,
+      "p90Ms": 1.600000023841858,
+      "rangeMs": [
+        1.2999999523162842,
+        1.600000023841858
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "combined",
+      "medianMs": 0.8999999761581421,
+      "p90Ms": 1,
+      "rangeMs": [
+        0.7999999523162842,
+        1.1999999284744263
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "current",
+      "medianMs": 1.3000000715255737,
+      "p90Ms": 1.4000000953674316,
+      "rangeMs": [
+        1.2000000476837158,
+        1.899999976158142
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "sameBuild",
+      "medianMs": 1.3000000715255737,
+      "p90Ms": 1.4000000953674316,
+      "rangeMs": [
+        1.1999999284744263,
+        1.8000000715255737
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "combined",
+      "medianMs": 1.1999999284744263,
+      "p90Ms": 1.2000000476837158,
+      "rangeMs": [
+        1.0999999046325684,
+        9.399999976158142
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-1000",
+      "label": "current",
+      "medianMs": 1,
+      "p90Ms": 1.100000023841858,
+      "rangeMs": [
+        0.7999999523162842,
+        11.200000047683716
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-1000",
+      "label": "sameBuild",
+      "medianMs": 1,
+      "p90Ms": 1.100000023841858,
+      "rangeMs": [
+        0.7000000476837158,
+        4.600000023841858
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-1000",
+      "label": "combined",
+      "medianMs": 0.7000000476837158,
+      "p90Ms": 0.8000000715255737,
+      "rangeMs": [
+        0.5,
+        1.6999999284744263
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-unique-100",
+      "label": "current",
+      "medianMs": 0.40000009536743164,
+      "p90Ms": 0.5,
+      "rangeMs": [
+        0.2999999523162842,
+        0.6000000238418579
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-unique-100",
+      "label": "sameBuild",
+      "medianMs": 0.40000009536743164,
+      "p90Ms": 0.5,
+      "rangeMs": [
+        0.3999999761581421,
+        0.7000000476837158
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "setup-visible-unique-100",
+      "label": "combined",
+      "medianMs": 0.3999999761581421,
+      "p90Ms": 0.5,
+      "rangeMs": [
+        0.2999999523162842,
+        0.6000000238418579
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "owner-removal-1000",
+      "label": "current",
+      "medianMs": 0.10000002384185791,
+      "p90Ms": 0.20000004768371582,
+      "rangeMs": [
+        0,
+        0.30000007152557373
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "owner-removal-1000",
+      "label": "sameBuild",
+      "medianMs": 0.10000002384185791,
+      "p90Ms": 0.20000004768371582,
+      "rangeMs": [
+        0,
+        0.2999999523162842
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "owner-removal-1000",
+      "label": "combined",
+      "medianMs": 0,
+      "p90Ms": 0.10000002384185791,
+      "rangeMs": [
+        0,
+        0.20000004768371582
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "parked-removal-1000",
+      "label": "current",
+      "medianMs": 0.30000001192092896,
+      "p90Ms": 0.3999999761581421,
+      "rangeMs": [
+        0.19999992847442627,
+        0.5
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "parked-removal-1000",
+      "label": "sameBuild",
+      "medianMs": 0.30000001192092896,
+      "p90Ms": 0.3999999761581421,
+      "rangeMs": [
+        0.19999992847442627,
+        0.40000009536743164
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "parked-removal-1000",
+      "label": "combined",
+      "medianMs": 0.2999999523162842,
+      "p90Ms": 0.3999999761581421,
+      "rangeMs": [
+        0.19999992847442627,
+        0.3999999761581421
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "exclude-parent-1000",
+      "label": "current",
+      "medianMs": 0.19999992847442627,
+      "p90Ms": 0.20000004768371582,
+      "rangeMs": [
+        0,
+        0.2999999523162842
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "exclude-parent-1000",
+      "label": "sameBuild",
+      "medianMs": 0.10000002384185791,
+      "p90Ms": 0.20000004768371582,
+      "rangeMs": [
+        0.09999990463256836,
+        0.2999999523162842
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "exclude-parent-1000",
+      "label": "combined",
+      "medianMs": 0.19999992847442627,
+      "p90Ms": 0.20000004768371582,
+      "rangeMs": [
+        0,
+        0.20000004768371582
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "disconnect-1000",
+      "label": "current",
+      "medianMs": 0.20000004768371582,
+      "p90Ms": 0.3999999761581421,
+      "rangeMs": [
+        0.09999990463256836,
+        0.40000009536743164
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "disconnect-1000",
+      "label": "sameBuild",
+      "medianMs": 0.20000004768371582,
+      "p90Ms": 0.3999999761581421,
+      "rangeMs": [
+        0.09999990463256836,
+        0.5
+      ]
+    },
+    {
+      "cpuRate": 1,
+      "scenario": "disconnect-1000",
+      "label": "combined",
+      "medianMs": 0.20000004768371582,
+      "p90Ms": 0.30000007152557373,
+      "rangeMs": [
+        0.10000002384185791,
+        0.7999999523162842
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-interaction-1000",
+      "label": "current",
+      "medianMs": 3.299999952316284,
+      "p90Ms": 4.100000023841858,
+      "rangeMs": [
+        2.600000023841858,
+        16.09999990463257
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-interaction-1000",
+      "label": "sameBuild",
+      "medianMs": 3.299999952316284,
+      "p90Ms": 3.799999952316284,
+      "rangeMs": [
+        2.5,
+        6.100000023841858
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-interaction-1000",
+      "label": "combined",
+      "medianMs": 2.299999952316284,
+      "p90Ms": 2.700000047683716,
+      "rangeMs": [
+        1.6999999284744263,
+        10.5
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "current",
+      "medianMs": 5.25,
+      "p90Ms": 5.700000047683716,
+      "rangeMs": [
+        4.5,
+        15.299999952316284
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "sameBuild",
+      "medianMs": 5.199999928474426,
+      "p90Ms": 5.799999952316284,
+      "rangeMs": [
+        4.400000095367432,
+        7.100000023841858
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-nested-interaction-1000",
+      "label": "combined",
+      "medianMs": 3.450000047683716,
+      "p90Ms": 3.899999976158142,
+      "rangeMs": [
+        2.8000000715255737,
+        9.699999928474426
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "current",
+      "medianMs": 5.600000023841858,
+      "p90Ms": 6.200000047683716,
+      "rangeMs": [
+        4.799999952316284,
+        7.899999976158142
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "sameBuild",
+      "medianMs": 5.350000023841858,
+      "p90Ms": 6,
+      "rangeMs": [
+        4.799999952316284,
+        12.100000023841858
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "scan-nested-after-exclusion-1000",
+      "label": "combined",
+      "medianMs": 4.799999952316284,
+      "p90Ms": 5.299999952316284,
+      "rangeMs": [
+        4.100000023841858,
+        6.200000047683716
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-1000",
+      "label": "current",
+      "medianMs": 3.449999988079071,
+      "p90Ms": 4.399999976158142,
+      "rangeMs": [
+        3,
+        7.099999904632568
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-1000",
+      "label": "sameBuild",
+      "medianMs": 3.299999952316284,
+      "p90Ms": 4.100000023841858,
+      "rangeMs": [
+        2.6999999284744263,
+        7.700000047683716
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-1000",
+      "label": "combined",
+      "medianMs": 2.400000035762787,
+      "p90Ms": 3,
+      "rangeMs": [
+        1.6999999284744263,
+        8.299999952316284
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-unique-100",
+      "label": "current",
+      "medianMs": 1.100000023841858,
+      "p90Ms": 1.600000023841858,
+      "rangeMs": [
+        0.5,
+        3.200000047683716
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-unique-100",
+      "label": "sameBuild",
+      "medianMs": 1.2000000476837158,
+      "p90Ms": 1.600000023841858,
+      "rangeMs": [
+        0.7999999523162842,
+        2.399999976158142
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "setup-visible-unique-100",
+      "label": "combined",
+      "medianMs": 1,
+      "p90Ms": 1.600000023841858,
+      "rangeMs": [
+        0.5,
+        2.5
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "owner-removal-1000",
+      "label": "current",
+      "medianMs": 0.34999996423721313,
+      "p90Ms": 0.7999999523162842,
+      "rangeMs": [
+        0,
+        0.8999999761581421
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "owner-removal-1000",
+      "label": "sameBuild",
+      "medianMs": 0.1499999761581421,
+      "p90Ms": 0.8999999761581421,
+      "rangeMs": [
+        0,
+        0.8999999761581421
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "owner-removal-1000",
+      "label": "combined",
+      "medianMs": 0.04999995231628418,
+      "p90Ms": 0.40000009536743164,
+      "rangeMs": [
+        0,
+        0.8000000715255737
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "parked-removal-1000",
+      "label": "current",
+      "medianMs": 0.8000000715255737,
+      "p90Ms": 1.2999999523162842,
+      "rangeMs": [
+        0.20000004768371582,
+        1.7000000476837158
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "parked-removal-1000",
+      "label": "sameBuild",
+      "medianMs": 1,
+      "p90Ms": 1.399999976158142,
+      "rangeMs": [
+        0.09999990463256836,
+        2
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "parked-removal-1000",
+      "label": "combined",
+      "medianMs": 0.8999999761581421,
+      "p90Ms": 1.399999976158142,
+      "rangeMs": [
+        0.20000004768371582,
+        1.5
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "exclude-parent-1000",
+      "label": "current",
+      "medianMs": 0.699999988079071,
+      "p90Ms": 1.100000023841858,
+      "rangeMs": [
+        0,
+        1.600000023841858
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "exclude-parent-1000",
+      "label": "sameBuild",
+      "medianMs": 0.6999999284744263,
+      "p90Ms": 1,
+      "rangeMs": [
+        0.09999990463256836,
+        1.2000000476837158
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "exclude-parent-1000",
+      "label": "combined",
+      "medianMs": 0.7000000476837158,
+      "p90Ms": 1.2000000476837158,
+      "rangeMs": [
+        0.09999990463256836,
+        1.5
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "disconnect-1000",
+      "label": "current",
+      "medianMs": 0.8999999761581421,
+      "p90Ms": 1.3000000715255737,
+      "rangeMs": [
+        0.20000004768371582,
+        2
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "disconnect-1000",
+      "label": "sameBuild",
+      "medianMs": 0.800000011920929,
+      "p90Ms": 1.5,
+      "rangeMs": [
+        0.10000002384185791,
+        1.7000000476837158
+      ]
+    },
+    {
+      "cpuRate": 4,
+      "scenario": "disconnect-1000",
+      "label": "combined",
+      "medianMs": 0.75,
+      "p90Ms": 1,
+      "rangeMs": [
+        0.09999990463256836,
+        1.7999999523162842
+      ]
+    }
+  ],
+  "samplesFile": "confirmation-samples.csv",
+  "sampleCount": 2160
+}
