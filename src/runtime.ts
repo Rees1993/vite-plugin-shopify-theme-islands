@@ -54,11 +54,13 @@ export function revive(payload: RevivePayload): ReviveRuntime {
   const spine = extendDirectiveSpine(baseSpine, payload.customDirectives);
 
   const lifecycle = createIslandLifecycleCoordinator();
-  const observability = createRuntimeObservability({
-    debug: opts.debug,
-    isObserved: (element) => lifecycle.isObserved(element),
-    console,
-  });
+  const observability = opts.debug
+    ? createRuntimeObservability({
+        debug: opts.debug,
+        isObserved: (element) => lifecycle.isObserved(element),
+        console,
+      })
+    : undefined;
   const debugBoundSurface = {
     dispatchLoad: runtimeSurface.dispatchLoad,
     dispatchError: runtimeSurface.dispatchError,

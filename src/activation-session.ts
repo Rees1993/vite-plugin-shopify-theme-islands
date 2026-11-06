@@ -35,7 +35,7 @@ export interface ActivationSessionDeps {
     dispatchError: RuntimeSurface["dispatchError"];
     createLogger(tagName: string): RuntimeLogger;
   };
-  observability: Pick<
+  observability?: Pick<
     RuntimeObservability,
     "noteInitialWaits" | "warnOnConflictingLoadGate" | "clear"
   >;
@@ -70,14 +70,14 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     stopped = true;
     retries.cancelAll();
     for (const tag of tags.keys()) release(tag);
-    deps.observability.clear();
+    deps.observability?.clear();
   };
 
   const release = (tag: string): void => {
     const state = tags.get(tag);
     tags.delete(tag);
     retries.cancel(tag);
-    deps.observability.clear([tag]);
+    deps.observability?.clear([tag]);
     for (const work of state?.elements.values() ?? []) {
       work.controller?.abort();
       work.unwatch();
@@ -85,6 +85,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
   };
 
   const discover = (tagName: string, element: HTMLElement): void => {
+    if (!deps.observability) return;
     const plan = deps.spine.planGates(element);
     deps.observability.warnOnConflictingLoadGate(tagName, element, plan.conflictSignature);
   };
@@ -195,7 +196,7 @@ export function createActivationSession(deps: ActivationSessionDeps): Activation
     };
     const plan = deps.spine.planGates(element);
     const log = deps.surface.createLogger(tagName);
-    deps.observability.noteInitialWaits(
+    deps.observability?.noteInitialWaits(
       tagName,
       plan.initialDiagnosticParts,
       deps.ownership.initialWalkComplete,
