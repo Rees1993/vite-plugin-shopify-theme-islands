@@ -49,3 +49,18 @@ representing the diagnostic-off production performance benefit.
 Shopify CLI's local preview synchronizes a development theme; it is not entirely
 offline. See [the official command reference](https://shopify.dev/docs/api/shopify-cli/theme/theme-dev).
 No live-theme development flag, publishing, checkout or cart-content mutation is used.
+
+## Review hardening
+
+Build preparation now writes validation-build.json per variant, including resolved
+source references, copied-source hashes and the actual bootstrap fingerprint.
+Rebuild older temporary checkouts before using the hardened runners. Validation
+uses those prepared references, not the repo's HEAD at measurement time.
+`validate.mjs --check-builds` verifies assets and prints prepared attribution
+without launching a browser. Missing/changed bootstrap files fail.
+
+Flow success requires the prepared bootstrap fingerprint, or (for local dev) the
+exact local Vite runtime URL, successful HTTP response and matching preflight body
+hash. Empty selections and invalid measurement-round counts fail before browser
+launch. `check-provenance.mjs <request.json>` can validate a captured provenance
+request independently; CLI regression tests cover positive and negative cases.
