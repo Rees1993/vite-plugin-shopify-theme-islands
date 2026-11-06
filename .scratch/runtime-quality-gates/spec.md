@@ -15,3 +15,10 @@ Reference: 77856c7bddfc29aa87b7bcadf089ea08122119cb. User authorized implementin
 - Review prototype patch in research/patches/combined-common-path.patch against 77856c7 through independent Standards and Spec axes. Retest correctness and timing where justified; keep source changes isolated from main.
 - Review remaining retro suggestions: scope/performance judgement standards, a shared local verification command/experiment tooling, skill and research-source durability. Apply only already authorized work; report additional recommendations separately from implementation.
 - Preserve the approved glossary/config migration and existing research files. Do not erase unrelated staged/unstaged work.
+
+## Completion evidence
+
+See review.md and evidence/. Local CLI and real-Chrome retests include the
+historical broken runtime as a negative control. Independent Standards/Spec
+review covered both main tooling and the isolated prototype; a research-runner
+fail-open finding was corrected with the canonical validator.

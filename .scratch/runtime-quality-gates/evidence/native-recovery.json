@@ -1,0 +1,115 @@
+{
+  "capturedAt": "2026-11-06T12:15:20.441Z",
+  "pluginCommit": "edbfac09a6a4d3425982b9b9bf4e4da67a3d9eea",
+  "sourceRoot": "/tmp/islands-prototype-review",
+  "runtimeBundleSha256": "3e9821f0df0883ee38541539722a9bb9800a32bbf2617707c1211d7dc6c1fff7",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-recovery.html",
+  "errors": [],
+  "results": [
+    {
+      "mode": "initial-success",
+      "actual": {
+        "parent": 1,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": []
+      },
+      "expected": {
+        "parent": 1,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "stop",
+      "actual": {
+        "parent": 1,
+        "alpha": 0,
+        "beta": 0,
+        "gamma": 0,
+        "parentRegistered": false,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 1,
+        "alpha": 0,
+        "beta": 0,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "retry",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 0
+      },
+      "pass": true
+    },
+    {
+      "mode": "fresh",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1
+      },
+      "pass": true
+    },
+    {
+      "mode": "fresh-and-scan",
+      "actual": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1,
+        "parentRegistered": true,
+        "preservedIdentity": true,
+        "errorAttempts": [
+          1
+        ]
+      },
+      "expected": {
+        "parent": 2,
+        "alpha": 1,
+        "beta": 1,
+        "gamma": 1
+      },
+      "pass": true
+    }
+  ],
+  "methodology": "Native Chromium runtime-only fixtures; timings informational; deterministic correctness and resource budgets enforced"
+}

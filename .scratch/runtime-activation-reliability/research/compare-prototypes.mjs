@@ -1,6 +1,7 @@
 // Research-only native benchmark. PROTOTYPES is a JSON map of label -> isolated source root.
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
+import puppeteer from 'puppeteer';
+import { validateNativeReport } from '../../../scripts/validate-native-report.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -34,6 +35,7 @@ for (const [label, root] of Object.entries(variants)) {
   bundles[label] = await readFile(output);
 }
 const server = createServer(async (request, response) => {
+  if (request.url === '/favicon.ico') { response.writeHead(204); response.end(); return; }
   const native = request.url.split('?')[0].match(/^\/native\/([a-zA-Z][a-zA-Z0-9-]*)\/(native-recovery\.html|native-policy\.html|runtime(?:-debug)?\.js)$/);
   if (native && bundles[native[1]]) {
     const javascript = native[2].endsWith('.js');
@@ -53,12 +55,15 @@ const server = createServer(async (request, response) => {
   response.setHeader('Content-Type', 'application/javascript'); response.end(bundles[label]);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const requireTheme = createRequire(join(process.env.THEME_ROOT ?? '/Users/alexrees/Documents/Lazer/Golfballs/golfballs-theme', 'package.json'));
-const puppeteer = requireTheme('puppeteer');
+
 let browser;
 try {
-  browser = await puppeteer.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
+  browser = await puppeteer.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE || undefined });
   const page = await browser.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('requestfailed', request => errors.push(`Request failed: ${request.url()}`));
+  page.on('response', response => { if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`); });
   await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'load' });
   const client = await page.createCDPSession();
   const data = {
@@ -75,7 +80,7 @@ try {
       await page.goto(`http://127.0.0.1:${server.address().port}/native/${label}/${fixture}${debug ? "?debug=1" : ""}`, { waitUntil: 'load' });
       await page.waitForSelector('#results', { timeout: 30000 });
       const checks = JSON.parse(await page.$eval('#results', element => element.textContent));
-      data.nativeChecks.push({ label, fixture, debug, results: checks });
+      data.nativeChecks.push({ label, fixture, debug, results: checks, errors: [...errors] });
     }
   }
   if (process.env.NATIVE_ONLY !== 'true') for (const cpuRate of [1, 4]) {
@@ -149,7 +154,8 @@ try {
   await writeFile(join(artifacts, 'summary.json'), JSON.stringify(data, null, 2));
   for (const row of data.summary) console.log(JSON.stringify(row));
   for (const check of data.nativeChecks) console.log(JSON.stringify({ label: check.label, fixture: check.fixture, debug: check.debug, passed: check.results.filter(result => result.pass).length, total: check.results.length }));
-  if (data.nativeChecks.some(check => check.results.some(result => !result.pass))) throw new Error('Native prototype check failed');
+  if (errors.length) throw new Error(errors.join('\n'));
+  for (const check of data.nativeChecks) validateNativeReport(check);
 } finally {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
