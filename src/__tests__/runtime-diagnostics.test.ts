@@ -143,7 +143,9 @@ describe("runtime diagnostics", () => {
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("same tag <same-tag>"));
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("first-resolved instance"));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("first observed Island element"),
+      );
 
       runtime.disconnect();
       warnSpy.mockRestore();

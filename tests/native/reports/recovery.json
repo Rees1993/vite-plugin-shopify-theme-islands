@@ -1,0 +1,26 @@
+{
+  "fixture": "native-recovery.html",
+  "errors": [],
+  "results": [
+    {
+      "mode": "initial-success",
+      "pass": true
+    },
+    {
+      "mode": "stop",
+      "pass": true
+    },
+    {
+      "mode": "retry",
+      "pass": true
+    },
+    {
+      "mode": "fresh",
+      "pass": true
+    },
+    {
+      "mode": "fresh-and-scan",
+      "pass": true
+    }
+  ]
+}

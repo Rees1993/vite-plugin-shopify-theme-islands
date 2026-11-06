@@ -221,6 +221,7 @@ describe("runtime custom directives", () => {
 
       const el = document.createElement("broken-island");
       el.setAttribute("client:on-click", "");
+      document.body.append(el);
       mutations.add(el);
       await flush();
 
@@ -285,6 +286,7 @@ describe("runtime custom directives", () => {
 
       const el = document.createElement("broken-async");
       el.setAttribute("client:on-click", "");
+      document.body.append(el);
       mutations.add(el);
       await flush();
 
