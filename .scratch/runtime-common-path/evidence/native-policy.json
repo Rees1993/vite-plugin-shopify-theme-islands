@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-11-06T12:21:59.536Z",
+  "pluginCommit": "6267a6989b16139b0587066237f6f1a1cc6147cd",
+  "sourceRoot": "/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands",
+  "runtimeBundleSha256": "5a65af2006cf6736a0e55ab84acefe36d6ed2914eacc6e5b5be86dcbfc5b99b4",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-policy.html",
+  "errors": [],
+  "results": [
+    {
+      "mode": "scan-included-child-through-excluded-parent",
+      "pass": true,
+      "calls": 1
+    },
+    {
+      "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+      "pass": true,
+      "beforeRemoval": 0,
+      "calls": 1
+    },
+    {
+      "mode": "included-child-pending-gate-survives-parent-exclusion",
+      "pass": true,
+      "calls": 1
+    }
+  ],
+  "methodology": "Native Chromium runtime-only fixtures; timings informational; deterministic correctness and resource budgets enforced"
+}

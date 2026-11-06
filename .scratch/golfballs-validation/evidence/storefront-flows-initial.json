@@ -1,0 +1,234 @@
+[
+  {
+    "variant": "deployed",
+    "route": "home",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "status": 200
+  },
+  {
+    "variant": "baseline",
+    "route": "home",
+    "errors": [],
+    "actions": [],
+    "status": 304,
+    "fatal": "HTTP 304"
+  },
+  {
+    "variant": "baseline",
+    "route": "collection",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      },
+      {
+        "message": "Uncaught [object Object]",
+        "stack": "Error: Uncaught [object Object]\n    at error (https://www.googletagmanager.com/gtm.js?id=GTM-PM3W8NN:204:504)\n    at c.m.onerror (https://www.googletagmanager.com/gtm.js?id=GTM-PM3W8NN:213:161)"
+      },
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "sort": "most-relevant"
+  },
+  {
+    "variant": "baseline",
+    "route": "product",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "quantity-stepper",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "quantityControls": [
+      {
+        "value": "1",
+        "min": "1",
+        "max": "1520"
+      },
+      {
+        "value": "2",
+        "min": "2",
+        "max": "1520"
+      }
+    ]
+  },
+  {
+    "variant": "baseline",
+    "route": "search",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      },
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "sort": "price-ascending"
+  },
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "status": 200
+  },
+  {
+    "variant": "candidate",
+    "route": "collection",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      },
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "sort": "most-relevant"
+  },
+  {
+    "variant": "candidate",
+    "route": "product",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "quantity-stepper",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "quantityControls": [
+      {
+        "value": "1",
+        "min": "1",
+        "max": "1520"
+      },
+      {
+        "value": "2",
+        "min": "2",
+        "max": "1520"
+      }
+    ]
+  },
+  {
+    "variant": "candidate",
+    "route": "search",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      },
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "status": 200,
+    "sort": "price-ascending"
+  }
+]

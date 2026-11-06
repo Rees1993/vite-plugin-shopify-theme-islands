@@ -1,0 +1,547 @@
+{
+  "capturedAt": "2026-11-06T11:10:40.182Z",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "referenceCommit": "77856c7bddfc29aa87b7bcadf089ea08122119cb",
+  "bundleSha256": {
+    "current": "b0fdb206898b0c34a7a494753326b5bb57eb61fdfcd1559a1765b07d6f14a1c2",
+    "patched": "cac1009f18cd58ec7ef6f4df6f0f4b277ec1e132dab6eef7de4355e2bbd5f8cd"
+  },
+  "methodology": "Real native Chrome customElements/MutationObserver fixtures; each variant runs with debug disabled and enabled. No timing measurements in this mode.",
+  "samples": [],
+  "nativeChecks": [
+    {
+      "label": "current",
+      "fixture": "native-recovery.html",
+      "debug": false,
+      "results": [
+        {
+          "mode": "initial-success",
+          "actual": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": []
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "stop",
+          "actual": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0,
+            "parentRegistered": false,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "retry",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh-and-scan",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "label": "current",
+      "fixture": "native-policy.html",
+      "debug": false,
+      "results": [
+        {
+          "mode": "scan-included-child-through-excluded-parent",
+          "pass": true,
+          "calls": 1
+        },
+        {
+          "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+          "pass": true,
+          "beforeRemoval": 0,
+          "calls": 1
+        },
+        {
+          "mode": "included-child-pending-gate-survives-parent-exclusion",
+          "pass": true,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "label": "current",
+      "fixture": "native-recovery.html",
+      "debug": true,
+      "results": [
+        {
+          "mode": "initial-success",
+          "actual": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": []
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "stop",
+          "actual": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0,
+            "parentRegistered": false,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "retry",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh-and-scan",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "label": "current",
+      "fixture": "native-policy.html",
+      "debug": true,
+      "results": [
+        {
+          "mode": "scan-included-child-through-excluded-parent",
+          "pass": true,
+          "calls": 1
+        },
+        {
+          "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+          "pass": true,
+          "beforeRemoval": 0,
+          "calls": 1
+        },
+        {
+          "mode": "included-child-pending-gate-survives-parent-exclusion",
+          "pass": true,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "label": "patched",
+      "fixture": "native-recovery.html",
+      "debug": false,
+      "results": [
+        {
+          "mode": "initial-success",
+          "actual": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": []
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "stop",
+          "actual": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0,
+            "parentRegistered": false,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "retry",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh-and-scan",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "label": "patched",
+      "fixture": "native-policy.html",
+      "debug": false,
+      "results": [
+        {
+          "mode": "scan-included-child-through-excluded-parent",
+          "pass": true,
+          "calls": 1
+        },
+        {
+          "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+          "pass": true,
+          "beforeRemoval": 0,
+          "calls": 1
+        },
+        {
+          "mode": "included-child-pending-gate-survives-parent-exclusion",
+          "pass": true,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "label": "patched",
+      "fixture": "native-recovery.html",
+      "debug": true,
+      "results": [
+        {
+          "mode": "initial-success",
+          "actual": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": []
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "stop",
+          "actual": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0,
+            "parentRegistered": false,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 1,
+            "alpha": 0,
+            "beta": 0,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "retry",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 0
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        },
+        {
+          "mode": "fresh-and-scan",
+          "actual": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1,
+            "parentRegistered": true,
+            "preservedIdentity": true,
+            "errorAttempts": [
+              1
+            ]
+          },
+          "expected": {
+            "parent": 2,
+            "alpha": 1,
+            "beta": 1,
+            "gamma": 1
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "label": "patched",
+      "fixture": "native-policy.html",
+      "debug": true,
+      "results": [
+        {
+          "mode": "scan-included-child-through-excluded-parent",
+          "pass": true,
+          "calls": 1
+        },
+        {
+          "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+          "pass": true,
+          "beforeRemoval": 0,
+          "calls": 1
+        },
+        {
+          "mode": "included-child-pending-gate-survives-parent-exclusion",
+          "pass": true,
+          "calls": 1
+        }
+      ]
+    }
+  ],
+  "prototypePatchSha256": "9af920b92043934b6aac15f8923efc2f751b962557aabf4944d0fcb7f17d91c6",
+  "summary": []
+}

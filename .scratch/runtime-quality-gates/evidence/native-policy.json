@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-11-06T12:15:21.237Z",
+  "pluginCommit": "edbfac09a6a4d3425982b9b9bf4e4da67a3d9eea",
+  "sourceRoot": "/tmp/islands-prototype-review",
+  "runtimeBundleSha256": "3e9821f0df0883ee38541539722a9bb9800a32bbf2617707c1211d7dc6c1fff7",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "fixture": "native-policy.html",
+  "errors": [],
+  "results": [
+    {
+      "mode": "scan-included-child-through-excluded-parent",
+      "pass": true,
+      "calls": 1
+    },
+    {
+      "mode": "cancelled-owner-transfers-through-native-mutation-observer",
+      "pass": true,
+      "beforeRemoval": 0,
+      "calls": 1
+    },
+    {
+      "mode": "included-child-pending-gate-survives-parent-exclusion",
+      "pass": true,
+      "calls": 1
+    }
+  ],
+  "methodology": "Native Chromium runtime-only fixtures; timings informational; deterministic correctness and resource budgets enforced"
+}

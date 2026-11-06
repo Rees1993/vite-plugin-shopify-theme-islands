@@ -1,0 +1,32 @@
+--- a/src/lifecycle.ts
++++ b/src/lifecycle.ts
+@@ -24,11 +24,13 @@
+ export function createIslandLifecycleCoordinator(): IslandLifecycle {
+   const cancellableWatchers = createCancellableWatchers();
+   let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
++  let hasExclusions = false;
+   let stopped = false;
+   let initialWalkComplete = false;
+   let walkImpl: ((root: HTMLElement) => void) | undefined;
+ 
+   const isExcluded = (el: Element): boolean => {
++    if (!hasExclusions) return false;
+     let current: Element | null = el;
+     while (current) {
+       const policy = rootPolicies.get(current as HTMLElement);
+@@ -113,6 +115,7 @@
+       stopped = true;
+       cancellableWatchers.cancelAll();
+       rootPolicies = new WeakMap();
++      hasExclusions = false;
+       document.removeEventListener("DOMContentLoaded", init);
+       observer.disconnect();
+     };
+@@ -122,6 +125,7 @@
+ 
+   return {
+     excludeRoot(root) {
++      hasExclusions = true;
+       rootPolicies.set(root, "exclude");
+       cancellableWatchers.cancelInRoot(root, isExcluded);
+     },

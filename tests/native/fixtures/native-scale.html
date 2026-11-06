@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Runtime setup baseline</title></head><body><h1>Running runtime setup baseline</h1><script type="module">
+import {revive} from './runtime.js';
+window.addEventListener('load',async()=>{
+const NativeIO=window.IntersectionObserver;
+const nativeAdd=HTMLElement.prototype.addEventListener;
+const nativeRemove=HTMLElement.prototype.removeEventListener;
+const nextFrame=()=>new Promise(r=>requestAnimationFrame(r));
+const results=[];
+for(const fixture of [
+ {name:'one-visible',count:1,unique:false,gate:'visible'},
+ {name:'hundred-same-visible',count:100,unique:false,gate:'visible'},
+ {name:'thousand-same-visible',count:1000,unique:false,gate:'visible'},
+ {name:'hundred-unique-visible',count:100,unique:true,gate:'visible'},
+ {name:'thousand-same-interaction',count:1000,unique:false,gate:'interaction'},
+]){
+for(let sample=1;sample<=5;sample++){
+const counts={observers:0,observations:0,disconnections:0,interactionAdds:0,interactionRemoves:0};
+window.IntersectionObserver=class extends NativeIO{
+ constructor(...args){super(...args);counts.observers++;}
+ observe(target){counts.observations++;return super.observe(target);}
+ disconnect(){counts.disconnections++;return super.disconnect();}
+};
+HTMLElement.prototype.addEventListener=function(name,...args){if(['mouseenter','touchstart','focusin'].includes(name))counts.interactionAdds++;return nativeAdd.call(this,name,...args);};
+HTMLElement.prototype.removeEventListener=function(name,...args){if(['mouseenter','touchstart','focusin'].includes(name))counts.interactionRemoves++;return nativeRemove.call(this,name,...args);};
+const islands={};
+let html='';
+for(let i=0;i<fixture.count;i++){
+const tag=fixture.unique?`scale-tag-${i}`:'scale-repeat';islands[`/${tag}.ts`]=async()=>{};
+html+=`<${tag} client:${fixture.gate} style="display:none"></${tag}>`;
+}
+document.body.innerHTML=html;
+const start=performance.now();const runtime=revive({islands});const synchronousSetupMs=performance.now()-start;
+await nextFrame();await nextFrame();
+const active={...counts};runtime.disconnect();await Promise.resolve();await Promise.resolve();
+results.push({fixture:fixture.name,count:fixture.count,uniqueTags:Object.keys(islands).length,sample,synchronousSetupMs,active,afterDisconnect:{...counts}});
+window.IntersectionObserver=NativeIO;HTMLElement.prototype.addEventListener=nativeAdd;HTMLElement.prototype.removeEventListener=nativeRemove;
+}
+}
+document.body.innerHTML='<h1>Runtime setup baseline</h1><pre id="results"></pre>';
+document.getElementById('results').textContent=JSON.stringify(results,null,2);
+});
+</script></body></html>

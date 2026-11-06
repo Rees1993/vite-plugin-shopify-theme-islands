@@ -1,0 +1,63 @@
+{
+  "origin": "http://127.0.0.1:9293",
+  "runtimeUrl": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+  "expectedHash": "16c9de19122c2df2d50a1ae477d7fdd10a0448c9210ceb8dbbe1982c2643019d",
+  "errors": [],
+  "results": [
+    {
+      "action": "retain",
+      "before": 0,
+      "childLoads": 1,
+      "excludedLoads": 0,
+      "registered": true,
+      "pass": true
+    },
+    {
+      "action": "exclude",
+      "before": 0,
+      "childLoads": 0,
+      "excludedLoads": 0,
+      "registered": false,
+      "pass": true
+    },
+    {
+      "action": "detach",
+      "before": 0,
+      "childLoads": 0,
+      "excludedLoads": 0,
+      "registered": false,
+      "pass": true
+    },
+    {
+      "action": "disconnect",
+      "before": 0,
+      "childLoads": 0,
+      "excludedLoads": 0,
+      "registered": false,
+      "pass": true
+    }
+  ],
+  "navigationAttempts": [
+    {
+      "attempt": 1,
+      "status": 200
+    }
+  ],
+  "status": 200,
+  "theme": {
+    "name": "Development (b6b917-Alexs-MacBook-Air)",
+    "id": 193189904701,
+    "schema_name": "Lazer Liquid Starter",
+    "schema_version": "0.0.1",
+    "theme_store_id": null,
+    "role": "development",
+    "handle": "null",
+    "style": {
+      "id": null,
+      "handle": null
+    }
+  },
+  "runtimeStatus": 200,
+  "runtimeHash": "16c9de19122c2df2d50a1ae477d7fdd10a0448c9210ceb8dbbe1982c2643019d",
+  "pass": true
+}

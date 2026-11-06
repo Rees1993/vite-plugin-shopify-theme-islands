@@ -1,0 +1,215 @@
+--- a/src/activation-session.ts
++++ b/src/activation-session.ts
+@@ -15,7 +15,6 @@
+ export interface ActivationOwnership {
+   readonly initialWalkComplete: boolean;
+   isObserved(el: Element): boolean;
+-  watchCancellable(el: Element, cancel: () => void): () => void;
+   walk(root: HTMLElement): void;
+ }
+ 
+@@ -46,6 +45,7 @@
+   discover(tagName: string, element: HTMLElement): void;
+   activate(candidate: ActivationCandidate): Promise<void>;
+   isPending(tagName: string): boolean;
++  reconcile(shouldCancel?: (element: Element) => boolean): void;
+   clear(): void;
+ }
+ 
+@@ -53,12 +53,12 @@
+   interface PendingElement {
+     controller?: AbortController;
+     canOwn: boolean;
+-    unwatch(): void;
+   }
+   interface TagActivation {
+     phase: "waiting" | "loading" | "retrying" | "exhausted" | "loaded";
+     elements: Map<HTMLElement, PendingElement>;
+     gateElement?: HTMLElement;
++    loader: IslandLoader;
+   }
+   const tags = new Map<string, TagActivation>();
+   const retries = createRetryScheduler({
+@@ -80,7 +80,6 @@
+     deps.observability.clear([tag]);
+     for (const work of state?.elements.values() ?? []) {
+       work.controller?.abort();
+-      work.unwatch();
+     }
+   };
+ 
+@@ -93,33 +92,12 @@
+     if (stopped || !deps.ownership.isObserved(element)) return;
+     let state = tags.get(tagName);
+     if (!state) {
+-      state = { phase: "waiting", elements: new Map() };
++      state = { phase: "waiting", elements: new Map(), loader };
+       tags.set(tagName, state);
+     }
+     if (state.phase === "loaded" || state.elements.has(element)) return;
+     const current = state;
+-    const work: PendingElement = { canOwn: true, unwatch: () => {} };
+-    work.unwatch = deps.ownership.watchCancellable(element, () => {
+-      if (current.elements.get(element) !== work) return;
+-      current.elements.delete(element);
+-      if (current.gateElement === element) current.gateElement = undefined;
+-      work.controller?.abort();
+-      if (tags.get(tagName) !== current) return;
+-      if (current.phase === "waiting" && !current.gateElement) {
+-        const next = [...current.elements.keys()].find(
+-          (root) => current.elements.get(root)!.canOwn && deps.ownership.isObserved(root),
+-        );
+-        if (next) {
+-          const parked = current.elements.get(next)!;
+-          current.elements.delete(next);
+-          parked.unwatch();
+-          void activate({ tagName, element: next, loader });
+-          return;
+-        }
+-        if (current.elements.size > 0) current.phase = "exhausted";
+-      }
+-      if (current.elements.size === 0 && current.phase !== "loading") release(tagName);
+-    });
++    const work: PendingElement = { canOwn: true };
+     current.elements.set(element, work);
+     if (current.phase === "loading" || current.phase === "retrying" || current.gateElement) return;
+     if (current.phase === "exhausted") current.phase = "waiting";
+@@ -178,7 +156,6 @@
+         const pending = [...current.elements.values()];
+         current.elements.clear();
+         current.gateElement = undefined;
+-        for (const work of pending) work.unwatch();
+         for (const work of pending) work.controller?.abort();
+         if (stopped || tags.get(tagName) !== current) return;
+         deps.surface.dispatchLoad({
+@@ -238,8 +215,39 @@
+     });
+   };
+ 
++  const reconcile = (
++    shouldCancel: (element: Element) => boolean = (element) => !deps.ownership.isObserved(element),
++  ): void => {
++    // Snapshot before invoking abort callbacks: cleanup may reenter the runtime.
++    const states = [...tags];
++    for (const [tagName, current] of states) {
++      const memberships = [...current.elements];
++      for (const [element, work] of memberships) {
++        if (tags.get(tagName) !== current || current.elements.get(element) !== work) continue;
++        if (!shouldCancel(element)) continue;
++        current.elements.delete(element);
++        if (current.gateElement === element) current.gateElement = undefined;
++        work.controller?.abort();
++        if (tags.get(tagName) !== current) continue;
++        if (current.phase === "waiting" && !current.gateElement) {
++          const next = [...current.elements.keys()].find(
++            (root) => current.elements.get(root)!.canOwn && deps.ownership.isObserved(root),
++          );
++          if (next) {
++            current.elements.delete(next);
++            void activate({ tagName, element: next, loader: current.loader });
++            continue;
++          }
++          if (current.elements.size > 0) current.phase = "exhausted";
++        }
++        if (current.elements.size === 0 && current.phase !== "loading") release(tagName);
++      }
++    }
++  };
++
+   return {
+     discover,
++    reconcile,
+     activate,
+     isPending: (tagName) => {
+       const state = tags.get(tagName);
+--- a/src/lifecycle.ts
++++ b/src/lifecycle.ts
+@@ -1,4 +1,3 @@
+-import { createCancellableWatchers } from "./cancellable-watchers.js";
+ import type { IslandLoader } from "./contract.js";
+ 
+ export interface IslandLifecycleStartInput {
+@@ -9,6 +8,7 @@
+   onDiscover?(tagName: string, el: HTMLElement): void;
+   onBeforeInitialWalk?: () => void;
+   onInitialWalkComplete?: () => void;
++  onInvalidate(shouldCancel?: (element: Element) => boolean): void;
+ }
+ 
+ export interface IslandLifecycle {
+@@ -16,13 +16,12 @@
+   includeRoot(root: HTMLElement): void;
+   isObserved(el: Element): boolean;
+   readonly initialWalkComplete: boolean;
+-  watchCancellable(el: Element, cancel: () => void): () => void;
+   walk(root: HTMLElement): void;
+   start(input: IslandLifecycleStartInput): { disconnect: () => void };
+ }
+ 
+ export function createIslandLifecycleCoordinator(): IslandLifecycle {
+-  const cancellableWatchers = createCancellableWatchers();
++  let invalidate: IslandLifecycleStartInput["onInvalidate"] | undefined;
+   let rootPolicies = new WeakMap<HTMLElement, "include" | "exclude">();
+   let stopped = false;
+   let initialWalkComplete = false;
+@@ -40,6 +39,7 @@
+ 
+   const start = (input: IslandLifecycleStartInput): { disconnect: () => void } => {
+     stopped = false;
++    invalidate = input.onInvalidate;
+     let disconnected = false;
+     let initialized = false;
+ 
+@@ -86,7 +86,7 @@
+     };
+ 
+     const observer = new MutationObserver((mutations) => {
+-      cancellableWatchers.cancelDetached(isExcluded);
++      input.onInvalidate();
+       handleAdditions(mutations);
+     });
+ 
+@@ -111,7 +111,7 @@
+     const disconnect = (): void => {
+       disconnected = true;
+       stopped = true;
+-      cancellableWatchers.cancelAll();
++      input.onInvalidate();
+       rootPolicies = new WeakMap();
+       document.removeEventListener("DOMContentLoaded", init);
+       observer.disconnect();
+@@ -123,7 +123,7 @@
+   return {
+     excludeRoot(root) {
+       rootPolicies.set(root, "exclude");
+-      cancellableWatchers.cancelInRoot(root, isExcluded);
++      invalidate?.((element) => (element === root || root.contains(element)) && isExcluded(element));
+     },
+     includeRoot(root) {
+       rootPolicies.set(root, "include");
+@@ -134,7 +134,6 @@
+     get initialWalkComplete() {
+       return initialWalkComplete;
+     },
+-    watchCancellable: cancellableWatchers.watch,
+     walk(root) {
+       walkImpl?.(root);
+     },
+--- a/src/runtime-ownership.ts
++++ b/src/runtime-ownership.ts
+@@ -21,6 +21,7 @@
+   activate(candidate: OwnershipActivationCandidate): Promise<void>;
+   isPending(tagName: string): boolean;
+   clear(): void;
++  reconcile(shouldCancel?: (element: Element) => boolean): void;
+ }
+ 
+ export interface ObservedRootSessionDeps {
+@@ -36,6 +37,7 @@
+   let endReadyLog: (() => void) | undefined;
+   const disconnectLifecycle = deps.lifecycle.start({
+     getRoot: () => document.body,
++    onInvalidate: (shouldCancel) => deps.session.reconcile(shouldCancel),
+     islandMap: deps.islandMap,
+     isPending: (tag) => deps.session.isPending(tag),
+     onDiscover: (tagName, element) => {

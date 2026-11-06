@@ -1,0 +1,169 @@
+[
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [],
+    "overrides": [
+      {
+        "served": "theme.D6QK5Cee.min.js",
+        "sha256": "c599fa611ef70f2cd24d3799432e7247b2d38003e5ba617e868998867f051731"
+      },
+      {
+        "served": "l-b2b-link.BlyLSUbs.min.js",
+        "sha256": "36005b59c698a8499c0d624ac90903e55c1acef29b13407bfb84b47391957af9"
+      },
+      {
+        "served": "b2bLinkIntent.B6N_b6a9.min.js",
+        "sha256": "8f3eeca78da5d924713c8d49b52822318d7b04b21f312680e8c3a4695ecdd51d"
+      },
+      {
+        "served": "browsingType.DMOK5iOV.min.js",
+        "sha256": "d588948277420d653620d84209736484ef113a2942abcfa1b3553a26d86d49d6"
+      },
+      {
+        "served": "ModeSwitcher.Cuh1nfJ8.min.js",
+        "sha256": "0735b58214b894f4beeaabd63962553835455fc49795b8de38a1f2901c5b8f00"
+      },
+      {
+        "served": "UtilityBarMarquee.BBrkaknE.min.js",
+        "sha256": "49f1301d2b4ce55ebf2c56c5d507df0e92fae1e5ed20e629f5c4edcb32fcb049"
+      },
+      {
+        "served": "l-segment-refresh.BqG-pne5.min.js",
+        "sha256": "b8a7b4ae5d7cd84112dbf0b0373783e48cb347e93376aa1e25907cf98761310b"
+      },
+      {
+        "served": "MobileMenu.DMVeKv0w.min.js",
+        "sha256": "99198936b32bb9f88460063582e95393ff89b38603f3cd11f789889bce6e251b"
+      },
+      {
+        "served": "designStudio.events.DY4Pe8yQ.min.js",
+        "sha256": "37258760103b6103f69750d07506d15c138c5a7856a4c43af17398bc427c9d26"
+      },
+      {
+        "served": "focus-trap.esm.BO0Icfjz.min.js",
+        "sha256": "bba2c7a4504b489c41130a628811dfc7a754de2936541afa6b37deb3ff9cdf2b"
+      },
+      {
+        "served": "bodyScroll.5C_vk-Q2.min.js",
+        "sha256": "d420dcdff7dfb3af7a05f90f6934517bd112e7028c34a5f68da71fcbdf3af461"
+      },
+      {
+        "served": "search-modal.Cfr0RyGp.min.js",
+        "sha256": "cfde54ab3d77294049fcdd06d8d9a3db764a998a45a5cf559e1f30b8adc0b205"
+      },
+      {
+        "served": "debounce.lyBBPHdP.min.js",
+        "sha256": "89b12bd2c40883093925efd4c9997044a262b55cddbe013793a4bc8ece49ca57"
+      },
+      {
+        "served": "parseHTML.C-hh7jJd.min.js",
+        "sha256": "1efd994733c5dab3cb6f82dd708feab94751fac2128f250fefe8d8c4491f3426"
+      },
+      {
+        "served": "HeroCarousel.DtjVCD7-.min.js",
+        "sha256": "c7a855532d61c4016657b5e978ad5ad36a64d6f470520db317190432103243ee"
+      },
+      {
+        "served": "l-video-accessible.Bvlq3x14.min.js",
+        "sha256": "c7272b6db146e7672945f06db60a0ce6c0f76842832b2fc542b606d7eefccaa4"
+      },
+      {
+        "served": "ScrollRegion.Clb53AU4.min.js",
+        "sha256": "afff29d5b9d1810bf2937b02275881a610b7b9c539ff8d527126c155323dbd8d"
+      },
+      {
+        "served": "l-design-studio-links.CI31sgRU.min.js",
+        "sha256": "c0df1fd09c71739f03254ea95ca89299b28a7cc699090d8d1823aecdbce50bdb"
+      },
+      {
+        "served": "CartDrawer.BEQ-2C2R.min.js",
+        "sha256": "765a1981d8b3381e6741d313ba1a219e5e5c4c909991854b4754fa5ea024c502"
+      },
+      {
+        "served": "index.9dkDZTbp.min.js",
+        "sha256": "821c027f2392b1f80d2ad45132c0433e2c56419ddf8c9a056dea5d88f662ebc9"
+      },
+      {
+        "served": "cartError.DXDVwTlQ.min.js",
+        "sha256": "b9276de1ffc792fe0c5239368ccc5decb4ccda3a994823bfeba40b019e3be489"
+      },
+      {
+        "served": "typedQuantity.BI7wE1S6.min.js",
+        "sha256": "e6aed3d3714e8bc37bf479c22c6c76246cfe20abb3b7dde98c28001e150ae45d"
+      },
+      {
+        "served": "headerCartCount.uwFCipFG.min.js",
+        "sha256": "5f26000512f4b3b6f18580862d0d25efefaa975cd32e278cadfab1004341852c"
+      },
+      {
+        "served": "productionDays.D3wWHvHT.min.js",
+        "sha256": "75d10fc135b01afdb645bb1cd8caff83bc438ea2c7e80b9bddf1df82ed54c5bf"
+      },
+      {
+        "served": "theme.D6QK5Cee.min.js",
+        "sha256": "c599fa611ef70f2cd24d3799432e7247b2d38003e5ba617e868998867f051731"
+      },
+      {
+        "served": "l-agent-cart-guard.ClDRin9Z.min.js",
+        "sha256": "d7eae04b480c57d0c6f176da8e9ee827be1f2557da3f35823c72e72ecd03be05"
+      },
+      {
+        "served": "l-cart-toast.CDQ47YQg.min.js",
+        "sha256": "a393f1c6e377e3cb099ad86f17927eebd31d42f1e91579c4470b8e9fbba41316"
+      },
+      {
+        "served": "l-chat-widget.CcSrqBPw.min.js",
+        "sha256": "4ebc3577999bfb619679f850d7048e2bdee25c892525ed4ba52fe558665bc3b3"
+      }
+    ],
+    "buildMetadata": {
+      "variant": "candidate",
+      "pluginCommit": "72ffe94067e2ac6abdd28efd672c83344aeb0f65",
+      "themeCommit": "ba0fc69b85d0914cf99afc42693748bf2d74b99e",
+      "pluginSourceSha256": "6d3482b31f299116858776b05776f819159526c96a44cc162102b97f982db493",
+      "themeSourceSha256": "8437d6728d6748e805739bfe13d0f4b11867fdc56029687eeec2526838252c78",
+      "bootstrap": {
+        "file": "theme.D6QK5Cee.min.js",
+        "sha256": "c599fa611ef70f2cd24d3799432e7247b2d38003e5ba617e868998867f051731"
+      }
+    },
+    "status": 200,
+    "environment": {
+      "url": "https://golfballscom.myshopify.com",
+      "theme": {
+        "name": "UAT Theme | November 3rd",
+        "id": 193546256701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "main",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "https://golfballscom.myshopify.com/cdn/shop/t/258/assets/theme.DbK64AxR.min.js"
+      ]
+    },
+    "expectedProvenance": {
+      "file": "theme.D6QK5Cee.min.js",
+      "sha256": "c599fa611ef70f2cd24d3799432e7247b2d38003e5ba617e868998867f051731"
+    },
+    "provenanceVerified": true
+  }
+]

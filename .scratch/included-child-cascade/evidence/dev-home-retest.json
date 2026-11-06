@@ -1,0 +1,57 @@
+[
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [],
+    "actions": [
+      {
+        "name": "mobile-menu-open-close",
+        "pass": true
+      },
+      {
+        "name": "search-open-close",
+        "pass": true
+      },
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 200,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      }
+    ],
+    "overrides": [],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    },
+    "expectedProvenance": {
+      "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+      "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+    },
+    "provenanceVerified": true
+  }
+]

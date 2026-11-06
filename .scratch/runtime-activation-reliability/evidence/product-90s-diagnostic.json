@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2026-11-05T22:51:45.539Z",
+  "pluginCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+  "themeCommit": "ba0fc69b85d0914cf99afc42693748bf2d74b99e",
+  "themeRoot": "/Users/alexrees/Documents/Lazer/Golfballs/golfballs-theme",
+  "lighthouseVersion": "12.6.1",
+  "puppeteerVersion": "24.43.1",
+  "browserVersion": "Chrome/157.0.8103.38",
+  "samplesPerPage": 1,
+  "measurements": [
+    {
+      "route": "product",
+      "path": "/products/titleist-pro-v1-golf-balls-p01155",
+      "round": 1,
+      "fetchTime": "2026-11-05T22:51:51.757Z",
+      "performanceScore": 0.69,
+      "lcpMs": 3962.8482999999997,
+      "cls": 0,
+      "tbtMs": 404.4999999999982,
+      "fcpMs": 2312.5688999999998,
+      "speedIndexMs": 6410.539028737883,
+      "jsTransferBytes": 1058995,
+      "totalTransferBytes": 22156995,
+      "settings": {
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "maxWaitForLoad": 90000
+      },
+      "warnings": [
+        "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+      ]
+    }
+  ],
+  "readiness": [],
+  "methodology": {
+    "mode": "mobile Lighthouse simulated Slow 4G and 4x CPU slowdown; explicit cold HTTP cache per run; retained store authentication and consent",
+    "consent": "declined when banner available",
+    "order": "round-robin routes, sequential runs",
+    "readiness": "separate cold navigations at normal CPU/network speed; observed :defined timestamps plus menu/search/cart click-to-state checks; not field INP",
+    "limitations": [
+      "Deployed plugin version is not inferred from the local package version.",
+      "TBT is a lab metric, not field INP.",
+      "No after-change comparison exists yet."
+    ]
+  }
+}

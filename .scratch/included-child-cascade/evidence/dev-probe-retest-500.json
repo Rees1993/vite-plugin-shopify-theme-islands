@@ -1,0 +1,10 @@
+{
+  "origin": "http://127.0.0.1:9293",
+  "runtimeUrl": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+  "expectedHash": "16c9de19122c2df2d50a1ae477d7fdd10a0448c9210ceb8dbbe1982c2643019d",
+  "errors": [],
+  "results": [],
+  "status": 500,
+  "pass": false,
+  "error": "Expected actual development theme"
+}

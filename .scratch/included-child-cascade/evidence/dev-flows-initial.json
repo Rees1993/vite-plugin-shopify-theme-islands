@@ -1,0 +1,231 @@
+[
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [],
+    "actions": [],
+    "localModuleResponses": [],
+    "overrides": [],
+    "status": 500,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "scripts": []
+    },
+    "fatal": "HTTP 500"
+  },
+  {
+    "variant": "candidate",
+    "route": "collection",
+    "errors": [],
+    "actions": [
+      {
+        "name": "mobile-menu-open-close",
+        "pass": true
+      },
+      {
+        "name": "search-open-close",
+        "pass": true
+      },
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 200,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      },
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 304,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      }
+    ],
+    "overrides": [],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    },
+    "beforeSort": "Customize\n\nTitleist\n\nTitleist\nPro V1 Golf Balls\nWhite\nYellow\n76\n\nRegular price\nFrom: $36.95",
+    "sort": "price-ascending",
+    "afterSort": "Trick Balls\n\nTrick Balls\nWorld's Best Golf Joke Balls - Unputtaball\n\nRegular price\n$3.99",
+    "expectedProvenance": {
+      "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+      "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+    },
+    "provenanceVerified": true
+  },
+  {
+    "variant": "candidate",
+    "route": "product",
+    "errors": [],
+    "actions": [
+      {
+        "name": "mobile-menu-open-close",
+        "pass": true
+      },
+      {
+        "name": "search-open-close",
+        "pass": true
+      },
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "quantity-stepper",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 200,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      }
+    ],
+    "overrides": [],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    },
+    "quantityControls": [
+      {
+        "value": "1",
+        "min": "1",
+        "max": "1520"
+      },
+      {
+        "value": "2",
+        "min": "2",
+        "max": "1520"
+      }
+    ],
+    "expectedProvenance": {
+      "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+      "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+    },
+    "provenanceVerified": true
+  },
+  {
+    "variant": "candidate",
+    "route": "search",
+    "errors": [],
+    "actions": [
+      {
+        "name": "mobile-menu-open-close",
+        "pass": true
+      },
+      {
+        "name": "search-open-close",
+        "pass": true
+      },
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 200,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      },
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "status": 304,
+        "bytes": 234708,
+        "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+      }
+    ],
+    "overrides": [],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    },
+    "beforeSort": "Customize\n\nTitleist\n\nTitleist\nPro V1 Golf Balls\nWhite\nYellow\n76\n\nRegular price\nFrom: $36.95",
+    "sort": "price-ascending",
+    "afterSort": "Logo\n\nLogo\nSleeve, Chip Marker and Tee Kit\nBlue\nBlack\nGreen\nOrange\n+6\n6 more colors\n\nRegular price\nFrom: $0.00",
+    "expectedProvenance": {
+      "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+      "sha256": "6a769205b04f34d9aadb0c25c6e8e6a1c7b6326e81667552c41e308d654bf492"
+    },
+    "provenanceVerified": true
+  }
+]

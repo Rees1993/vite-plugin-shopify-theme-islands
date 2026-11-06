@@ -136,6 +136,7 @@ describe("runtime compile", () => {
       );
 
       const el2 = document.createElement("retry-island");
+      document.body.append(el2);
       moCallback!(
         [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
         {} as MutationObserver,
@@ -168,6 +169,7 @@ describe("runtime compile", () => {
       expect(loader).toHaveBeenCalledTimes(1);
 
       const el2 = document.createElement("no-retry-island");
+      document.body.append(el2);
       moCallback!(
         [{ addedNodes: [el2], removedNodes: [] } as unknown as MutationRecord],
         {} as MutationObserver,

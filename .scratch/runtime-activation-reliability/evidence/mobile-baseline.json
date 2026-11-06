@@ -1,0 +1,1295 @@
+{
+  "sourceMetadata": {
+    "capturedAt": "2026-11-05T22:42:20.839Z",
+    "pluginCommit": "af71a36d58fa21163dd9f5637a7a069132ef93d8",
+    "themeCommit": "ba0fc69b85d0914cf99afc42693748bf2d74b99e",
+    "browserVersion": "Chrome/157.0.8103.38",
+    "lighthouseVersion": "12.6.1",
+    "puppeteerVersion": "24.43.1"
+  },
+  "methodology": {
+    "mode": "mobile Lighthouse simulated Slow 4G and 4x CPU slowdown; explicit cold HTTP cache per run; retained store authentication and consent",
+    "consent": "Retained authenticated measurement profile. Post-run currentVisitorConsent was marketing=yes, analytics=yes, preferences=yes, sale_of_data=empty; a decline was attempted only if the banner was immediately available. Consent was not sampled during each audit.",
+    "order": "round-robin routes, sequential runs",
+    "readiness": "separate cold navigations at normal CPU/network speed; observed :defined timestamps plus menu/search/cart click-to-state checks; not field INP Full open/close cycle timings include locator waits and animations; they are not isolated handler latency.",
+    "limitations": [
+      "Deployed plugin version is not inferred from the local package version.",
+      "TBT is a lab metric, not field INP.",
+      "No after-change comparison exists yet.",
+      "Product audits carry capture-limit warnings at 45 seconds; a 90-second diagnostic also warned. Product results remain provisional.",
+      "Post-run consent was allowed rather than declined. Match the recorded state for comparison; do not describe this baseline as declined-consent."
+    ],
+    "readinessCaptureStartedAt": "2026-11-05T22:54:09.706Z",
+    "auditCaptureLimitMs": 45000
+  },
+  "byRoute": [
+    {
+      "route": "home",
+      "metrics": {
+        "lcpMs": {
+          "median": 4120.36175,
+          "min": 4047.1282499999998,
+          "max": 4193.21025
+        },
+        "cls": {
+          "median": 0.03522151009683425,
+          "min": 0.03522151009683425,
+          "max": 0.04629915314705519
+        },
+        "tbtMs": {
+          "median": 398.4999999999991,
+          "min": 384.00000000000364,
+          "max": 449
+        },
+        "fcpMs": {
+          "median": 2245.2998749999997,
+          "min": 2073.2835000000005,
+          "max": 2318.1952500000007
+        },
+        "speedIndexMs": {
+          "median": 2942.0237926505715,
+          "min": 2734.4726085472175,
+          "max": 3084.3666225436477
+        },
+        "jsTransferBytes": {
+          "median": 1043878,
+          "min": 964877,
+          "max": 1055669
+        },
+        "totalTransferBytes": {
+          "median": 3896015,
+          "min": 3884393,
+          "max": 3935563
+        }
+      },
+      "samples": [
+        {
+          "route": "home",
+          "path": "/",
+          "round": 1,
+          "fetchTime": "2026-11-05T22:42:27.808Z",
+          "performanceScore": 0.75,
+          "lcpMs": 4047.1282499999998,
+          "cls": 0.04629915314705519,
+          "tbtMs": 384.00000000000364,
+          "fcpMs": 2073.2835000000005,
+          "speedIndexMs": 2734.4726085472175,
+          "jsTransferBytes": 964877,
+          "totalTransferBytes": 3896015,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "home",
+          "path": "/",
+          "round": 2,
+          "fetchTime": "2026-11-05T22:44:30.127Z",
+          "performanceScore": 0.73,
+          "lcpMs": 4193.21025,
+          "cls": 0.03522151009683425,
+          "tbtMs": 398.4999999999991,
+          "fcpMs": 2318.1952500000007,
+          "speedIndexMs": 2942.0237926505715,
+          "jsTransferBytes": 1055669,
+          "totalTransferBytes": 3935563,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "home",
+          "path": "/",
+          "round": 3,
+          "fetchTime": "2026-11-05T22:46:33.556Z",
+          "performanceScore": 0.72,
+          "lcpMs": 4120.36175,
+          "cls": 0.03522151009683425,
+          "tbtMs": 449,
+          "fcpMs": 2245.2998749999997,
+          "speedIndexMs": 3084.3666225436477,
+          "jsTransferBytes": 1043878,
+          "totalTransferBytes": 3884393,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "route": "collection",
+      "metrics": {
+        "lcpMs": {
+          "median": 4420.68915,
+          "min": 4418.90655,
+          "max": 4569.605150000001
+        },
+        "cls": {
+          "median": 0.004119550856579184,
+          "min": 0.004119550856579184,
+          "max": 0.004119550856579184
+        },
+        "tbtMs": {
+          "median": 404.4999999999982,
+          "min": 386.00000000000364,
+          "max": 450.4999999999982
+        },
+        "fcpMs": {
+          "median": 2618.64555,
+          "min": 2545.2154,
+          "max": 2619.3315000000007
+        },
+        "speedIndexMs": {
+          "median": 6520.30279647217,
+          "min": 6132.9020627213795,
+          "max": 6648.985355923909
+        },
+        "jsTransferBytes": {
+          "median": 1052559,
+          "min": 1048437,
+          "max": 1064435
+        },
+        "totalTransferBytes": {
+          "median": 3806367,
+          "min": 3610188,
+          "max": 4087141
+        }
+      },
+      "samples": [
+        {
+          "route": "collection",
+          "path": "/collections/golf-balls",
+          "round": 1,
+          "fetchTime": "2026-11-05T22:42:47.198Z",
+          "performanceScore": 0.65,
+          "lcpMs": 4420.68915,
+          "cls": 0.004119550856579184,
+          "tbtMs": 404.4999999999982,
+          "fcpMs": 2545.2154,
+          "speedIndexMs": 6520.30279647217,
+          "jsTransferBytes": 1052559,
+          "totalTransferBytes": 3610188,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "collection",
+          "path": "/collections/golf-balls",
+          "round": 2,
+          "fetchTime": "2026-11-05T22:44:48.220Z",
+          "performanceScore": 0.63,
+          "lcpMs": 4569.605150000001,
+          "cls": 0.004119550856579184,
+          "tbtMs": 450.4999999999982,
+          "fcpMs": 2619.3315000000007,
+          "speedIndexMs": 6132.9020627213795,
+          "jsTransferBytes": 1064435,
+          "totalTransferBytes": 4087141,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "collection",
+          "path": "/collections/golf-balls",
+          "round": 3,
+          "fetchTime": "2026-11-05T22:46:53.011Z",
+          "performanceScore": 0.65,
+          "lcpMs": 4418.90655,
+          "cls": 0.004119550856579184,
+          "tbtMs": 386.00000000000364,
+          "fcpMs": 2618.64555,
+          "speedIndexMs": 6648.985355923909,
+          "jsTransferBytes": 1048437,
+          "totalTransferBytes": 3806367,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "route": "product",
+      "metrics": {
+        "lcpMs": {
+          "median": 3970.7398000000003,
+          "min": 3960.2734,
+          "max": 4123.969299999999
+        },
+        "cls": {
+          "median": 0,
+          "min": 0,
+          "max": 0.005305577288471777
+        },
+        "tbtMs": {
+          "median": 373.0000000000009,
+          "min": 353.5,
+          "max": 438
+        },
+        "fcpMs": {
+          "median": 2470.5968,
+          "min": 2459.8913999999995,
+          "max": 2473.6349
+        },
+        "speedIndexMs": {
+          "median": 7063.959876658409,
+          "min": 6931.8415345078565,
+          "max": 7158.223519332572
+        },
+        "jsTransferBytes": {
+          "median": 1057088,
+          "min": 1057053,
+          "max": 1071491
+        },
+        "totalTransferBytes": {
+          "median": 20995184,
+          "min": 20948171,
+          "max": 24121632
+        }
+      },
+      "samples": [
+        {
+          "route": "product",
+          "path": "/products/titleist-pro-v1-golf-balls-p01155",
+          "round": 1,
+          "fetchTime": "2026-11-05T22:43:07.531Z",
+          "performanceScore": 0.67,
+          "lcpMs": 3970.7398000000003,
+          "cls": 0.005305577288471777,
+          "tbtMs": 438,
+          "fcpMs": 2470.5968,
+          "speedIndexMs": 7063.959876658409,
+          "jsTransferBytes": 1057053,
+          "totalTransferBytes": 24121632,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": [
+            "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+          ]
+        },
+        {
+          "route": "product",
+          "path": "/products/titleist-pro-v1-golf-balls-p01155",
+          "round": 2,
+          "fetchTime": "2026-11-05T22:45:11.726Z",
+          "performanceScore": 0.68,
+          "lcpMs": 4123.969299999999,
+          "cls": 0,
+          "tbtMs": 373.0000000000009,
+          "fcpMs": 2473.6349,
+          "speedIndexMs": 6931.8415345078565,
+          "jsTransferBytes": 1071491,
+          "totalTransferBytes": 20948171,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": [
+            "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+          ]
+        },
+        {
+          "route": "product",
+          "path": "/products/titleist-pro-v1-golf-balls-p01155",
+          "round": 3,
+          "fetchTime": "2026-11-05T22:47:16.610Z",
+          "performanceScore": 0.7,
+          "lcpMs": 3960.2734,
+          "cls": 0,
+          "tbtMs": 353.5,
+          "fcpMs": 2459.8913999999995,
+          "speedIndexMs": 7158.223519332572,
+          "jsTransferBytes": 1057088,
+          "totalTransferBytes": 20995184,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": [
+            "The page loaded too slowly to finish within the time limit. Results may be incomplete."
+          ]
+        }
+      ]
+    },
+    {
+      "route": "search",
+      "metrics": {
+        "lcpMs": {
+          "median": 3968.751250000001,
+          "min": 3967.4967500000002,
+          "max": 4468.5791500000005
+        },
+        "cls": {
+          "median": 0.001223824816056822,
+          "min": 0.001223824816056822,
+          "max": 0.001223824816056822
+        },
+        "tbtMs": {
+          "median": 379.5,
+          "min": 365,
+          "max": 728.0000000000018
+        },
+        "fcpMs": {
+          "median": 2317.03475,
+          "min": 2258.9539000000004,
+          "max": 2318.44655
+        },
+        "speedIndexMs": {
+          "median": 6348.421780887578,
+          "min": 5091.073737435004,
+          "max": 6762.372989081739
+        },
+        "jsTransferBytes": {
+          "median": 1050010,
+          "min": 1046358,
+          "max": 1064817
+        },
+        "totalTransferBytes": {
+          "median": 2965145,
+          "min": 2830201,
+          "max": 3070837
+        }
+      },
+      "samples": [
+        {
+          "route": "search",
+          "path": "/search?q=Pro+V1",
+          "round": 1,
+          "fetchTime": "2026-11-05T22:44:08.875Z",
+          "performanceScore": 0.61,
+          "lcpMs": 3967.4967500000002,
+          "cls": 0.001223824816056822,
+          "tbtMs": 728.0000000000018,
+          "fcpMs": 2317.03475,
+          "speedIndexMs": 6348.421780887578,
+          "jsTransferBytes": 1064817,
+          "totalTransferBytes": 2965145,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "search",
+          "path": "/search?q=Pro+V1",
+          "round": 2,
+          "fetchTime": "2026-11-05T22:46:12.791Z",
+          "performanceScore": 0.72,
+          "lcpMs": 3968.751250000001,
+          "cls": 0.001223824816056822,
+          "tbtMs": 379.5,
+          "fcpMs": 2318.44655,
+          "speedIndexMs": 5091.073737435004,
+          "jsTransferBytes": 1050010,
+          "totalTransferBytes": 3070837,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        },
+        {
+          "route": "search",
+          "path": "/search?q=Pro+V1",
+          "round": 3,
+          "fetchTime": "2026-11-05T22:48:17.195Z",
+          "performanceScore": 0.67,
+          "lcpMs": 4468.5791500000005,
+          "cls": 0.001223824816056822,
+          "tbtMs": 365,
+          "fcpMs": 2258.9539000000004,
+          "speedIndexMs": 6762.372989081739,
+          "jsTransferBytes": 1046358,
+          "totalTransferBytes": 2830201,
+          "settings": {
+            "formFactor": "mobile",
+            "screenEmulation": {
+              "mobile": true,
+              "width": 412,
+              "height": 823,
+              "deviceScaleFactor": 1.75,
+              "disabled": false
+            },
+            "throttling": {
+              "rttMs": 150,
+              "throughputKbps": 1638.4,
+              "requestLatencyMs": 562.5,
+              "downloadThroughputKbps": 1474.5600000000002,
+              "uploadThroughputKbps": 675,
+              "cpuSlowdownMultiplier": 4
+            },
+            "throttlingMethod": "simulate",
+            "maxWaitForLoad": 45000
+          },
+          "warnings": []
+        }
+      ]
+    }
+  ],
+  "readiness": [
+    {
+      "route": "home",
+      "registration": {
+        "mobileMenu": {
+          "median": 2129.100000023842,
+          "min": 2000.1000000238419,
+          "max": 4628.700000047684
+        },
+        "cart": {
+          "median": 2129.100000023842,
+          "min": 2000.1000000238419,
+          "max": 4628.700000047684
+        },
+        "search": {
+          "median": 2129.100000023842,
+          "min": 2000.1000000238419,
+          "max": 4628.799999952316
+        }
+      },
+      "actions": [
+        {
+          "round": 1,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5191.600000023842,
+          "interactionMs": 581.8000000715256
+        },
+        {
+          "round": 1,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5359.600000023842,
+          "interactionMs": 167.80000007152557
+        },
+        {
+          "round": 1,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5760.299999952316,
+          "interactionMs": 400.2999999523163
+        },
+        {
+          "round": 2,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2718.8000000715256,
+          "interactionMs": 655.3000000715256
+        },
+        {
+          "round": 2,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2843.5,
+          "interactionMs": 124.39999997615814
+        },
+        {
+          "round": 2,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 3221.3000000715256,
+          "interactionMs": 377.7000000476837
+        },
+        {
+          "round": 3,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2516.5,
+          "interactionMs": 545.1000000238419
+        },
+        {
+          "round": 3,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2713.5,
+          "interactionMs": 149.10000002384186
+        },
+        {
+          "round": 3,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 3123.899999976158,
+          "interactionMs": 410.2000000476837
+        }
+      ]
+    },
+    {
+      "route": "collection",
+      "registration": {
+        "collectionFilters": {
+          "median": 2835.7999999523163,
+          "min": 476.7000000476837,
+          "max": 4321.799999952316
+        },
+        "mobileMenu": {
+          "median": 2951.899999976158,
+          "min": 968.4000000953674,
+          "max": 4371.600000023842
+        },
+        "cart": {
+          "median": 2951.899999976158,
+          "min": 968.4000000953674,
+          "max": 4371.700000047684
+        },
+        "search": {
+          "median": 2951.899999976158,
+          "min": 968.5,
+          "max": 4371.700000047684
+        }
+      },
+      "actions": [
+        {
+          "round": 1,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 3432.1999999284744,
+          "interactionMs": 606.1000000238419
+        },
+        {
+          "round": 1,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 3723.5999999046326,
+          "interactionMs": 291.09999990463257
+        },
+        {
+          "round": 1,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 4187.599999904633,
+          "interactionMs": 463.7999999523163
+        },
+        {
+          "round": 2,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5034.100000023842,
+          "interactionMs": 735.7000000476837
+        },
+        {
+          "round": 2,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5313,
+          "interactionMs": 278.5
+        },
+        {
+          "round": 2,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 5700.200000047684,
+          "interactionMs": 387
+        },
+        {
+          "round": 3,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 1422.9000000953674,
+          "interactionMs": 997.4000000953674
+        },
+        {
+          "round": 3,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 1573,
+          "interactionMs": 150
+        },
+        {
+          "round": 3,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 1993.4000000953674,
+          "interactionMs": 420.2000000476837
+        }
+      ]
+    },
+    {
+      "route": "product",
+      "registration": {
+        "mobileMenu": {
+          "median": 1167.5,
+          "min": 1144.3999999761581,
+          "max": 1657
+        },
+        "cart": {
+          "median": 1184.5,
+          "min": 1144.3999999761581,
+          "max": 1657.1000000238419
+        },
+        "search": {
+          "median": 1167.6000000238419,
+          "min": 1144.5,
+          "max": 1657.1000000238419
+        },
+        "buyBox": {
+          "median": 1308,
+          "min": 1156.8999999761581,
+          "max": 1720.5
+        }
+      },
+      "actions": [
+        {
+          "round": 1,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2150,
+          "interactionMs": 520.1000000238419
+        },
+        {
+          "round": 1,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2314.6999999284744,
+          "interactionMs": 164.5
+        },
+        {
+          "round": 1,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2688.6999999284744,
+          "interactionMs": 373.89999997615814
+        },
+        {
+          "round": 2,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 1962.0999999046326,
+          "interactionMs": 934.5
+        },
+        {
+          "round": 2,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2082.7999999523163,
+          "interactionMs": 120.5
+        },
+        {
+          "round": 2,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2459.1999999284744,
+          "interactionMs": 376.1999999284744
+        },
+        {
+          "round": 3,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2156,
+          "interactionMs": 1021.3999999761581
+        },
+        {
+          "round": 3,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2281.100000023842,
+          "interactionMs": 124.69999992847443
+        },
+        {
+          "round": 3,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2663.600000023842,
+          "interactionMs": 382.2999999523163
+        }
+      ]
+    },
+    {
+      "route": "search",
+      "registration": {
+        "mobileMenu": {
+          "median": 1840.6999999284744,
+          "min": 1678.5,
+          "max": 1846.6000000238419
+        },
+        "cart": {
+          "median": 1846.7000000476837,
+          "min": 1678.5,
+          "max": 1856.1999999284744
+        },
+        "search": {
+          "median": 1846.7000000476837,
+          "min": 1678.5,
+          "max": 1856.1999999284744
+        },
+        "searchFilters": {
+          "median": 1796.5,
+          "min": 1568.1999999284744,
+          "max": 1846.8000000715256
+        }
+      },
+      "actions": [
+        {
+          "round": 1,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2387.2000000476837,
+          "interactionMs": 532.7000000476837
+        },
+        {
+          "round": 1,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2486.4000000953674,
+          "interactionMs": 99.10000002384186
+        },
+        {
+          "round": 1,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2904.2000000476837,
+          "interactionMs": 417.60000002384186
+        },
+        {
+          "round": 2,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2620,
+          "interactionMs": 811.5
+        },
+        {
+          "round": 2,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2752.100000023842,
+          "interactionMs": 131.90000009536743
+        },
+        {
+          "round": 2,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 3128.7999999523163,
+          "interactionMs": 376.60000002384186
+        },
+        {
+          "round": 3,
+          "name": "mobile-menu",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2474.1999999284744,
+          "interactionMs": 917.5
+        },
+        {
+          "round": 3,
+          "name": "search-modal",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2593.399999976158,
+          "interactionMs": 119
+        },
+        {
+          "round": 3,
+          "name": "cart-drawer",
+          "outcome": "pass",
+          "completedSinceNavigationMs": 2991.100000023842,
+          "interactionMs": 397.3000000715256
+        }
+      ]
+    }
+  ],
+  "deployment": {
+    "capturedAt": "2026-11-05T22:56:15.646Z",
+    "consent": {
+      "marketing": "yes",
+      "analytics": "yes",
+      "preferences": "yes",
+      "sale_of_data": ""
+    },
+    "theme": {
+      "id": 193546256701,
+      "role": "main",
+      "name": "UAT Theme | November 3rd"
+    },
+    "scripts": [
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shop/t/258/assets/theme.DbK64AxR.min.js"
+      },
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shopifycloud/storefront/assets/storefront/load_feature-ed94c51f.js"
+      },
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shopifycloud/storefront/assets/shopify_pay/storefront-f0e26bdf.js"
+      },
+      {
+        "origin": "https://cdn.shopify.com",
+        "path": "/shopifycloud/storefront/assets/storefront/origin_trials-e8afbaf1.js"
+      },
+      {
+        "origin": "https://cdn.shopify.com",
+        "path": "/extensions/01a1ad66-753e-7b0b-b6db-8a1a8acfad92/golfballs-b2b-146/assets/design-studio.js"
+      },
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shopifycloud/storefront/assets/shop_events_listener-819172a8.js"
+      },
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shopifycloud/storefront/assets/storefront/webmcp-54c687b6.js"
+      },
+      {
+        "origin": "https://golfballscom.myshopify.com",
+        "path": "/cdn/shop/t/258/assets/top-brands-menu.js"
+      },
+      {
+        "origin": "https://cdn.shopify.com",
+        "path": "/extensions/01a1a165-1247-7266-bb37-8f8ab4ca2998/reviews-co-uk-product-and-merchant-review-collection-63/assets/reviewsio-preview.js"
+      }
+    ],
+    "servedScriptHashes": [
+      {
+        "path": "/cdn/shop/t/258/assets/theme.DbK64AxR.min.js",
+        "sha256": "152f0767139fdf6e9d4ab609cf2586e909cd5791f34dbc22bc99a00df42d92aa",
+        "decodedBytes": 41537
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/top-brands-menu.js",
+        "sha256": "550e1fb15958ddfc333eb4fcc82a610e5a02fb996e66bb2c82cbbf870b74f706",
+        "decodedBytes": 1126
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-b2b-link.BlyLSUbs.min.js",
+        "sha256": "36005b59c698a8499c0d624ac90903e55c1acef29b13407bfb84b47391957af9",
+        "decodedBytes": 262
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/b2bLinkIntent.B6N_b6a9.min.js",
+        "sha256": "8f3eeca78da5d924713c8d49b52822318d7b04b21f312680e8c3a4695ecdd51d",
+        "decodedBytes": 1886
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/bodyScroll.5C_vk-Q2.min.js",
+        "sha256": "d420dcdff7dfb3af7a05f90f6934517bd112e7028c34a5f68da71fcbdf3af461",
+        "decodedBytes": 214
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/ModeSwitcher.Bi9BO4mz.min.js",
+        "sha256": "88c792ddcd9708b0d442c82f78fe141f40e0c4d960b7ac1d0014a8d32095872c",
+        "decodedBytes": 2291
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/browsingType.BJ4W0aJ8.min.js",
+        "sha256": "8a58ccab1f40d70c13dc8019563183c92b9e2f7cf334241509fd220b7901df4f",
+        "decodedBytes": 2513
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/MobileMenu.DMVeKv0w.min.js",
+        "sha256": "99198936b32bb9f88460063582e95393ff89b38603f3cd11f789889bce6e251b",
+        "decodedBytes": 2995
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/focus-trap.esm.BO0Icfjz.min.js",
+        "sha256": "bba2c7a4504b489c41130a628811dfc7a754de2936541afa6b37deb3ff9cdf2b",
+        "decodedBytes": 20256
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/debounce.lyBBPHdP.min.js",
+        "sha256": "89b12bd2c40883093925efd4c9997044a262b55cddbe013793a4bc8ece49ca57",
+        "decodedBytes": 183
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/UtilityBarMarquee.BBrkaknE.min.js",
+        "sha256": "49f1301d2b4ce55ebf2c56c5d507df0e92fae1e5ed20e629f5c4edcb32fcb049",
+        "decodedBytes": 2422
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/search-modal.Cfr0RyGp.min.js",
+        "sha256": "cfde54ab3d77294049fcdd06d8d9a3db764a998a45a5cf559e1f30b8adc0b205",
+        "decodedBytes": 11157
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-segment-refresh.BtIkwMFH.min.js",
+        "sha256": "3ed0a4f98d629b2c074f9fd2b6bfd7d1454c0e76073529eac08b2eab813a0ab7",
+        "decodedBytes": 10258
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/parseHTML.C-hh7jJd.min.js",
+        "sha256": "1efd994733c5dab3cb6f82dd708feab94751fac2128f250fefe8d8c4491f3426",
+        "decodedBytes": 160
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-design-studio-links.CI31sgRU.min.js",
+        "sha256": "c0df1fd09c71739f03254ea95ca89299b28a7cc699090d8d1823aecdbce50bdb",
+        "decodedBytes": 1076
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/CartDrawer.BW0mV1o4.min.js",
+        "sha256": "e3bd96a93f70d3630f8d7b617cee9e167310128cae2e56596e9f71b971282dbd",
+        "decodedBytes": 16772
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/cartError.CAXwo8c-.min.js",
+        "sha256": "b46b4ef9a0a5d4c3dac6b28940eb3bb1a799176d3e73cca558144d2445143362",
+        "decodedBytes": 494
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/typedQuantity.DmVD9uh3.min.js",
+        "sha256": "866205ae6830092b380140876f50f9eb2829b5081224ae89c3e366db671ce44e",
+        "decodedBytes": 4181
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/headerCartCount.uwFCipFG.min.js",
+        "sha256": "5f26000512f4b3b6f18580862d0d25efefaa975cd32e278cadfab1004341852c",
+        "decodedBytes": 459
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/productionDays.D3wWHvHT.min.js",
+        "sha256": "75d10fc135b01afdb645bb1cd8caff83bc438ea2c7e80b9bddf1df82ed54c5bf",
+        "decodedBytes": 124
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-agent-cart-guard.ClDRin9Z.min.js",
+        "sha256": "d7eae04b480c57d0c6f176da8e9ee827be1f2557da3f35823c72e72ecd03be05",
+        "decodedBytes": 920
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-cart-toast.DRIBzS2n.min.js",
+        "sha256": "2d6356621dfcda1db8d68b50f25e160b6da5f9979bf5d7a5240a98090ede2013",
+        "decodedBytes": 1430
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-chat-widget.DO5v3yd6.min.js",
+        "sha256": "1e24768642da5838e92be4e1f0c9a5e021ffdad980ca848388c0f2917f347cbd",
+        "decodedBytes": 7889
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/index.9dkDZTbp.min.js",
+        "sha256": "821c027f2392b1f80d2ad45132c0433e2c56419ddf8c9a056dea5d88f662ebc9",
+        "decodedBytes": 53327
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/HeroCarousel.DtjVCD7-.min.js",
+        "sha256": "c7a855532d61c4016657b5e978ad5ad36a64d6f470520db317190432103243ee",
+        "decodedBytes": 7110
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/l-video-accessible.Bvlq3x14.min.js",
+        "sha256": "c7272b6db146e7672945f06db60a0ce6c0f76842832b2fc542b606d7eefccaa4",
+        "decodedBytes": 2095
+      },
+      {
+        "path": "/cdn/shop/t/258/assets/ScrollRegion.Clb53AU4.min.js",
+        "sha256": "afff29d5b9d1810bf2937b02275881a610b7b9c539ff8d527126c155323dbd8d",
+        "decodedBytes": 826
+      }
+    ],
+    "localBuiltAssetComparison": [
+      {
+        "file": "theme.DbK64AxR.min.js",
+        "present": false
+      },
+      {
+        "file": "top-brands-menu.js",
+        "present": false
+      },
+      {
+        "file": "l-b2b-link.BlyLSUbs.min.js",
+        "sha256": "36005b59c698a8499c0d624ac90903e55c1acef29b13407bfb84b47391957af9",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "b2bLinkIntent.B6N_b6a9.min.js",
+        "sha256": "8f3eeca78da5d924713c8d49b52822318d7b04b21f312680e8c3a4695ecdd51d",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "bodyScroll.5C_vk-Q2.min.js",
+        "sha256": "d420dcdff7dfb3af7a05f90f6934517bd112e7028c34a5f68da71fcbdf3af461",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "ModeSwitcher.Bi9BO4mz.min.js",
+        "present": false
+      },
+      {
+        "file": "browsingType.BJ4W0aJ8.min.js",
+        "present": false
+      },
+      {
+        "file": "MobileMenu.DMVeKv0w.min.js",
+        "sha256": "99198936b32bb9f88460063582e95393ff89b38603f3cd11f789889bce6e251b",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "focus-trap.esm.BO0Icfjz.min.js",
+        "sha256": "bba2c7a4504b489c41130a628811dfc7a754de2936541afa6b37deb3ff9cdf2b",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "debounce.lyBBPHdP.min.js",
+        "sha256": "89b12bd2c40883093925efd4c9997044a262b55cddbe013793a4bc8ece49ca57",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "UtilityBarMarquee.BBrkaknE.min.js",
+        "sha256": "49f1301d2b4ce55ebf2c56c5d507df0e92fae1e5ed20e629f5c4edcb32fcb049",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "search-modal.Cfr0RyGp.min.js",
+        "sha256": "cfde54ab3d77294049fcdd06d8d9a3db764a998a45a5cf559e1f30b8adc0b205",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "l-segment-refresh.BtIkwMFH.min.js",
+        "present": false
+      },
+      {
+        "file": "parseHTML.C-hh7jJd.min.js",
+        "sha256": "1efd994733c5dab3cb6f82dd708feab94751fac2128f250fefe8d8c4491f3426",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "l-design-studio-links.CI31sgRU.min.js",
+        "sha256": "c0df1fd09c71739f03254ea95ca89299b28a7cc699090d8d1823aecdbce50bdb",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "CartDrawer.BW0mV1o4.min.js",
+        "present": false
+      },
+      {
+        "file": "cartError.CAXwo8c-.min.js",
+        "present": false
+      },
+      {
+        "file": "typedQuantity.DmVD9uh3.min.js",
+        "present": false
+      },
+      {
+        "file": "headerCartCount.uwFCipFG.min.js",
+        "sha256": "5f26000512f4b3b6f18580862d0d25efefaa975cd32e278cadfab1004341852c",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "productionDays.D3wWHvHT.min.js",
+        "sha256": "75d10fc135b01afdb645bb1cd8caff83bc438ea2c7e80b9bddf1df82ed54c5bf",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "l-agent-cart-guard.ClDRin9Z.min.js",
+        "sha256": "d7eae04b480c57d0c6f176da8e9ee827be1f2557da3f35823c72e72ecd03be05",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "l-cart-toast.DRIBzS2n.min.js",
+        "present": false
+      },
+      {
+        "file": "l-chat-widget.DO5v3yd6.min.js",
+        "present": false
+      },
+      {
+        "file": "index.9dkDZTbp.min.js",
+        "sha256": "821c027f2392b1f80d2ad45132c0433e2c56419ddf8c9a056dea5d88f662ebc9",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "HeroCarousel.DtjVCD7-.min.js",
+        "sha256": "c7a855532d61c4016657b5e978ad5ad36a64d6f470520db317190432103243ee",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "l-video-accessible.Bvlq3x14.min.js",
+        "sha256": "c7272b6db146e7672945f06db60a0ce6c0f76842832b2fc542b606d7eefccaa4",
+        "matchesServedAsset": true
+      },
+      {
+        "file": "ScrollRegion.Clb53AU4.min.js",
+        "sha256": "afff29d5b9d1810bf2937b02275881a610b7b9c539ff8d527126c155323dbd8d",
+        "matchesServedAsset": true
+      }
+    ],
+    "limitation": "Captured after baseline runs; does not prove a deployment was unchanged during every sample or that served package internals match the local plugin source."
+  }
+}

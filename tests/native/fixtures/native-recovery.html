@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Island recovery distinction</title><style>body{font:16px/1.6 system-ui;max-width:1000px;margin:40px auto;padding:0 20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:12px;text-align:left}.pass{color:#166534}.fail{color:#b91c1c}pre{white-space:pre-wrap;background:#f1f5f9;padding:20px}</style></head><body><h1>Running recovery checks…</h1><script type="module">
+import { revive } from './runtime.js';
+window.addEventListener('load', async () => {
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const results=[];
+let id=0;
+for(const mode of ['initial-success','stop','retry','fresh','fresh-and-scan']) {
+  const prefix=`native-${++id}`;
+  const names={parent:`${prefix}-parent`,alpha:`${prefix}-alpha`,beta:`${prefix}-beta`,gamma:`${prefix}-gamma`};
+  const counts={parent:0,alpha:0,beta:0,gamma:0};
+  const errors=[];
+  const onError=e=>errors.push(e.detail.attempt);
+  document.addEventListener('islands:error',onError);
+  document.body.innerHTML=`<${names.parent}><${names.alpha}></${names.alpha}></${names.parent}><${names.parent}><${names.beta}></${names.beta}></${names.parent}>`;
+  const firstBefore=document.querySelector(names.parent);
+  let fresh=null;
+  const parent=async()=>{counts.parent++;if(mode!=='initial-success'&&counts.parent===1)throw new Error('controlled first attempt failure');customElements.define(names.parent,class extends HTMLElement{});};
+  const child=key=>async()=>{counts[key]++;customElements.define(names[key],class extends HTMLElement{});};
+  const runtime=revive({islands:{[`/${names.parent}.ts`]:parent,[`/${names.alpha}.ts`]:child('alpha'),[`/${names.beta}.ts`]:child('beta'),[`/${names.gamma}.ts`]:child('gamma')},options:{retry:{retries:mode==='retry'?1:0,delay:10}}});
+  await sleep(80);
+  if(mode==='fresh'||mode==='fresh-and-scan') {
+    fresh=document.createElement(names.parent);fresh.innerHTML=`<${names.gamma}></${names.gamma}>`;document.body.append(fresh);await sleep(80);
+  }
+  if(mode==='fresh-and-scan'){runtime.scan();await sleep(40);}
+  const actual={...counts,parentRegistered:!!customElements.get(names.parent),preservedIdentity:firstBefore===document.querySelector(names.parent),errorAttempts:errors};
+  const expected=mode==='stop'?{parent:1,alpha:0,beta:0,gamma:0}:mode==='initial-success'?{parent:1,alpha:1,beta:1,gamma:0}:mode==='retry'?{parent:2,alpha:1,beta:1,gamma:0}:{parent:2,alpha:1,beta:1,gamma:1};
+  const pass=Object.entries(expected).every(([key,val])=>actual[key]===val);
+  results.push({mode,actual,expected,pass});runtime.disconnect();document.removeEventListener('islands:error',onError);
+}
+document.body.innerHTML='<h1>Island recovery distinction</h1><p>Native browser DOM, real customElements registration, real MutationObserver, current runtime bundle.</p><table><thead><tr><th>Scenario</th><th>Parent attempts</th><th>Earlier children A / B</th><th>Fresh child C</th><th>Result</th></tr></thead><tbody>'+results.map(r=>`<tr><td>${r.mode}</td><td>${r.actual.parent}</td><td>${r.actual.alpha} / ${r.actual.beta}</td><td>${r.actual.gamma}</td><td class="${r.pass?'pass':'fail'}">${r.pass?'PASS':'FAIL'}</td></tr>`).join('')+'</tbody></table><h2>Evidence</h2><pre id="results"></pre>';
+document.getElementById('results').textContent=JSON.stringify(results,null,2);
+});
+</script></body></html>

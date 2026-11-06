@@ -35,41 +35,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "22"
 
-      - name: Install intent
-        run: npm install -g @tanstack/intent
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install pinned tooling
+        run: bun ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
 
       - name: Check staleness
         id: stale
-        run: |
-          OUTPUT=$(intent stale --json 2>&1) || true
-          echo "$OUTPUT"
-
-          # Check if any skills need review
-          NEEDS_REVIEW=$(echo "$OUTPUT" | node -e "
-            const input = require('fs').readFileSync('/dev/stdin','utf8');
-            try {
-              const reports = JSON.parse(input);
-              const stale = reports.flatMap(r =>
-                r.skills.filter(s => s.needsReview).map(s => ({ library: r.library, skill: s.name, reasons: s.reasons }))
-              );
-              if (stale.length > 0) {
-                console.log(JSON.stringify(stale));
-              }
-            } catch {}
-          ")
-
-          if [ -z "$NEEDS_REVIEW" ]; then
-            echo "has_stale=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_stale=true" >> "$GITHUB_OUTPUT"
-            # Escape for multiline GH output
-            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-            echo "stale_json<<$EOF" >> "$GITHUB_OUTPUT"
-            echo "$NEEDS_REVIEW" >> "$GITHUB_OUTPUT"
-            echo "$EOF" >> "$GITHUB_OUTPUT"
-          fi
+        run: bun run skills:check
 
       - name: Build summary
         if: steps.stale.outputs.has_stale == 'true'

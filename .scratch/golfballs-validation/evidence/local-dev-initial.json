@@ -1,0 +1,146 @@
+[
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [],
+    "actions": [],
+    "localModuleResponses": [],
+    "status": 500,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "scripts": []
+    },
+    "fatal": "HTTP 500"
+  },
+  {
+    "variant": "candidate",
+    "route": "collection",
+    "errors": [],
+    "actions": [],
+    "localModuleResponses": [],
+    "status": 500,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "scripts": []
+    },
+    "fatal": "HTTP 500"
+  },
+  {
+    "variant": "candidate",
+    "route": "product",
+    "errors": [],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": false,
+        "error": "Waiting for selector `cart-drawer[data-state=\"open\"]` failed",
+        "state": {
+          "search": "false"
+        }
+      },
+      {
+        "name": "quantity-stepper",
+        "pass": false,
+        "error": "Waiting for selector `pdp-quantity-stepper:defined` failed",
+        "state": {
+          "search": "false"
+        }
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      },
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      },
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      }
+    ],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    }
+  },
+  {
+    "variant": "candidate",
+    "route": "search",
+    "errors": [],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      },
+      {
+        "name": "filter-drawer-open-close",
+        "pass": true
+      },
+      {
+        "name": "desktop-sort-and-dynamic-results",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      },
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      }
+    ],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    },
+    "beforeSort": "Customize\n\nTitleist\n\nTitleist\nPro V1 Golf Balls\nWhite\nYellow\n76\n\nRegular price\nFrom: $36.95",
+    "sort": "price-ascending",
+    "afterSort": "Logo\n\nLogo\nSleeve, Chip Marker and Tee Kit\nBlue\nBlack\nGreen\nOrange\n+6\n6 more colors\n\nRegular price\nFrom: $0.00"
+  }
+]
