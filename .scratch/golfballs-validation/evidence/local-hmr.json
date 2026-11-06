@@ -1,0 +1,33 @@
+{
+  "origin": "http://127.0.0.1:9293",
+  "module": "/tmp/golfballs-validation/local-dev/src/islands/MobileMenu.ts",
+  "actions": [
+    "menu/search passed before edit",
+    "menu/search passed after Vite hot update"
+  ],
+  "messages": [
+    "[vite] connecting...",
+    "[vite] connected.",
+    "[vite] hot updated: /@id/__x00__vite-plugin-shopify-theme-islands/revive",
+    "[vite] css hot updated: /src/entrypoints/theme.css"
+  ],
+  "requests": [
+    "http://localhost:5175/src/islands/MobileMenu.ts?t=1793969854845",
+    "http://localhost:5175/src/islands/MobileMenu.ts?t=1793969913295"
+  ],
+  "theme": {
+    "name": "Development (b6b917-Alexs-MacBook-Air)",
+    "id": 193189904701,
+    "schema_name": "Lazer Liquid Starter",
+    "schema_version": "0.0.1",
+    "theme_store_id": null,
+    "role": "development",
+    "handle": "null",
+    "style": {
+      "id": null,
+      "handle": null
+    }
+  },
+  "reloads": 0,
+  "pass": true
+}

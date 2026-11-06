@@ -1,0 +1,50 @@
+[
+  {
+    "variant": "candidate",
+    "route": "home",
+    "errors": [],
+    "actions": [
+      {
+        "name": "mobile-menu-open-close",
+        "pass": true
+      },
+      {
+        "name": "search-open-close",
+        "pass": true
+      },
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "localModuleResponses": [
+      {
+        "url": "http://localhost:5175/@fs/Users/alexrees/Documents/Lazer/vite-plugin-shopify-theme-islands/dist/runtime.js",
+        "bytes": 229122,
+        "sha256": "da24abfec04b6b787802c34017a5ed8b0d72b7b861502e654d0e679c9ceb06f0"
+      }
+    ],
+    "status": 200,
+    "environment": {
+      "url": "http://127.0.0.1:9293",
+      "theme": {
+        "name": "Development (b6b917-Alexs-MacBook-Air)",
+        "id": 193189904701,
+        "schema_name": "Lazer Liquid Starter",
+        "schema_version": "0.0.1",
+        "theme_store_id": null,
+        "role": "development",
+        "handle": "null",
+        "style": {
+          "id": null,
+          "handle": null
+        }
+      },
+      "scripts": [
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/@vite/client",
+        "http://localhost:5175/src/entrypoints/theme.ts"
+      ]
+    }
+  }
+]

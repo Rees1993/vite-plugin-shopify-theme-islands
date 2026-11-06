@@ -1,0 +1,19 @@
+[
+  {
+    "variant": "baseline",
+    "route": "home",
+    "errors": [
+      {
+        "message": "Uncaught TypeError: Failed to construct 'URL': Invalid URL",
+        "stack": "Error: Uncaught TypeError: Failed to construct 'URL': Invalid URL\n    at J (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:64999)\n    at r.XMLHttpRequest.XMLHttpRequest.open (https://golfballscom.myshopify.com/cdn/wpm/sb8a4071cw5df52f02p06561c06md4694b52m.js:1:74592)\n    at s (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1135)\n    at get (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:1260)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5943)\n    at <anonymous> (https://rum-static.pingdom.net/pa-62eae4689034fb001100107a.js:1:5950)"
+      }
+    ],
+    "actions": [
+      {
+        "name": "cart-open-close-repeat",
+        "pass": true
+      }
+    ],
+    "status": 200
+  }
+]
