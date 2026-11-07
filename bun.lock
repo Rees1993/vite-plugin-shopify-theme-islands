@@ -6,7 +6,7 @@
       "name": "vite-plugin-shopify-theme-islands",
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.8.4",
-        "@tanstack/intent": "0.0.21",
+        "@tanstack/intent": "0.5.6",
         "@types/bun": "^1.3.10",
         "@types/node": "^22.0.0",
         "oxfmt": "0.41.0",
@@ -14,7 +14,6 @@
         "puppeteer": "24.43.1",
         "typescript": "^5.0.0",
         "vite": "^8.0.0",
-        "yaml": "2.8.2",
       },
       "peerDependencies": {
         "vite": ">=6",
@@ -150,7 +149,7 @@
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-rc.9", "", {}, "sha512-w6oiRWgEBl04QkFZgmW+jnU1EC9b57Oihi2ot3HNWIQRqgHp5PnYDia5iZ5FF7rpa4EQdiqMDXjlqKGXBhsoXw=="],
 
-    "@tanstack/intent": ["@tanstack/intent@0.0.21", "", { "dependencies": { "yaml": "^2.7.0" }, "bin": { "intent": "dist/cli.mjs", "intent-library": "dist/intent-library.mjs" } }, "sha512-LhiHCCFIlA6Jg01DbSDnBJ080QFYqH7h9Ggk2Q9rMZGVGCKb+3hsm3kgjQTM8lHqF3D1VUWcAXDuRBOtWKozNQ=="],
+    "@tanstack/intent": ["@tanstack/intent@0.5.6", "", { "bin": { "intent": "dist/cli.mjs" } }, "sha512-9Ta/GMGPcqBIqlbrqeYyqBVKEP7XyAXy6nn90bPiE2oHB6KPgjEweUbHNXLQ6Pim01VtMMNf0dmUFMGKKHXmlw=="],
 
     "@tootallnate/quickjs-emscripten": ["@tootallnate/quickjs-emscripten@0.23.0", "", {}, "sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA=="],
 

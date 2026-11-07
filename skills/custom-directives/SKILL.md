@@ -283,19 +283,25 @@ Source: src/resolved-config.ts — validateOptions() duplicate and built-in conf
 Wrong:
 
 ```ts
-{
-  name: "client:hash",
-  entrypoint: "src/directives/hash.ts", // ← no ./
-}
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
+
+shopifyThemeIslands({
+  directives: {
+    custom: [{ name: "client:hash", entrypoint: "src/directives/hash.ts" }],
+  },
+});
 ```
 
 Correct:
 
 ```ts
-{
-  name: "client:hash",
-  entrypoint: "./src/directives/hash.ts",
-}
+import shopifyThemeIslands from "vite-plugin-shopify-theme-islands";
+
+shopifyThemeIslands({
+  directives: {
+    custom: [{ name: "client:hash", entrypoint: "./src/directives/hash.ts" }],
+  },
+});
 ```
 
 Custom directive entrypoints are resolved through Vite. Relative local files should usually use `./...`; unresolved entrypoints fail the build.
