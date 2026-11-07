@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
+  cpSync,
   mkdtempSync,
-  mkdirSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -12,25 +12,43 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { publint } from "publint";
+import { formatMessage } from "publint/utils";
 
 const repo = fileURLToPath(new URL("../", import.meta.url));
 const project = resolve(process.argv[2] ?? repo);
 const temporary = mkdtempSync(join(tmpdir(), "package-verification-"));
+const cache = join(temporary, "cache");
 const childEnv = { ...process.env, NODE_COMPILE_CACHE: join(temporary, "node-cache") };
+
+function run(stage, command, args, cwd) {
+  try {
+    return execFileSync(command, args, {
+      cwd,
+      encoding: "utf8",
+      env: childEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 30000,
+    });
+  } catch (error) {
+    const details = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
+    throw Error(
+      `${stage} failed (${error.status ?? error.code ?? error.message})${details ? "\n" + details : ""}`,
+    );
+  }
+}
+
 function filesUnder(directory, prefix = "") {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const name = prefix + entry.name;
     return entry.isDirectory() ? filesUnder(join(directory, entry.name), name + "/") : [name];
   });
 }
-function targets(value) {
-  if (typeof value === "string") return value.startsWith("./") ? [value.slice(2)] : [];
-  return value && typeof value === "object" ? Object.values(value).flatMap(targets) : [];
-}
-try {
-  const manifest = JSON.parse(readFileSync(join(project, "package.json"), "utf8"));
+
+function packPackage() {
   const [pack] = JSON.parse(
-    execFileSync(
+    run(
+      "Pack package",
       "npm",
       [
         "pack",
@@ -40,54 +58,58 @@ try {
         "--pack-destination",
         temporary,
         "--cache",
-        join(temporary, "cache"),
+        cache,
       ],
-      { cwd: project, encoding: "utf8", env: childEnv, stdio: ["ignore", "pipe", "pipe"] },
+      project,
     ),
   );
-  const extracted = join(temporary, "extracted");
-  mkdirSync(extracted);
-  const tarball = join(temporary, pack.filename);
-  execFileSync("tar", ["-xzf", tarball, "-C", extracted]);
-  const packed = join(extracted, "package");
-  const files = new Set(filesUnder(packed));
-  for (const file of [
-    ...targets(manifest.exports),
-    ...targets(manifest.main),
-    ...targets(manifest.types),
-    "dist/runtime.js",
-  ]) {
-    if (!files.has(file)) throw Error(`Missing package file: ${file}`);
-  }
+  return {
+    tarball: join(temporary, pack.filename),
+    files: new Set(pack.files.map((file) => file.path)),
+  };
+}
+
+function verifyContents(files) {
   const skills = filesUnder(join(project, "skills")).filter(
     (file) => !file.startsWith("_artifacts/") && !file.startsWith("."),
   );
-  if (!skills.some((file) => file.endsWith("/SKILL.md"))) throw Error("No source skills found");
-  for (const file of [
+  const skillNames = skills
+    .filter((file) => file.endsWith("/SKILL.md"))
+    .map((file) => file.slice(0, -"/SKILL.md".length));
+  if (!skillNames.length) throw Error("No source skills found");
+  const required = [
+    "dist/runtime.js",
     ...filesUnder(join(project, "dist")).map((file) => "dist/" + file),
     ...skills.map((file) => "skills/" + file),
-  ]) {
+  ];
+  for (const file of required) {
     if (!files.has(file)) throw Error(`Missing package file: ${file}`);
   }
   for (const file of files) {
     if (
       /^(?:\.scratch|\.github|src|tests|scripts|node_modules)\//.test(file) ||
       file.startsWith("skills/_artifacts/")
-    )
+    ) {
       throw Error(`Unwanted package file: ${file}`);
+    }
   }
+  return skillNames;
+}
+
+function installConsumer(tarball, name) {
   const consumer = join(temporary, "consumer");
-  mkdirSync(consumer);
+  cpSync(join(repo, "scripts/fixtures/package-consumer"), consumer, { recursive: true });
   writeFileSync(
     join(consumer, "package.json"),
     JSON.stringify({
       name: "package-contract-consumer",
       private: true,
       type: "module",
-      intent: { skills: [manifest.name] },
+      intent: { skills: [name] },
     }),
   );
-  execFileSync(
+  run(
+    "Install consumer",
     "npm",
     [
       "install",
@@ -98,59 +120,36 @@ try {
       "--no-fund",
       "--package-lock=false",
       "--cache",
-      join(temporary, "cache"),
+      cache,
       tarball,
     ],
-    { cwd: consumer, env: childEnv, stdio: ["ignore", "pipe", "pipe"] },
+    consumer,
   );
-  // Supply the declared peer from the lockfile; the library itself comes only from the tarball.
+  // Only the peer uses the checkout; the library comes from the installed tarball.
   symlinkSync(join(repo, "node_modules/vite"), join(consumer, "node_modules/vite"), "dir");
-  writeFileSync(
-    join(consumer, "imports.mjs"),
-    `
-import plugin from ${JSON.stringify(manifest.name)};
-import Island from ${JSON.stringify(manifest.name + "/island")};
-import { onIslandLoad, onIslandError } from ${JSON.stringify(manifest.name + "/events")};
-if (![plugin, Island, onIslandLoad, onIslandError].every(value => typeof value === "function")) throw Error("Invalid public JavaScript exports");
-`,
-  );
-  execFileSync(process.execPath, ["imports.mjs"], {
-    cwd: consumer,
-    env: childEnv,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  writeFileSync(
-    join(consumer, "consumer.ts"),
-    `
-import plugin from ${JSON.stringify(manifest.name)};
-import Island from ${JSON.stringify(manifest.name + "/island")};
-import { onIslandLoad, onIslandError } from ${JSON.stringify(manifest.name + "/events")};
-import { disconnect, scan, observe, unobserve } from ${JSON.stringify(manifest.name + "/revive")};
-plugin();
-class Example extends Island(HTMLElement) {}
-const offLoad: () => void = onIslandLoad(detail => { const tag: string = detail.tag; const duration: number = detail.duration; const attempt: number = detail.attempt; });
-const offError: () => void = onIslandError(detail => { const tag: string = detail.tag; const error: unknown = detail.error; const attempt: number = detail.attempt; });
-scan(document.body); observe(document.body); unobserve(document.body); disconnect();
-`,
-  );
-  execFileSync(
+  return consumer;
+}
+
+async function verifyMetadata(installed) {
+  const { messages, pkg } = await publint({ pkgDir: installed, pack: false, strict: true });
+  const errors = messages.filter((message) => message.type === "error");
+  if (errors.length)
+    throw Error(
+      `Package metadata failed\n${errors.map((message) => formatMessage(message, pkg)).join("\n")}`,
+    );
+}
+
+function verifyConsumer(consumer) {
+  run("Import consumer", process.execPath, ["imports.mjs"], consumer);
+  run(
+    "Typecheck consumer",
     process.execPath,
-    [
-      join(repo, "node_modules/typescript/bin/tsc"),
-      "--noEmit",
-      "--strict",
-      "--target",
-      "ES2020",
-      "--module",
-      "NodeNext",
-      "--moduleResolution",
-      "NodeNext",
-      "--lib",
-      "ES2020,DOM",
-      "consumer.ts",
-    ],
-    { cwd: consumer, env: childEnv, stdio: ["ignore", "pipe", "pipe"] },
+    [join(repo, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
+    consumer,
   );
+}
+
+function verifySkills(consumer, installed, name, skillNames) {
   const intentRoot = join(repo, "node_modules/@tanstack/intent");
   const intent = JSON.parse(readFileSync(join(intentRoot, "package.json"), "utf8"));
   const intentBin = resolve(
@@ -158,41 +157,41 @@ scan(document.body); observe(document.body); unobserve(document.body); disconnec
     typeof intent.bin === "string" ? intent.bin : intent.bin.intent,
   );
   const discovery = JSON.parse(
-    execFileSync(process.execPath, [intentBin, "list", "--json"], {
-      cwd: consumer,
-      encoding: "utf8",
-      env: childEnv,
-      stdio: ["ignore", "pipe", "pipe"],
-    }),
+    run("Discover skills", process.execPath, [intentBin, "list", "--json"], consumer),
   );
-  const installed = realpathSync(join(consumer, "node_modules", manifest.name));
   const discovered = new Set(
     discovery.skills
       .filter(
         (skill) =>
-          skill.packageName === manifest.name && realpathSync(skill.packageRoot) === installed,
+          skill.packageName === name && realpathSync(skill.packageRoot) === realpathSync(installed),
       )
       .map((skill) => skill.use),
   );
-  const skillNames = skills
-    .filter((file) => file.endsWith("/SKILL.md"))
-    .map((file) => file.slice(0, -"/SKILL.md".length));
-  for (const name of skillNames) {
-    if (!discovered.has(`${manifest.name}#${name}`))
-      throw Error(`Missing discovered skill: ${name}`);
+  for (const skill of skillNames) {
+    if (!discovered.has(`${name}#${skill}`)) throw Error(`Missing discovered skill: ${skill}`);
   }
+}
+
+try {
+  const manifest = JSON.parse(readFileSync(join(project, "package.json"), "utf8"));
+  const { tarball, files } = packPackage();
+  const skills = verifyContents(files);
+  const consumer = installConsumer(tarball, manifest.name);
+  const installed = join(consumer, "node_modules", manifest.name);
+  await verifyMetadata(installed);
+  verifyConsumer(consumer);
+  verifySkills(consumer, installed, manifest.name, skills);
   console.log(
     JSON.stringify({
       name: manifest.name,
       version: manifest.version,
       files: files.size,
-      skills: skillNames,
+      skills,
       checks: ["contents", "imports", "types", "skill-discovery"],
     }),
   );
 } catch (error) {
   console.error(`[test:package] ${error.message}`);
-  if (error.stdout) console.error(error.stdout.toString());
   process.exitCode = 1;
 } finally {
   rmSync(temporary, { recursive: true, force: true });

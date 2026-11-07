@@ -81,6 +81,7 @@
     "@types/node": "^22.0.0",
     "oxfmt": "0.41.0",
     "oxlint": "1.56.0",
+    "publint": "0.3.25",
     "puppeteer": "24.43.1",
     "typescript": "^5.0.0",
     "vite": "^8.0.0"
