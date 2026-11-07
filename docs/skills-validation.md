@@ -7,10 +7,9 @@ status. The CLI integration tests exercise valid and invalid package skills usin
 the actual installed binary.
 
 The generated workflow pins its reusable jobs to the commit packaged with the
-same release. Pull requests run read-only validation. Release/manual runs produce
+same release and owns skill validation and review reporting. Pull requests run read-only validation. Release/manual runs produce
 read-only review reports. The separate publisher can create reminder PRs only
-when the repository variable `INTENT_REVIEW_PULL_REQUESTS` is explicitly `true`;
-this migration does not set it. Mechanical repairs occur only in the CI checkout
+when the repository variable `INTENT_REVIEW_PULL_REQUESTS` is explicitly `true`. Mechanical repairs occur only in the CI checkout
 and are uploaded as patches for review, never committed or published by validation.
 The release-pinned analysis jobs use Node 22, matching this package's requirement.
 
