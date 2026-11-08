@@ -65,7 +65,7 @@
     "test:plugin": "bun test src/__tests__/plugin.test.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "test:package": "bun run build && node scripts/verify-package.mjs",
+    "test:package": "bun run build && publint --strict --pack npm && node scripts/verify-package.mjs",
     "skills:check": "intent validate",
     "lint": "oxlint src/",
     "format": "oxfmt src/",
