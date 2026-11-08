@@ -18,6 +18,7 @@ hash; the hash also distinguishes uncommitted source changes. Validate an existi
 report with `node scripts/validate-native-report.mjs <report.json>`.
 
 Validator fixture inputs live in `tests/native/reports/`; they are curated test
-data rather than historical benchmark output. `scripts/validate-runtime-provenance.mjs`
-checks prepared-build and browser-response fingerprints independently of any
-storefront-specific runner.
+data rather than historical benchmark output.
+
+Historical measurement evidence and provenance tooling are retained in the
+[research archive](https://github.com/Rees1993/vite-plugin-shopify-theme-islands/tree/f8a71cbbb7490177362992fc5895df3e9c72c360).
