@@ -205,7 +205,8 @@ Directives gate **code loading at the tag level**.
 
 - directives are authored on individual elements
 - once a tag's module loads, matching elements upgrade normally through the Custom Elements registry
-- if the same tag appears with conflicting gates, the first-resolved instance wins for that tag
+- the first observed element supplies the tag’s complete Gate policy; later occurrences await the shared module load
+- if that pending element is removed or unobserved, ownership transfers to the next still-observed occurrence, which uses its own Gate policy
 - in `debug: true`, the runtime logs a warning once per tag when it sees conflicting same-tag gates
 
 ### `client:visible`
@@ -554,7 +555,7 @@ shopifyThemeIslands({
 });
 ```
 
-Once retries are exhausted the island is dequeued — a fresh activation requires a new element instance.
+Once retries are exhausted, automatic attempts stop. A new Island element may start a fresh activation. If it succeeds, earlier observed same-tag parent subtrees also receive the normal child activation cascade. Scanning an earlier element does not grant more retries.
 
 ## Lifecycle events
 
