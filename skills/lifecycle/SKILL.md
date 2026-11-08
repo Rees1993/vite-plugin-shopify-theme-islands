@@ -166,7 +166,7 @@ Source: src/events.ts
 
 Wrong:
 
-```ts
+```ts expect-error=TS2614
 import { disconnect } from "vite-plugin-shopify-theme-islands/island";
 ```
 

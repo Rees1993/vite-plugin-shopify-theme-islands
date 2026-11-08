@@ -267,7 +267,11 @@ export class CartItems extends HTMLElement {}
 customElements.define("cart-items", CartItems); // one define per file
 ```
 
-```ts
+The subclass imports the base from the preceding file. This two-file example is
+compiled together in the CLI integration tests; the isolated-fence checker cannot
+resolve the sibling example.
+
+```ts no-check
 // frontend/js/islands/CartDrawerItems.ts
 import { CartItems } from "./CartItems";
 class CartDrawerItems extends CartItems {}
