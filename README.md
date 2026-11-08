@@ -206,7 +206,7 @@ Directives gate **code loading at the tag level**.
 - directives are authored on individual elements
 - once a tag's module loads, matching elements upgrade normally through the Custom Elements registry
 - the first observed element supplies the tag’s complete Gate policy; later occurrences await the shared module load
-- if that pending element is removed or unobserved, its Gate policy transfers to the next still-observed occurrence
+- if that pending element is removed or unobserved, ownership transfers to the next still-observed occurrence, which uses its own Gate policy
 - in `debug: true`, the runtime logs a warning once per tag when it sees conflicting same-tag gates
 
 ### `client:visible`
